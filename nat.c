@@ -306,9 +306,11 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
  */
 #ifndef IPV6_ORIGINAL_DST
 #define IPV6_ORIGINAL_DST SO_ORIGINAL_DST
+#define IPV6_ORIGINAL_DST_UNDEF 
 #endif /* !IPV6_ORIGINAL_DST */
 #ifndef SOL_IPV6
 #define SOL_IPV6 SOL_IP
+#define SOL_IPV6_UNDEF 
 #endif /* !SOL_IPV6 */
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
@@ -335,6 +337,14 @@ nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 	}
 	return rv;
 }
+#ifdef IPV6_ORIGINAL_DST_UNDEF
+#undef IPV6_ORIGINAL_DST
+#undef IPV6_ORIGINAL_DST_UNDEF
+#endif /* IPV6_ORIGINAL_DST_UNDEF */
+#ifdef SOL_IPV6_UNDEF
+#undef SOL_IPV6
+#undef SOL_IPV6_UNDEF
+#endif /* SOL_IPV6_UNDEF */
 
 #ifdef IP_TRANSPARENT
 /*
