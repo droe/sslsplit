@@ -93,6 +93,7 @@ GIT?=		git
 WGET?=		wget
 
 BZIP2?=		bzip2
+COL?=		col
 LN?=		ln
 MAN?=		man
 TAR?=		tar
@@ -300,6 +301,17 @@ mantest:
 	$(MAN) -M . 1 $(TARGET)
 	$(RM) man1
 
+$(TARGET)-$(VERSION).1.txt: $(TARGET).1
+	$(RM) -f man1
+	$(LN) -sf . man1
+	$(MAN) -M . 1 $(TARGET) | $(COL) -b >$@
+	$(RM) man1
+
+man: $(TARGET)-$(VERSION).1.txt
+
+manclean:
+	$(RM) -f $(TARGET)-*.1.txt
+
 fetchdeps:
 	$(WGET) --no-check-certificate -O- $(KHASH_URL) >khash.h
 
@@ -320,13 +332,13 @@ disttest: $(TARGET)-$(VERSION).tar.bz2
 	cd $(TARGET)-$(VERSION) && $(MAKE) && $(MAKE) test && ./$(TARGET) -V
 	$(RM) -r $(TARGET)-$(VERSION)
 
-distclean: clean
+distclean:
 	$(RM) -f $(TARGET)-*.tar.bz2
 
-realclean: distclean
+realclean: distclean manclean clean
 	$(MAKE) -C extra/pki clean
 endif
 
 .PHONY: all config clean test lint install deinstall \
-        mantest fetchdeps dist disttest distclean realclean
+        mantest man manclean fetchdeps dist disttest distclean realclean
 
