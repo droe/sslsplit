@@ -1,0 +1,4 @@
+#!/bin/sh
+ulimit -n @@maxfds@@
+export LD_LIBRARY_PATH=@@localbase@@/lib:"$LD_LIBRARY_PATH"
+exec @@prefix@@/bin/sslsplit "$@"

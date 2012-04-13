@@ -1,0 +1,9 @@
+[ req ]
+distinguished_name = reqdn
+
+[ reqdn ]
+
+[ v3_ca ]
+basicConstraints                        = CA:TRUE
+subjectKeyIdentifier                    = hash
+authorityKeyIdentifier                  = keyid:always,issuer:always

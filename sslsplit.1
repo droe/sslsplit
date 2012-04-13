@@ -1,0 +1,487 @@
+.\" SSLsplit - transparent and scalable SSL/TLS interception
+.\" Copyright (c) 2009-2012, Daniel Roethlisberger <daniel@roe.ch>
+.\" All rights reserved.
+.\" http://www.roe.ch/SSLsplit
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice unmodified, this list of conditions, and the following
+.\"    disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.TH SSLSPLIT 1  "1 April 2012"
+.SH NAME
+sslsplit \-\- transparent and scalable SSL/TLS interception
+.SH SYNOPSIS
+.na
+.B sslsplit
+[\fB-PZdDgGseujplLS\fP]
+\fB-k\fP \fIpem\fP \fB-c\fP \fIpem\fP [\fB-C\fP \fIpem\fP] \
+[\fB-K\fP \fIpem\fP]
+\fIspecs\fP
+.br
+.B sslsplit
+[\fB-PZdDgGseujplLS\fP]
+\fB-t\fP \fIdir\fP
+\fIspecs\fP
+.br
+.B sslsplit
+[\fB-PZdDgGseujplLS\fP]
+\fB-t\fP \fIdir\fP
+\fB-k\fP \fIpem\fP \fB-c\fP \fIpem\fP [\fB-C\fP \fIpem\fP] \
+[\fB-K\fP \fIpem\fP]
+\fIspecs\fP
+.br
+.B sslsplit -E
+.br
+.B sslsplit -V
+.br
+.B sslsplit -h
+.br
+.ad
+.SH DESCRIPTION
+SSLsplit is a tool for man-in-the-middle attacks against SSL/TLS encrypted
+network connections.  Connections are transparently intercepted through a
+network address translation engine and redirected to SSLsplit.  SSLsplit
+terminates SSL/TLS and initiates a new SSL/TLS connection to the original
+destination address, while logging all data transmitted.
+.LP
+SSLsplit supports plain TCP, plain SSL, HTTP and HTTPS connections over both
+IPv4 and IPv6.  For SSL and HTTPS connections, SSLsplit generates and signs
+forged X509v3 certificates on-the-fly, based on the original server certificate
+subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
+Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
+ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
+private key is available, instead of generating forged ones.  SSLsplit supports
+NULL-prefix CN certificates.
+.LP
+SSLsplit supports a number of NAT engines, static forwarding and SNI DNS
+lookups to determine the original destination of redirected connections
+(see NAT ENGINES and PROXY SPECIFICATIONS below).
+.LP
+To actually implement an attack, you also need to redirect the traffic to the
+system running \fBsslsplit\fP.  Your options include running \fBsslsplit\fP on
+a legitimate router, ARP spoofing, ND spoofing, DNS poisoning, deploying a
+rogue access point (e.g. using hostap mode), physical recabling, malicious VLAN
+reconfiguration or route injection, /etc/hosts modification and so on.
+SSLsplit does not implement the actual traffic redirection.
+.SH OPTIONS
+.TP
+.B \-c \fIpemfile\fP
+Use CA certificate from \fIpemfile\fP to sign certificates forged on-the-fly.
+If \fIpemfile\fP also contains the matching CA private key, it is also loaded,
+otherwise it must be provided with \fB-k\fP.
+If \fB-t\fP is also given, SSLsplit will only forge a certificate if there is
+no matching certificate in the provided certificate directory.
+.TP
+.B \-C \fIpemfile\fP
+Use CA certificates from \fIpemfile\fP as extra certificates in the certificate
+chain.  This is needed if the CA given with \fB-k\fP and \fB-c\fP is a sub-CA,
+in which case any intermediate CA certificates and the root CA certificate must
+be included in the certificate chain.
+.TP
+.B \-d
+Detach from TTY and run as a daemon, logging error messages to syslog instead
+of standard error.
+.TP
+.B \-D
+Run in debug mode, log lots of debugging information to standard error.  This
+also forces foreground mode and cannot be used with \fB-d\fP.
+.TP
+.B \-e \fIengine\fP
+Use \fIengine\fP as the default NAT engine for \fIspecs\fP without
+explicit NAT engine, static destination address or SNI mode.
+\fIengine\fP can be any of the NAT engines supported by the system, as
+returned by \fB-E\fP.
+.TP
+.B \-E
+List all supported NAT engines available on the system and exit.  See
+NAT ENGINES for a list of NAT engines currently supported by SSLsplit.
+.TP
+.B \-g \fIpemfile\fP
+Use Diffie-Hellman group parameters from \fIpemfile\fP for Ephemereal
+Diffie-Hellman (EDH/DHE) cipher suites.  If \fB-g\fP is not given, SSLsplit
+first tries to load DH parameters from the key files given by \fB-K\fP and
+\fB-k\fP.  If no DH parameters are found in the key files, built-in 512 or 1024
+bit group parameters are automatically used iff a non-RSA private key is given
+with \fB-K\fP.
+This is because DSA/DSS private keys can by themselves only be used for signing
+and thus require DH to exchange an SSL/TLS session key.
+If \fB-g\fP is given, the parameters from the given \fIpemfile\fP will always
+be used, even with RSA private keys (within the cipher suites available in
+OpenSSL).
+The \fB-g\fP option is only available if SSLsplit was built against a version
+of OpenSSL which supports Diffie-Hellman cipher suites.
+.TP
+.B \-G \fIcurve\fP
+Use the named \fIcurve\fP for Ephemereal Elliptic Curve Diffie-Hellman (EECDH)
+cipher suites.  If \fB-G\fP is not given, the curve \fBprime256v1\fP is used
+automatically iff a non-RSA private key is given with \fB-K\fP.
+This is because ECDSA/ECDSS private keys can by themselves only be used for
+signing and thus require ECDH to exchange an SSL/TLS session key.
+If \fB-G\fP is given, the named \fIcurve\fP will always be used, even with RSA
+private keys (within the cipher suites available in OpenSSL).
+The \fB-G\fP option is only available if SSLsplit was built against a version
+of OpenSSL which supports Elliptic Curve Diffie-Hellman cipher suites.
+.TP
+.B \-h
+Display help on usage and exit.
+.TP
+.B \-j \fIjaildir\fP
+Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
+If \fB-j\fP is not given, SSLsplit will automatically change root directory to
+\fI/var/empty\fP if run as root and \fB-S\fP is not used.
+.TP
+.B \-k \fIpemfile\fP
+Use CA private key from \fIpemfile\fP to sign certificates forged on-the-fly.
+If \fIpemfile\fP also contains the matching CA certificate, it is also loaded,
+otherwise it must be provided with \fB-c\fP.
+If \fB-t\fP is also given, SSLsplit will only forge a certificate if there is
+no matching certificate in the provided certificate directory.
+.TP
+.B \-K \fIpemfile\fP
+Use private key from \fIpemfile\fP for certificates forged on-the-fly.
+If \fB-K\fP is not given, SSLsplit will generate a random 1024-bit RSA key.
+.TP
+.B \-l \fIlogfile\fP
+Log connections to \fIlogfile\fP in a single line per connection format,
+including addresses and ports and some HTTP and SSL information, if available.
+.TP
+.B \-L \fIlogfile\fP
+Log connection content to \fIlogfile\fP.  The content log will contain a
+parsable log format with transmitted data, prepended with headers identifying
+the connection and the data length of each logged segment.
+.TP
+.B \-p \fIpidfile\fP
+Write the process ID to \fIpidfile\fP and refuse to run if the \fIpidfile\fP
+is already in use by another process.
+.TP
+.B \-P
+Passthrough SSL/TLS connections which cannot be split instead of dropping them.
+Connections cannot be split if \fB-c\fP and \fB-k\fP are not given and the
+site does not match any certificate loaded using \fB-t\fP, or if the connection
+to the original server gives SSL/TLS errors.  Specifically, this happens if the
+site requests a client certificate.  Passthrough with \fB-P\fP results in
+uninterrupted service for the clients, while dropping is the more secure
+alternative if unmonitored connections must be prevented.
+.TP
+.B \-s \fIciphers\fP
+Use OpenSSL \fIciphers\fP specification for both server and client SSL/TLS
+connections.  If \fB-s\fP is not given, a cipher list of \fBALL\fP is used.
+Normally, SSL/TLS implementations choose the most secure cipher suites, not the
+fastest ones.  By specifying an appropriate OpenSSL cipher list, the set of
+cipher suites can be limited to fast algorithms, or \fBNULL\fP cipher suites
+can be added.  Not that for connections to be successful, the SSLsplit cipher
+suites must include at least one cipher suite supported by both the client and
+the server of each connection.
+See ciphers(1) for details on how to construct OpenSSL cipher lists.
+.TP
+.B \-S \fIlogdir\fP
+Log connection content to separate log files under \fIlogdir\fP.  For each
+connection, a log file will be written, which will contain both directions of
+data as transmitted.  Information about the connection will be contained in
+the filename only.
+If \fB-S\fP is used with \fB-j\fP, \fIlogdir\fP is relative to \fIjaildir\fP.
+If \fB-S\fP is used with \fB-u\fP, \fIlogdir\fP must be writable by \fIuser\fP.
+.TP
+.B \-t \fIcertdir\fP
+Use private key, certificate and certificate chain from PEM files in
+\fIcertdir\fP for sites matching the respective common names, instead of
+using certificates forged on-the-fly.  A single PEM file must contain a
+single private key, a single certificate and optionally intermediate and
+root CA certificates to use as certificate chain.
+If \fB-c\fP and \fB-k\fP are also given, certificates will be forged
+on-the-fly for sites matching none of the certificates loaded from
+\fIcertdir\fP.
+Otherwise, connections matching no certificate will be dropped, or if
+\fB-P\fP is given, passed through without splitting SSL/TLS.
+.TP
+.B \-u
+Drop privileges after opening sockets and files by setting the real,
+effective and stored user IDs to \fIuser\fP and loading the appropriate
+primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
+privileges to the stored UID if EUID != UID (setuid bit scenario), or to
+\fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0)
+and \fB-S\fP is not used.
+.TP
+.B \-V
+Display version and compiled features information and exit.
+.TP
+.B \-Z
+Disable SSL/TLS compression on all connections.  This is useful if your
+limiting factor is CPU, not network bandwidth.
+The \fB-Z\fP option is only available if SSLsplit was built against a version
+of OpenSSL which supports disabling compression.
+.SH "PROXY SPECIFICATIONS"
+Proxy specifications (\fIspecs\fP) consist of the connection type, listen
+address and static forward address or address resolution mechanism (NAT engine,
+SNI DNS lookup):
+.LP
+.na
+\fBhttps\fP \fIlistenaddr port\fP
+[\fInat-engine\fP|\fIfwdaddr port\fP|\fBsni\fP \fIport\fP]
+.br
+\fBssl\fP   \fIlistenaddr port\fP
+[\fInat-engine\fP|\fIfwdaddr port\fP|\fBsni\fP \fIport\fP]
+.br
+\fBhttp\fP  \fIlistenaddr port\fP
+[\fInat-engine\fP|\fIfwdaddr port\fP]
+.br
+\fBtcp\fP   \fIlistenaddr port\fP
+[\fInat-engine\fP|\fIfwdaddr port\fP]
+.ad
+.TP
+.I listenaddr port
+IPv4 or IPv6 address and port or service name to listen on.  This is the
+address and port where the NAT engine should redirect connections to.
+.TP
+.I nat-engine
+NAT engine to query for determining the original destination address and port
+of transparently redirected connections.
+If no engine is given, the default engine is used, unless overridden with
+\fB-e\fP.  When using a NAT engine, \fBsslsplit\fP needs to run on the same
+system as the NAT rules redirecting the traffic to \fBsslsplit\fP.
+See NAT ENGINES for a list of supported NAT engines.
+.TP
+.I fwdaddr port
+Static destination address, IPv4 or IPv6, with port or service name.  When this
+is used, connections are forwarded to the given server address and port.
+.TP
+\fBsni\fP \fIport\fP
+Use the Server Name Indication (SNI) hostname sent by the client in the
+ClientHello SSL/TLS message to determine the IP address of the server to
+connect to.  This only works for \fBssl\fP and \fBhttps\fP \fIspecs\fP and
+needs a port or service name as an argument.
+This is the only way to redirect traffic transparently using NAT rules and run
+\fBsslsplit\fP on a different system than the NAT engine.
+.LP
+.SH "NAT ENGINES"
+SSLsplit currently supports the following NAT engines:
+.TP
+.B pf
+OpenBSD packet filter (pf), also available on FreeBSD and NetBSD.
+Fully supported, including IPv6.
+Assuming inbound interface \fBem0\fP:
+.LP
+.RS
+.nf
+\fBrdr pass on em0 proto tcp from 2001:db8::/64 to any port  80 \\
+         ->       ::1 port 10080\fP
+\fBrdr pass on em0 proto tcp from 2001:db8::/64 to any port 443 \\
+         ->       ::1 port 10443\fP
+\fBrdr pass on em0 proto tcp from  192.0.2.0/24 to any port  80 \\
+         -> 127.0.0.1 port 10080\fP
+\fBrdr pass on em0 proto tcp from  192.0.2.0/24 to any port 443 \\
+         -> 127.0.0.1 port 10443\fP
+.fi
+.RE
+.TP
+.B ipfw
+FreeBSD IP firewall (IPFW), also available on Mac OS X.
+Fully supported on FreeBSD, including IPv6.
+Only supports IPv4 on Mac OS X due to the ancient version of IPFW included.
+.LP
+.RS
+.nf
+\fBipfw add fwd       ::1,10080 tcp from 2001:db8::/64 to any  80\fP
+\fBipfw add fwd       ::1,10443 tcp from 2001:db8::/64 to any 443\fP
+\fBipfw add fwd 127.0.0.1,10080 tcp from 192.0.2.0/24  to any  80\fP
+\fBipfw add fwd 127.0.0.1,10443 tcp from 192.0.2.0/24  to any 443\fP
+.fi
+.RE
+.TP
+.B ipfilter
+IPFilter (ipfilter, ipf), available on many systems, including FreeBSD, NetBSD,
+Linux and Solaris.
+Only supports IPv4 due to limitations in the SIOCGNATL ioctl(2) interface.
+Assuming inbound interface \fBbge0\fP:
+.LP
+.RS
+.nf
+\fBrdr bge0 0.0.0.0/0 port  80 -> 127.0.0.1 port 10080\fP
+\fBrdr bge0 0.0.0.0/0 port 443 -> 127.0.0.1 port 10443\fP
+.fi
+.RE
+.TP
+.B netfilter
+Linux netfilter using the iptables REDIRECT target.
+Only supports IPv4 due to limitations in the SO_ORIGINAL_DST getsockopt(2)
+interface.
+.LP
+.RS
+.nf
+\fBiptables -t nat -A PREROUTING -s 192.0.2.0/24 \\
+         -p tcp --dport  80 \\
+         -j REDIRECT --to-ports 10080\fP
+\fBiptables -t nat -A PREROUTING -s 192.0.2.0/24 \\
+         -p tcp --dport 443 \\
+         -j REDIRECT --to-ports 10443\fP
+.fi
+.RE
+.TP
+.B tproxy
+Linux netfilter using the iptables TPROXY target together with routing
+table magic to allow non-local traffic to originate on local sockets.
+Fully supported, including IPv6.
+.LP
+.RS
+.nf
+\fBip -f inet6 rule add fwmark 1 lookup 100\fP
+\fBip -f inet6 route add local default dev lo table 100\fP
+\fBip6tables -t mangle -N DIVERT\fP
+\fBip6tables -t mangle -A DIVERT -j MARK --set-mark 1\fP
+\fBip6tables -t mangle -A DIVERT -j ACCEPT\fP
+\fBip6tables -t mangle -A PREROUTING -p tcp -m socket -j DIVERT\fP
+\fBip6tables -t mangle -A PREROUTING -s 2001:db8::/64 \\
+          -p tcp --dport 80 \\
+          -j TPROXY --tproxy-mark 0x1/0x1 --on-port 10080\fP
+\fBip6tables -t mangle -A PREROUTING -s 2001:db8::/64 \\
+          -p tcp --dport 443 \\
+          -j TPROXY --tproxy-mark 0x1/0x1 --on-port 10443\fP
+\fBip -f inet rule add fwmark 1 lookup 100\fP
+\fBip -f inet route add local default dev lo table 100\fP
+\fBiptables -t mangle -N DIVERT\fP
+\fBiptables -t mangle -A DIVERT -j MARK --set-mark 1\fP
+\fBiptables -t mangle -A DIVERT -j ACCEPT\fP
+\fBiptables -t mangle -A PREROUTING -p tcp -m socket -j DIVERT\fP
+\fBiptables -t mangle -A PREROUTING -s 192.0.2.0/24 \\
+         -p tcp --dport 80 \\
+         -j TPROXY --tproxy-mark 0x1/0x1 --on-port 10080\fP
+\fBiptables -t mangle -A PREROUTING -s 192.0.2.0/24 \\
+         -p tcp --dport 443 \\
+         -j TPROXY --tproxy-mark 0x1/0x1 --on-port 10443\fP
+.fi
+.LP
+Note that return path filtering (rp_filter) also needs to be disabled on
+interfaces which handle TPROXY redirected traffic.
+.RE
+.SH EXAMPLES
+Matching the above NAT engine configuration samples, intercept HTTP and HTTPS
+over IPv4 and IPv6 using forged certificates with CA private key \fBca.key\fP
+and certificate \fBca.crt\fP, logging connections to \fBconnect.log\fP and
+connection data into separate files under \fB/tmp\fP (add \fB-e\fP
+\fInat-engine\fP to select the appropriate engine if multiple engines are
+available on your system):
+.LP
+.HS
+.nf
+\fBsslsplit -k ca.key -c ca.crt -l connect.log -L /tmp \\
+         https ::1 10443  https 127.0.0.1 10443 \\
+         http  ::1 10080  http  127.0.0.1 10080\fP
+.fi
+.RE
+.LP
+Intercepting IMAP/IMAPS using the same settings:
+.LP
+.HS
+.nf
+\fBsslsplit -k ca.key -c ca.crt -l connect.log -L /tmp \\
+         ssl ::1 10993  ssl 127.0.0.1 10993 \\
+         tcp ::1 10143  tcp 127.0.0.1 10143\fP
+.fi
+.RE
+.LP
+A more targetted setup, HTTPS only, using certificate/chain/key files from
+\fB/path/to/cert.d\fP and statically redirecting to \fBwww.example.org\fP
+instead of querying a NAT engine:
+.LP
+.HS
+.nf
+\fBsslsplit -t /path/to/cert.d -l connect.log -L /tmp \\
+         https ::1       10443 www.example.org 443 \\
+         https 127.0.0.1 10443 www.example.org 443\fP
+.fi
+.RE
+.LP
+The original example, but using SSL options optimized for speed by disabling
+compression and selecting only fast block cipher cipher suites and using a
+precomputed private key \fBleaf.key\fP for the forged certificates
+(most significant speed increase is gained by choosing fast algorithms and
+small keysizes for the CA and leaf private keys; check \fBopenssl speed\fP for
+algorithm performance on your system):
+.LP
+.HS
+.nf
+\fBsslsplit -Z -s NULL:RC4:AES128 -K leaf.key \\
+         -k ca.key -c ca.crt -l connect.log -L /tmp \\
+         https ::1 10443  https 127.0.0.1 10443 \\
+         http  ::1 10080  http  127.0.0.1 10080\fP
+.fi
+.RE
+.LP
+The original example, but running as a daemon under user \fBsslsplit\fP and
+writing a PID file:
+.LP
+.HS
+.nf
+\fBsslsplit -d -p /var/run/sslsplit.pid -u sslsplit \\
+         -k ca.key -c ca.crt -l connect.log -L /tmp \\
+         https ::1 10443  https 127.0.0.1 10443 \\
+         http  ::1 10080  http  127.0.0.1 10080\fP
+.fi
+.RE
+.LP
+To generate a CA private key \fBca.key\fP  and certificate \fBca.crt\fP using
+OpenSSL:
+.LP
+.HS
+.nf
+\fBcat >x509v3ca.cnf <<'EOF'\fP
+[ req ]
+distinguished_name = reqdn
+
+[ reqdn ]
+
+[ v3_ca ]
+basicConstraints        = CA:TRUE
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer:always
+\fBEOF\fP
+
+\fBopenssl genrsa -out ca.key 1024\fP
+\fBopenssl req -new -nodes -x509 -sha1 -out ca.crt -key ca.key \\
+        -config x509v3ca.cnf -extensions v3_ca \\
+        -subj '/O=SSLsplit Root CA/CN=SSLsplit Root CA/' \\
+        -set_serial 0 -days 3650\fP
+.fi
+.SH SCALABILITY
+SSLsplit is scalable to a relatively high number of listeners and connections
+due to a multithreaded, event based architecture based on libevent, taking
+advantage of platform specific select() replacements such as kqueue.  The main
+thread handles the listeners and signalling, while a number of worker threads
+equal to twice the number of CPU cores is used for handling the actual
+connections in separate event bases, including the CPU-intensive SSL/TLS
+handling.
+.LP
+Care has been taken to choose scalable data structures for caching certificates
+and SSL sessions.  Logging is implemented in separate disk writer threads to
+ensure that socket event handling threads don't have to block on disk I/O.
+SSLsplit uses SSL session caching on both ends to minimize the amount of full
+SSL handshakes, but even then, the limiting factor in handling SSL connections
+are the actual bignum computations.
+.SH "SEE ALSO"
+openssl(1), ciphers(1), speed(1),
+pf(4), ipfw(8), iptables(8), ip6tables(8), ip(8),
+hostapd(8), arpspoof(8), parasite6(8), yersinia(8)
+.SH AUTHORS
+Daniel Roethlisberger <daniel@roe.ch>
+.SH BUGS
+Session resumption does not work for SSLv2-only clients.  As a workaround,
+clients attepmting to resume a session will always be given a new one and thus
+require a full handshake on every connection, resulting in degraded performance
+with SSLv2 clients.  However, SSLv2-only clients should be rare these days.

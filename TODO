@@ -1,0 +1,9 @@
+-   Parse some information from HTTP responses (status, size)
+-   Handle renego & client cert authentication more gracefully
+-   Separate orig cert retrieval from actual fwd address/proto config
+-   OCSP denial mode based on targetdir cert's OCSP servers
+-   CRL "denial" mode based on targetdir cert's CDPs
+-   Client fingerprinting: only intercept clients with headers matching regex
+-   Configurable and/or scriptable modification of requests and/or responses
+-   STARTTLS for various protocols
+-   Sample scripts for single file/fifo content log postprocessing
