@@ -28,6 +28,7 @@
 
 #include "attrib.h"
 #include "opts.h"
+#include "version.h"
 
 #include <check.h>
 #include <stdlib.h>
@@ -43,11 +44,9 @@ blank_suite(void)
 
 START_TEST(build_date_01)
 {
-	char *bd = BUILD_DATE;
-
-	fail_unless(strlen(bd) == 10, "length mismatch");
-	fail_unless(bd[4] == '-', "year/month separator not dash");
-	fail_unless(bd[7] == '-', "month/day separator not dash");
+	fail_unless(strlen(build_date) == 10, "length mismatch");
+	fail_unless(build_date[4] == '-', "year/month separator not dash");
+	fail_unless(build_date[7] == '-', "month/day separator not dash");
 }
 END_TEST
 

@@ -242,7 +242,6 @@ all: version config $(TARGET)
 
 version:
 	@echo "$(PNAME) $(VERSION)"
-	@touch version.c
 
 config:
 	@echo "via pkg-config: $(strip $(PKGS) $(TPKGS))"
@@ -260,8 +259,10 @@ endif
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-%.o: %.c $(HDRS) GNUmakefile $(VFILE)
+%.o: %.c $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+version.o: version.c version.h GNUmakefile $(VFILE) FORCE
 
 extra/pki/rsa.pem:
 	$(MAKE) -C extra/pki
@@ -274,12 +275,9 @@ test: extra/pki/rsa.pem $(TARGET).test
 $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
-%.ot: %.t $(HDRS) GNUmakefile $(VFILE)
+%.ot: %.t $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(TPKG_CPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
 		-x c $<
-
-lint:
-	$(CPPCHECK) --force --enable=all --error-exitcode=1 .
 
 clean:
 	$(RM) -f $(TARGET) *.o $(TARGET).test *.ot *.core *~
@@ -296,6 +294,9 @@ deinstall:
 	$(RM) -f $(PREFIX)/bin/$(TARGET) $(PREFIX)/share/man/man1/$(TARGET).1
 
 ifdef GITDIR
+lint:
+	$(CPPCHECK) --force --enable=all --error-exitcode=1 .
+
 mantest:
 	$(RM) -f man1
 	$(LN) -sf . man1
@@ -339,6 +340,8 @@ distclean:
 realclean: distclean manclean clean
 	$(MAKE) -C extra/pki clean
 endif
+
+FORCE:
 
 .PHONY: all config clean test lint install deinstall \
         mantest man manclean fetchdeps dist disttest distclean realclean
