@@ -242,6 +242,7 @@ all: version config $(TARGET)
 
 version:
 	@echo "$(PNAME) $(VERSION)"
+	@touch version.c
 
 config:
 	@echo "via pkg-config: $(strip $(PKGS) $(TPKGS))"

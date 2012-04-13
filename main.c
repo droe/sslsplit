@@ -38,6 +38,7 @@
 #include "cachemgr.h"
 #include "sys.h"
 #include "log.h"
+#include "version.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -65,12 +66,12 @@ extern int daemon(int, int);
 static void
 main_version(void)
 {
-	fprintf(stderr, "%s %s (built %s)\n", PNAME, VERSION, BUILD_DATE);
+	fprintf(stderr, "%s %s (built %s)\n", PNAME, version, build_date);
 	fprintf(stderr, "Copyright (c) 2009-2012, "
 	                "Daniel Roethlisberger <daniel@roe.ch>\n");
 	fprintf(stderr, "http://www.roe.ch/SSLsplit\n");
-	if (FEATURES[0]) {
-		fprintf(stderr, "Features: %s\n", FEATURES);
+	if (features[0]) {
+		fprintf(stderr, "Features: %s\n", features);
 	}
 	nat_version();
 	ssl_openssl_version();
