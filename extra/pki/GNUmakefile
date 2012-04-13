@@ -79,10 +79,12 @@ targets: rsa.crt
 # openssl s_server cannot be easily controlled from scripts; it is
 # more robust to just connect to a real server to create a session
 session.pem:
-	echo -e 'GET /test/SSLsplit-$(VERSION) HTTP/1.1\r\nHost:' \
-		'daniel.roe.ch\r\nConnection: close\r\n\r\n' | \
-		$(OPENSSL) s_client -connect daniel.roe.ch:443 \
-		-quiet -no_ign_eof -sess_out $@ >/dev/null 2>&1
+	( \
+	echo 'GET /test/SSLsplit-$(VERSION) HTTP/1.1'; \
+	echo 'Host: daniel.roe.ch'; \
+	echo 'Connection: close'; \
+	echo ) | $(OPENSSL) s_client -connect daniel.roe.ch:443 \
+		-quiet -crlf -no_ign_eof -sess_out $@ >/dev/null 2>&1
 	test -r $@
 
 clean:
