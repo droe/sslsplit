@@ -47,7 +47,7 @@ rsa.key:
 ec.key:
 	$(OPENSSL) ecparam -out $@ -name prime192v1 -genkey
 
-%.crt: %.key
+%.crt: %.key $(CONFIG)
 	$(OPENSSL) req -new -nodes -x509 -sha1 -out $@ -key $< \
 		-config $(CONFIG) -extensions $(CA_EXT) \
 		-subj $(CA_SUBJECT) \
@@ -56,7 +56,7 @@ ec.key:
 server.key:
 	$(OPENSSL) genrsa -out $@ 1024
 
-server.crt: server.key
+server.crt: server.key $(CONFIG)
 	$(OPENSSL) req -new -nodes -x509 -sha1 -out $@ -key $< \
 		-config $(CONFIG) -extensions $(CRT_EXT) \
 		-subj $(CRT_SUBJECT) \
@@ -66,7 +66,7 @@ server.crt: server.key
 	cat $^ >$@
 
 targets: rsa.crt
-	$(MKDIR) targets
+	$(MKDIR) -p targets
 	$(OPENSSL) genrsa -out targets/daniel.roe.ch.key 1024
 	$(OPENSSL) req -new -sha1 -subj '/C=CH/CN=daniel.roe.ch/' \
 		-key targets/daniel.roe.ch.key \
