@@ -15,5 +15,8 @@
 /extra/pki/rsa.pem
 /extra/pki/rsa.crt
 /extra/pki/rsa.key
+/extra/pki/server.pem
+/extra/pki/server.crt
+/extra/pki/server.key
 /extra/pki/session.pem
 /extra/pki/targets/*

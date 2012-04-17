@@ -264,10 +264,10 @@ $(TARGET): $(OBJS)
 
 version.o: version.c version.h GNUmakefile $(VFILE) FORCE
 
-extra/pki/rsa.pem:
+extra/pki/%.pem:
 	$(MAKE) -C extra/pki
 
-test: extra/pki/rsa.pem $(TARGET).test
+test: extra/pki/rsa.pem extra/pki/server.pem $(TARGET).test
 	$(RM) extra/pki/session.pem
 	$(MAKE) -C extra/pki session
 	./$(TARGET).test

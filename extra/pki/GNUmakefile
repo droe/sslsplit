@@ -4,12 +4,15 @@ OPENSSL?=	openssl
 MKDIR?=		mkdir
 
 # OpenSSL settings
-CA_SUBJECT?=	'/O=SSLsplit Root CA/CN=SSLsplit Root CA/'
+CA_SUBJECT?=	'/C=CH/O=SSLsplit Root CA/CN=SSLsplit Root CA/'
 CA_DAYS?=	3650
+CA_EXT:=	v3_ca
+CRT_SUBJECT?=	'/C=CH/O=SSLsplit Test Certificate/CN=daniel.roe.ch/'
+CRT_DAYS?=	365
+CRT_EXT:=	v3_crt
 CONFIG:=	x509v3ca.cnf
-CONFIG_EXT:=	v3_ca
 
-all: rsa dsa ec targets
+all: rsa dsa ec targets server
 
 session: session.pem
 
@@ -20,6 +23,8 @@ rsa: rsa.pem
 dsa: dsa.pem
 
 ec: ec.pem
+
+server: server.pem
 
 dh512.param:
 	$(OPENSSL) dhparam -out $@ -2 512
@@ -44,9 +49,18 @@ ec.key:
 
 %.crt: %.key
 	$(OPENSSL) req -new -nodes -x509 -sha1 -out $@ -key $< \
-		-config $(CONFIG) -extensions $(CONFIG_EXT) \
+		-config $(CONFIG) -extensions $(CA_EXT) \
 		-subj $(CA_SUBJECT) \
 		-set_serial 0 -days $(CA_DAYS)
+
+server.key:
+	$(OPENSSL) genrsa -out $@ 1024
+
+server.crt: server.key
+	$(OPENSSL) req -new -nodes -x509 -sha1 -out $@ -key $< \
+		-config $(CONFIG) -extensions $(CRT_EXT) \
+		-subj $(CRT_SUBJECT) \
+		-set_serial 42 -days $(CRT_DAYS)
 
 %.pem: %.crt %.key
 	cat $^ >$@
@@ -88,7 +102,7 @@ session.pem:
 	test -r $@
 
 clean:
-	rm -rf rsa.* dsa.* ec.* dh*.param targets *.srl session.pem
+	rm -rf rsa.* dsa.* ec.* dh*.param targets *.srl session.pem server.*
 
 .PHONY: all clean rsa dsa ec dh dhall session
 

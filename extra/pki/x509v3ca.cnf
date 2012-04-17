@@ -4,6 +4,29 @@ distinguished_name = reqdn
 [ reqdn ]
 
 [ v3_ca ]
-basicConstraints                        = CA:TRUE
-subjectKeyIdentifier                    = hash
-authorityKeyIdentifier                  = keyid:always,issuer:always
+basicConstraints                = CA:TRUE
+subjectKeyIdentifier            = hash
+authorityKeyIdentifier          = keyid:always,issuer:always
+
+[ v3_crt ]
+basicConstraints                = CA:FALSE
+subjectKeyIdentifier            = hash
+authorityKeyIdentifier          = keyid:always,issuer:always
+authorityInfoAccess             = OCSP;URI:http://daniel.roe.ch/test/ocsp
+crlDistributionPoints           = URI:http://daniel.roe.ch/test/crl1,crl2
+subjectAltName                  = dirName:s1n,DNS:daniel.roe.ch,IP:127.0.0.1,email:daniel@roe.ch,DNS:www.roe.ch,DNS:*.roe.ch
+
+[ s1n ]
+C=CH
+O=SSLsplit Test Certificate
+CN=daniel.roe.ch
+
+[ crl2 ]
+fullname                        = URI:http://daniel.roe.ch/test/crl2
+CRLissuer                       = URI:dirName:crl2issuer
+reasons                         = keyCompromise, CACompromise
+
+[ crl2issuer ]
+C=CH
+O=SSLsplit Root CA
+CN=SSLsplit Root CA
