@@ -31,6 +31,7 @@
 #include "ssl.h"
 
 #define TESTCERT "extra/pki/server.crt"
+#define TESTCERT2 "extra/pki/rsa.crt"
 
 static void
 ssl_setup(void)
@@ -425,6 +426,40 @@ START_TEST(ssl_x509_names_01)
 }
 END_TEST
 
+START_TEST(ssl_x509_ocsps_01)
+{
+	X509 *c;
+	char **ocsps, **p;
+
+	c = ssl_x509_load(TESTCERT);
+	fail_unless(!!c, "loading certificate failed");
+	ocsps = ssl_x509_ocsps(c);
+	fail_unless(!!ocsps, "parsing OCSP extensions failed");
+	fail_unless(!!ocsps[0], "first OCSP");
+	fail_unless(!strcmp(ocsps[0], "http://daniel.roe.ch/test/ocsp"),
+	                              "first OCSP");
+	fail_unless(!ocsps[1], "too many OCSPs");
+	p = ocsps;
+	while (*p)
+		free(*p++);
+	free(ocsps);
+	X509_free(c);
+}
+END_TEST
+
+START_TEST(ssl_x509_ocsps_02)
+{
+	X509 *c;
+	char **ocsps;
+
+	c = ssl_x509_load(TESTCERT2);
+	fail_unless(!!c, "loading certificate failed");
+	ocsps = ssl_x509_ocsps(c);
+	fail_unless(!ocsps, "unexpected OCSP extensions");
+	X509_free(c);
+}
+END_TEST
+
 START_TEST(ssl_features_01)
 {
 	int have_threads = 0;
@@ -483,6 +518,12 @@ ssl_suite(void)
 	tc = tcase_create("ssl_x509_names");
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_x509_names_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ssl_x509_ocsps");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_x509_ocsps_01);
+	tcase_add_test(tc, ssl_x509_ocsps_02);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_features");

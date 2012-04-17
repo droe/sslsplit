@@ -1212,6 +1212,75 @@ ssl_x509_names(X509 *crt)
 }
 
 /*
+ * Returns a zero-terminated buffer containing the ASN1 IA5 string.
+ * Returned buffer must be free()'d by caller.
+ */
+static char *
+ssl_ia5string_strdup(ASN1_IA5STRING *ia5)
+{
+	char *str;
+
+	if (!ia5 || !ia5->length)
+		return NULL;
+	str = malloc(ia5->length + 1);
+	if (!str)
+		return NULL;
+	memcpy(str, ia5->data, ia5->length);
+	str[ia5->length] = 0;
+	return str;
+}
+
+/*
+ * Returns a NULL terminated array of pointers to copies of Authority
+ * Information Access (AIA) URLs of a given type contained in the certificate.
+ * Caller must free returned buffer and all pointers within.
+ */
+char **
+ssl_x509_aias(X509 *crt, const int type)
+{
+	AUTHORITY_INFO_ACCESS *aias;
+	char **res;
+	int count, i, j;
+
+	aias = X509_get_ext_d2i(crt, NID_info_access, NULL, NULL);
+	if (!aias || !(count = sk_ACCESS_DESCRIPTION_num(aias)))
+		return NULL;
+
+	res = malloc((count + 1) * sizeof(char *));
+	if (!res) {
+		sk_ACCESS_DESCRIPTION_pop_free(aias, ACCESS_DESCRIPTION_free);
+		return NULL;
+	}
+
+	for (i = 0, j = 0; i < count; i++) {
+		ACCESS_DESCRIPTION *aia;
+
+		aia = sk_ACCESS_DESCRIPTION_value(aias, i);
+		if (aia &&
+		    OBJ_obj2nid(aia->method) == type &&
+		    aia->location->type == GEN_URI) {
+			res[j] = ssl_ia5string_strdup(aia->location->d.ia5);
+			if (res[j])
+				j++;
+		}
+	}
+	res[j] = '\0';
+	sk_ACCESS_DESCRIPTION_pop_free(aias, ACCESS_DESCRIPTION_free);
+	return res;
+}
+
+/*
+ * Returns a NULL terminated array of pointers to copies of Authority
+ * Information Access (AIA) URLs of type OCSP contained in the certificate.
+ * Caller must free returned buffer and all pointers within.
+ */
+char **
+ssl_x509_ocsps(X509 *crt)
+{
+	return ssl_x509_aias(crt, NID_ad_OCSP);
+}
+
+/*
  * Check whether the certificate is valid based on current time.
  * Return 1 if valid, 0 otherwise.
  */
