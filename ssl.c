@@ -1162,7 +1162,7 @@ ssl_x509_names(X509 *crt)
 	size_t count;
 
 	cn = ssl_x509_subject_cn(crt, &cnsz);
-	altnames = X509_get_ext_d2i(crt, NID_subject_alt_name, 0, 0);
+	altnames = X509_get_ext_d2i(crt, NID_subject_alt_name, NULL, NULL);
 
 	count = (altnames ? sk_GENERAL_NAME_num(altnames) : 0) + (cn ? 2 : 1);
 	res = malloc(count * sizeof(char*));
@@ -1206,6 +1206,7 @@ ssl_x509_names(X509 *crt)
 			p++;
 		}
 	}
+	*p = NULL;
 	GENERAL_NAMES_free(altnames);
 	return res;
 }
