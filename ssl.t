@@ -426,6 +426,36 @@ START_TEST(ssl_x509_names_01)
 }
 END_TEST
 
+START_TEST(ssl_x509_names_to_str_01)
+{
+	X509 *c;
+	char *names;
+
+	c = ssl_x509_load(TESTCERT);
+	fail_unless(!!c, "loading certificate failed");
+	names = ssl_x509_names_to_str(c);
+	fail_unless(!!names, "no string");
+	fail_unless(!strcmp(names,
+	            "daniel.roe.ch/daniel.roe.ch/www.roe.ch/*.roe.ch"),
+	            "wrong name string");
+	X509_free(c);
+}
+END_TEST
+
+START_TEST(ssl_x509_names_to_str_02)
+{
+	X509 *c;
+	char *names;
+
+	c = ssl_x509_load(TESTCERT2);
+	fail_unless(!!c, "loading certificate failed");
+	names = ssl_x509_names_to_str(c);
+	fail_unless(!!names, "no string");
+	fail_unless(!strcmp(names, "SSLsplit Root CA"), "wrong name string");
+	X509_free(c);
+}
+END_TEST
+
 START_TEST(ssl_x509_ocsps_01)
 {
 	X509 *c;
@@ -518,6 +548,12 @@ ssl_suite(void)
 	tc = tcase_create("ssl_x509_names");
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_x509_names_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ssl_x509_names_to_str");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_x509_names_to_str_01);
+	tcase_add_test(tc, ssl_x509_names_to_str_02);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_x509_ocsps");

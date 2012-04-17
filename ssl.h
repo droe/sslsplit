@@ -85,9 +85,9 @@ char * ssl_x509_subject(X509 *) NONNULL() MALLOC;
 char * ssl_x509_subject_cn(X509 *, size_t *) NONNULL() MALLOC;
 #define SSL_X509_FPRSZ 20
 int ssl_x509_fingerprint_sha1(X509 *, unsigned char *) NONNULL();
-int ssl_x509_names_match(X509 *, const char *) NONNULL();
-char * ssl_x509_names_to_str(X509 *, size_t) NONNULL() MALLOC;
 char ** ssl_x509_names(X509 *) NONNULL() MALLOC;
+int ssl_x509_names_match(X509 *, const char *) NONNULL();
+char * ssl_x509_names_to_str(X509 *) NONNULL() MALLOC;
 char ** ssl_x509_aias(X509 *, const int) NONNULL(1) MALLOC;
 char ** ssl_x509_ocsps(X509 *) NONNULL() MALLOC;
 int ssl_x509_is_valid(X509 *) NONNULL();

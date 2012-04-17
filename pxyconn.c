@@ -243,7 +243,7 @@ pxy_debug_crt(X509 *crt)
 		free(sj);
 	}
 
-	char *names = ssl_x509_names_to_str(crt, 60);
+	char *names = ssl_x509_names_to_str(crt);
 	if (names) {
 		log_dbg_printf("Common Names: %s\n", names);
 		free(names);
@@ -598,8 +598,8 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 	}
 
 	if (WANT_CONNECT_LOG(ctx)) {
-		ctx->ssl_names = ssl_x509_names_to_str(cert->crt, 128);
-		ctx->ssl_orignames = ssl_x509_names_to_str(ctx->origcrt, 128);
+		ctx->ssl_names = ssl_x509_names_to_str(cert->crt);
+		ctx->ssl_orignames = ssl_x509_names_to_str(ctx->origcrt);
 	}
 
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
@@ -670,7 +670,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			if (ctx->ssl_names) {
 				free(ctx->ssl_names);
 			}
-			ctx->ssl_names = ssl_x509_names_to_str(newcrt, 128);
+			ctx->ssl_names = ssl_x509_names_to_str(newcrt);
 		}
 		SSL_CTX *sslctx, *newsslctx;
 		newsslctx = pxy_srcsslctx_create(ctx, newcrt, ctx->opts->chain,

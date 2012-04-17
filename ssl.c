@@ -1081,72 +1081,6 @@ ssl_x509_names_match(X509 *crt, const char *dnsname)
 }
 
 /*
- * Returns a printable representation of a certificate's common names found
- * in the Subject DN CN and subjectAltNames extension.
- * If the length of the common names exceeds limit characters, the rest is
- * truncated.
- * Caller must free returned buffer.
- * Embedded NULL characters in hostnames are replaced with '!'.
- */
-char *
-ssl_x509_names_to_str(X509 *crt, size_t limit)
-{
-	GENERAL_NAMES *altnames;
-	char *cn, *buf;
-	size_t cnsz;
-
-	if ((limit == 0) || (limit > 1023))
-		limit = 1023;
-	buf = malloc(limit+1);
-	if (!buf)
-		return NULL;
-	buf[0] = '\0';
-
-	cn = ssl_x509_subject_cn(crt, &cnsz);
-	if (cn) {
-		strncat(buf, cn, limit);
-		free(cn);
-	}
-
-	altnames = X509_get_ext_d2i(crt, NID_subject_alt_name, 0, 0);
-	if (!altnames)
-		return buf;
-	for (int i = 0; i < sk_GENERAL_NAME_num(altnames); i++) {
-		GENERAL_NAME *gn = sk_GENERAL_NAME_value(altnames, i);
-		if (gn->type == GEN_DNS) {
-			unsigned char *altname;
-			int altnamesz;
-			size_t written;
-			ASN1_STRING_to_UTF8(&altname, gn->d.dNSName);
-			altnamesz = ASN1_STRING_length(gn->d.dNSName);
-			if (altnamesz < 0)
-				break;
-			if (strlen(buf) + 1 < limit)
-				strncat(buf, "/", 1);
-			written = strlen(buf);
-			for (int j = 0; j < altnamesz; j++) {
-				if (written < limit) {
-					buf[written] = altname[j] ?
-					               altname[j] : '!';
-					written++;
-				}
-			}
-			OPENSSL_free((char*)altname);
-			buf[written] = '\0';
-			if (written == limit) {
-				buf[limit-3] = '.';
-				buf[limit-2] = '.';
-				buf[limit-1] = '.';
-				GENERAL_NAMES_free(altnames);
-				return buf;
-			}
-		}
-	}
-	GENERAL_NAMES_free(altnames);
-	return buf;
-}
-
-/*
  * Returns a NULL terminated array of pointers to all common names found
  * in the Subject DN CN and subjectAltNames extension (DNSName only).
  * Caller must free returned buffer and all pointers within.
@@ -1209,6 +1143,46 @@ ssl_x509_names(X509 *crt)
 	*p = NULL;
 	GENERAL_NAMES_free(altnames);
 	return res;
+}
+
+/*
+ * Returns a printable representation of a certificate's common names found
+ * in the Subject DN CN and subjectAltNames extension, separated by slashes.
+ * Caller must free returned buffer.
+ * Embedded NULL characters in hostnames are replaced with '!'.
+ */
+char *
+ssl_x509_names_to_str(X509 *crt)
+{
+	char **names;
+	size_t sz;
+	char *buf, *next;
+
+	names = ssl_x509_names(crt);
+	if (!names)
+		return NULL;
+
+	sz = 0;
+	for (char **p = names; *p; p++) {
+		sz += strlen(*p) + 1;
+	}
+
+	if (!(buf = malloc(sz)))
+		goto out;
+	next = buf;
+	for (char **p = names; *p; p++) {
+		char *src = *p;
+		while (*src) {
+			*next++ = *src++;
+		}
+		*next++ = '/';
+	}
+	*--next = '\0';
+out:
+	for (char **p = names; *p; p++)
+		free(*p);
+	free(names);
+	return buf;
 }
 
 /*
