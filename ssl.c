@@ -1148,7 +1148,7 @@ ssl_x509_names_to_str(X509 *crt, size_t limit)
 
 /*
  * Returns a NULL terminated array of pointers to all common names found
- * in the Subject DN CN and subjectAltNames extension.
+ * in the Subject DN CN and subjectAltNames extension (DNSName only).
  * Caller must free returned buffer and all pointers within.
  * Embedded NULL characters in hostnames are replaced with '!'.
  */
@@ -1199,9 +1199,9 @@ ssl_x509_names(X509 *crt)
 				return NULL;
 			}
 			for (int j = 0; j < altnamesz; j++) {
-				*p[j] = altname[j] ? altname[j] : '!';
+				(*p)[j] = altname[j] ? altname[j] : '!';
 			}
-			*p[altnamesz] = '\0';
+			(*p)[altnamesz] = '\0';
 			OPENSSL_free((char*)altname);
 			p++;
 		}

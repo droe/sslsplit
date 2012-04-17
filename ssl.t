@@ -30,6 +30,20 @@
 
 #include "ssl.h"
 
+#define TESTCERT "extra/pki/server.crt"
+
+static void
+ssl_setup(void)
+{
+	ssl_init();
+}
+
+static void
+ssl_teardown(void)
+{
+	ssl_fini();
+}
+
 static char wildcard1[] = "*.example.org";
 static char wildcard2[] = "www.*.example.org";
 static char wildcard3[] = "*.*.org";
@@ -385,6 +399,32 @@ START_TEST(ssl_tls_clienthello_parse_sni_07)
 END_TEST
 #endif /* !OPENSSL_NO_TLSEXT */
 
+START_TEST(ssl_x509_names_01)
+{
+	X509 *c;
+	char **names, **p;
+
+	c = ssl_x509_load(TESTCERT);
+	fail_unless(!!c, "loading certificate failed");
+	names = ssl_x509_names(c);
+	fail_unless(!!names, "parsing names failed");
+	fail_unless(!!names[0], "first name");
+	fail_unless(!strcmp(names[0], "daniel.roe.ch"), "first name");
+	fail_unless(!!names[1], "second name");
+	fail_unless(!strcmp(names[1], "daniel.roe.ch"), "second name");
+	fail_unless(!!names[2], "third name");
+	fail_unless(!strcmp(names[2], "www.roe.ch"), "third name");
+	fail_unless(!!names[3], "fourth name");
+	fail_unless(!strcmp(names[3], "*.roe.ch"), "fourth name");
+	fail_unless(!names[4], "too many names");
+	p = names;
+	while (*p)
+		free(*p++);
+	free(names);
+	X509_free(c);
+}
+END_TEST
+
 START_TEST(ssl_features_01)
 {
 	int have_threads = 0;
@@ -439,6 +479,11 @@ ssl_suite(void)
 	tcase_add_test(tc, ssl_tls_clienthello_parse_sni_07);
 	suite_add_tcase(s, tc);
 #endif /* !OPENSSL_NO_TLSEXT */
+
+	tc = tcase_create("ssl_x509_names");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_x509_names_01);
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_features");
 	tcase_add_test(tc, ssl_features_01);
