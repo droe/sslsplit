@@ -121,6 +121,19 @@ START_TEST(base64_enc_05)
 }
 END_TEST
 
+START_TEST(base64_enc_06)
+{
+	char *buf;
+	size_t sz;
+
+	buf = base64_enc((unsigned char *)"", 0, &sz);
+	fail_unless(!!buf, "no buffer returned");
+	fail_unless(!sz, "length not 0");
+	fail_unless(!buf[0], "not empty string");
+	free(buf);
+}
+END_TEST
+
 START_TEST(base64_dec_01)
 {
 	unsigned char *buf;
@@ -286,6 +299,19 @@ START_TEST(base64_dec_15)
 }
 END_TEST
 
+START_TEST(base64_dec_16)
+{
+	unsigned char *buf;
+	size_t sz;
+
+	buf = base64_dec("", 0, &sz);
+	fail_unless(!!buf, "no buffer returned");
+	fail_unless(!sz, "length not 0");
+	fail_unless(!buf[0], "not empty string");
+	free(buf);
+}
+END_TEST
+
 Suite *
 base64_suite(void)
 {
@@ -300,6 +326,7 @@ base64_suite(void)
 	tcase_add_test(tc, base64_enc_03);
 	tcase_add_test(tc, base64_enc_04);
 	tcase_add_test(tc, base64_enc_05);
+	tcase_add_test(tc, base64_enc_06);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("base64_dec");
@@ -318,6 +345,7 @@ base64_suite(void)
 	tcase_add_test(tc, base64_dec_13);
 	tcase_add_test(tc, base64_dec_14);
 	tcase_add_test(tc, base64_dec_15);
+	tcase_add_test(tc, base64_dec_16);
 	suite_add_tcase(s, tc);
 
 	return s;

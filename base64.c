@@ -27,10 +27,12 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 /*
  * Base64 decode insz bytes from in.
- * Returns allocated buffer containing outsz bytes, not null terminated.
+ * Returns allocated buffer containing outsz bytes.
+ * The buffer is null-terminated, but the terminator is not included in outsz.
  * If in does not contain valid Base64 encoded data, returns NULL.
  * This is a very strict implementation.  Any characters not within the
  * Base64 alphabet are considered invalid, including newline and whitespace.
@@ -78,13 +80,18 @@ base64_dec(const char *in, size_t insz, size_t *outsz)
 	if (insz % 4)
 		return NULL;
 
+	if (insz == 0) {
+		*outsz = 0;
+		return (unsigned char *)strdup("");
+	}
+
 	if (in[insz - 2] == '=')
 		*outsz = ((insz / 4) * 3) - 2;
 	else if (in[insz - 1] == '=')
 		*outsz = ((insz / 4) * 3) - 1;
 	else
 		*outsz = (insz / 4) * 3;
-	if (!(out = malloc(*outsz))) {
+	if (!(out = malloc((*outsz) + 1))) {
 		*outsz = 0;
 		return NULL;
 	}
@@ -116,6 +123,7 @@ base64_dec(const char *in, size_t insz, size_t *outsz)
 		if (o + 2 < *outsz)
 			out[o + 2] =  tmp        & 0xff;
 	}
+	out[*outsz] = '\0';
 	return out;
 
 leave:
@@ -125,7 +133,8 @@ leave:
 
 /*
  * Base64 encode insz bytes from in.
- * Returns allocated buffer containing outsz bytes, not null terminated.
+ * Returns allocated buffer containing outsz bytes.
+ * The buffer is null-terminated, but the terminator is not included in outsz.
  */
 char *
 base64_enc(const unsigned char *in, size_t insz, size_t *outsz)
@@ -143,8 +152,13 @@ base64_enc(const unsigned char *in, size_t insz, size_t *outsz)
 	int tmp;
 	char *out;
 
+	if (insz == 0) {
+		*outsz = 0;
+		return strdup("");
+	}
+
 	*outsz = ((insz + 2) / 3) * 4;
-	if (!(out = malloc(*outsz))) {
+	if (!(out = malloc((*outsz) + 1))) {
 		*outsz = 0;
 		return NULL;
 	}
@@ -164,6 +178,7 @@ base64_enc(const unsigned char *in, size_t insz, size_t *outsz)
 		if (i + 3 > insz)
 			out[o + 3] = '=';
 	}
+	out[*outsz] = '\0';
 	return out;
 }
 
