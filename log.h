@@ -68,8 +68,8 @@ void log_content_open(log_content_ctx_t *, char *, char *) NONNULL();
 void log_content_submit(log_content_ctx_t *, logbuf_t *, int) NONNULL();
 void log_content_close(log_content_ctx_t *) NONNULL();
 
-int log_preinit(opts_t *) NONNULL();
-int log_init(opts_t *) NONNULL();
+int log_preinit(opts_t *) NONNULL() WUNRES;
+int log_init(opts_t *) NONNULL() WUNRES;
 void log_fini(void);
 
 #endif /* !LOG_H */

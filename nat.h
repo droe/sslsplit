@@ -29,6 +29,8 @@
 #ifndef NAT_H
 #define NAT_H
 
+#include "attrib.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -38,15 +40,15 @@ typedef int (*nat_lookup_cb_t)(struct sockaddr *, socklen_t *, evutil_socket_t,
                                struct sockaddr *, socklen_t);
 typedef int (*nat_socket_cb_t)(evutil_socket_t);
 
-int nat_exist(const char *);
-nat_lookup_cb_t nat_getlookupcb(const char *);
-nat_socket_cb_t nat_getsocketcb(const char *);
-int nat_ipv6ready(const char *);
+int nat_exist(const char *) WUNRES;
+nat_lookup_cb_t nat_getlookupcb(const char *) WUNRES;
+nat_socket_cb_t nat_getsocketcb(const char *) WUNRES;
+int nat_ipv6ready(const char *) WUNRES;
 
-const char *nat_getdefaultname(void);
+const char *nat_getdefaultname(void) WUNRES;
 void nat_list_engines(void);
-int nat_preinit(void);
-int nat_init(void);
+int nat_preinit(void) WUNRES;
+int nat_init(void) WUNRES;
 void nat_fini(void);
 void nat_version(void);
 

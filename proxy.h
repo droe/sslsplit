@@ -34,7 +34,7 @@
 
 typedef struct proxy_ctx proxy_ctx_t;
 
-proxy_ctx_t * proxy_new(opts_t *) NONNULL();
+proxy_ctx_t * proxy_new(opts_t *) NONNULL() MALLOC;
 void proxy_run(proxy_ctx_t *) NONNULL();
 void proxy_free(proxy_ctx_t *) NONNULL();
 

@@ -36,8 +36,8 @@
 
 void cachefkcrt_init_cb(struct cache *) NONNULL();
 
-cache_key_t cachefkcrt_mkkey(X509 *) NONNULL();
-cache_val_t cachefkcrt_mkval(X509 *) NONNULL();
+cache_key_t cachefkcrt_mkkey(X509 *) NONNULL() WUNRES;
+cache_val_t cachefkcrt_mkval(X509 *) NONNULL() WUNRES;
 
 #endif /* !CACHEFKCRT_H */
 

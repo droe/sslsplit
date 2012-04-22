@@ -38,7 +38,7 @@
 typedef ssize_t (*logger_write_func_t)(int, const void *, size_t);
 typedef struct logger logger_t;
 
-logger_t * logger_new(logger_write_func_t) NONNULL();
+logger_t * logger_new(logger_write_func_t) NONNULL() MALLOC;
 void logger_free(logger_t *) NONNULL();
 int logger_start(logger_t *) NONNULL();
 void logger_leave(logger_t *) NONNULL();

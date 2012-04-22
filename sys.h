@@ -35,22 +35,22 @@
 #include <sys/socket.h>
 #include <stdint.h>
 
-int sys_privdrop(const char *, const char *);
+int sys_privdrop(const char *, const char *) WUNRES;
 
-int sys_pidf_open(const char *) NONNULL();
-int sys_pidf_write(int);
+int sys_pidf_open(const char *) NONNULL() WUNRES;
+int sys_pidf_write(int) WUNRES;
 void sys_pidf_close(int, const char *) NONNULL(2);
 
 int sys_sockaddr_parse(struct sockaddr_storage *, socklen_t *,
-                       char *, char *, int, int) NONNULL(1,2,3,4);
-char * sys_sockaddr_str(struct sockaddr *, socklen_t) NONNULL(1);
+                       char *, char *, int, int) NONNULL(1,2,3,4) WUNRES;
+char * sys_sockaddr_str(struct sockaddr *, socklen_t) NONNULL(1) MALLOC;
 
-int sys_isdir(const char *) NONNULL();
+int sys_isdir(const char *) NONNULL() WUNRES;
 
 typedef void (*sys_dir_eachfile_cb_t)(const char *, void *) NONNULL(1);
 int sys_dir_eachfile(const char *, sys_dir_eachfile_cb_t, void *) NONNULL(1,2);
 
-uint32_t sys_get_cpu_cores(void);
+uint32_t sys_get_cpu_cores(void) WUNRES;
 
 #endif /* !SYS_H */
 

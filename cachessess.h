@@ -36,8 +36,9 @@
 
 void cachessess_init_cb(struct cache *) NONNULL();
 
-cache_key_t cachessess_mkkey(const unsigned char *, const size_t) NONNULL();
-cache_val_t cachessess_mkval(SSL_SESSION *) NONNULL();
+cache_key_t cachessess_mkkey(const unsigned char *, const size_t)
+            NONNULL() WUNRES;
+cache_val_t cachessess_mkval(SSL_SESSION *) NONNULL() WUNRES;
 
 #endif /* !CACHESSESS_H */
 

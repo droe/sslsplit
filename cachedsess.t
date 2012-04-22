@@ -60,8 +60,8 @@ static char sni[] = "daniel.roe.ch";
 static void
 cachemgr_setup(void)
 {
-	ssl_init();
-	cachemgr_init();
+	if ((ssl_init() == -1) || (cachemgr_init() == -1))
+		exit(EXIT_FAILURE);
 	addrlen = sizeof(struct sockaddr_in);
 	memset(&addr, 0, addrlen);
 	addr.ss_family = AF_INET;

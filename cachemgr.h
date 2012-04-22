@@ -40,7 +40,7 @@ extern cache_t *cachemgr_tgcrt;
 extern cache_t *cachemgr_ssess;
 extern cache_t *cachemgr_dsess;
 
-int cachemgr_init(void);
+int cachemgr_init(void) WUNRES;
 void cachemgr_fini(void);
 void cachemgr_gc(void);
 

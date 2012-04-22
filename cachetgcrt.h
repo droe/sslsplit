@@ -35,8 +35,8 @@
 
 void cachetgcrt_init_cb(struct cache *) NONNULL();
 
-cache_key_t cachetgcrt_mkkey(const char *) NONNULL();
-cache_val_t cachetgcrt_mkval(cert_t *) NONNULL();
+cache_key_t cachetgcrt_mkkey(const char *) NONNULL() WUNRES;
+cache_val_t cachetgcrt_mkval(cert_t *) NONNULL() WUNRES;
 
 #endif /* !CACHETGCRT_H */
 

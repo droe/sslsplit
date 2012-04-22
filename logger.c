@@ -92,8 +92,7 @@ logger_free(logger_t *logger) {
 int
 logger_submit(logger_t *logger, logbuf_t *lb)
 {
-	thrqueue_enqueue(logger->queue, lb);
-	return 0;
+	return thrqueue_enqueue(logger->queue, lb) ? 0 : -1;
 }
 
 /*

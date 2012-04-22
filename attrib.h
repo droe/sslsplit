@@ -45,7 +45,7 @@
 #define PRINTF(f,a)     __attribute__((format(printf,(f),(a))))
 #define SCANF(f,a)      __attribute__((format(scanf,(f),(a))))
 #define WUNRES          __attribute__((warn_unused_result))
-#define MALLOC          __attribute__((malloc))
+#define MALLOC          __attribute__((malloc)) WUNRES
 #define NONNULL(...)    __attribute__((nonnull(__VA_ARGS__)))
 #define PURE            __attribute__((pure))
 

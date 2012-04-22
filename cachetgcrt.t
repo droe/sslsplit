@@ -40,8 +40,8 @@
 static void
 cachemgr_setup(void)
 {
-	ssl_init();
-	cachemgr_init();
+	if ((ssl_init() == -1) || (cachemgr_init() == -1))
+		exit(EXIT_FAILURE);
 }
 
 static void
@@ -112,7 +112,7 @@ START_TEST(cache_tgcrt_04)
 	cert_free(c2);
 	/* deliberate access of free'd cert_t* */
 	fail_unless(c1->references == 0, "refcount != 0");
-	cachemgr_init();
+	fail_unless(cachemgr_init() != -1, "reinit");
 }
 END_TEST
 

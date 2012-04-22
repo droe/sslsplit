@@ -39,8 +39,9 @@
 
 void cachedsess_init_cb(struct cache *) NONNULL();
 
-cache_key_t cachedsess_mkkey(const struct sockaddr *, const socklen_t, const char *) NONNULL();
-cache_val_t cachedsess_mkval(SSL_SESSION *) NONNULL();
+cache_key_t cachedsess_mkkey(const struct sockaddr *, const socklen_t,
+                             const char *) NONNULL() WUNRES;
+cache_val_t cachedsess_mkval(SSL_SESSION *) NONNULL() WUNRES;
 
 #endif /* !CACHEDSESS_H */
 

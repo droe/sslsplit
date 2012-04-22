@@ -48,7 +48,7 @@ logbuf_t * logbuf_new_alloc(size_t, int, logbuf_t *) MALLOC;
 logbuf_t * logbuf_new_copy(const void *, size_t, int, logbuf_t *) MALLOC;
 logbuf_t * logbuf_new_printf(int, logbuf_t *, const char *, ...)
            MALLOC PRINTF(3,4);
-ssize_t logbuf_size(logbuf_t *) NONNULL();
+ssize_t logbuf_size(logbuf_t *) NONNULL() WUNRES;
 ssize_t logbuf_write_free(logbuf_t *, writefunc_t) NONNULL(1);
 void logbuf_free(logbuf_t *) NONNULL();
 

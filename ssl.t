@@ -39,7 +39,8 @@
 static void
 ssl_setup(void)
 {
-	ssl_init();
+	if (ssl_init() == -1)
+		exit(EXIT_FAILURE);
 }
 
 static void

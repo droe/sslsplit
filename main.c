@@ -620,8 +620,10 @@ main(int argc, char *argv[])
 		}
 		log_err_mode(LOG_ERR_MODE_SYSLOG);
 	}
-	if (opts->pidfile) {
-		sys_pidf_write(pidfd);
+	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
+		fprintf(stderr, "%s: failed to write PID file to '%s': %s\n",
+		                argv0, opts->pidfile, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
