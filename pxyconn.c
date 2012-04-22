@@ -33,6 +33,7 @@
 #include "ssl.h"
 #include "opts.h"
 #include "sys.h"
+#include "util.h"
 #include "log.h"
 #include "attrib.h"
 
@@ -862,7 +863,7 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 	} else {
 		/* not first line */
 		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
-			ctx->http_host = strdup(line + 6);
+			ctx->http_host = strdup(util_skipws(line + 6));
 		} else if (!strncasecmp(line, "Connection: ", 12)) {
 			ctx->sent_http_conn_close = 1;
 			return strdup("Connection: close");
