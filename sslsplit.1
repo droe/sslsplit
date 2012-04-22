@@ -30,22 +30,16 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-OPZdDgGseujplLS\fP]
-\fB-k\fP \fIpem\fP \fB-c\fP \fIpem\fP [\fB-C\fP \fIpem\fP] \
-[\fB-K\fP \fIpem\fP]
-\fIspecs\fP
+[\fB-kCKOPZdDgGseujplLS\fP] \fB-c\fP \fIpem\fP
+\fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGseujplLS\fP]
-\fB-t\fP \fIdir\fP
-\fIspecs\fP
+[\fB-kCKOPZdDgGseujplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+\fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGseujplLS\fP]
-\fB-t\fP \fIdir\fP
-\fB-k\fP \fIpem\fP \fB-c\fP \fIpem\fP [\fB-C\fP \fIpem\fP] \
-[\fB-K\fP \fIpem\fP]
-\fIspecs\fP
+[\fB-OPZdDgGseujplLS\fP] \fB-t\fP \fIdir\fP
+\fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
 .br
@@ -86,6 +80,8 @@ SSLsplit does not implement the actual traffic redirection.
 Use CA certificate from \fIpemfile\fP to sign certificates forged on-the-fly.
 If \fIpemfile\fP also contains the matching CA private key, it is also loaded,
 otherwise it must be provided with \fB-k\fP.
+If \fIpemfile\fP also contains Diffie-Hellman group parameters, they are also
+loaded, otherwise they can be provided with \fB-g\fP.
 If \fB-t\fP is also given, SSLsplit will only forge a certificate if there is
 no matching certificate in the provided certificate directory.
 .TP
@@ -104,7 +100,7 @@ Run in debug mode, log lots of debugging information to standard error.  This
 also forces foreground mode and cannot be used with \fB-d\fP.
 .TP
 .B \-e \fIengine\fP
-Use \fIengine\fP as the default NAT engine for \fIspecs\fP without
+Use \fIengine\fP as the default NAT engine for \fIproxyspecs\fP without
 explicit NAT engine, static destination address or SNI mode.
 \fIengine\fP can be any of the NAT engines supported by the system, as
 returned by \fB-E\fP.
@@ -151,6 +147,8 @@ If \fB-j\fP is not given, SSLsplit will automatically change root directory to
 Use CA private key from \fIpemfile\fP to sign certificates forged on-the-fly.
 If \fIpemfile\fP also contains the matching CA certificate, it is also loaded,
 otherwise it must be provided with \fB-c\fP.
+If \fIpemfile\fP also contains Diffie-Hellman group parameters, they are also
+loaded, otherwise they can be provided with \fB-g\fP.
 If \fB-t\fP is also given, SSLsplit will only forge a certificate if there is
 no matching certificate in the provided certificate directory.
 .TP
@@ -168,9 +166,10 @@ parsable log format with transmitted data, prepended with headers identifying
 the connection and the data length of each logged segment.
 .TP
 .B \-O
-Deny all Online Certificate Status Protocol (OCSP) requests on all proxy
-\fIspecs\fP and for all OCSP servers with an OCSP response of \fBtryLater\fP,
-causing OCSP clients to temporarily accept even revoked certificates.
+Deny all Online Certificate Status Protocol (OCSP) requests on all
+\fIproxyspecs\fP and for all OCSP servers with an OCSP response of
+\fBtryLater\fP, causing OCSP clients to temporarily accept even revoked
+certificates.
 HTTP requests are being treated as OCSP requests if the method is \fBGET\fP
 and the URI contains a syntactically valid OCSPRequest ASN.1 structure
 parsable by OpenSSL, or if the method is \fBPOST\fP and the \fBContent-Type\fP
@@ -241,7 +240,7 @@ limiting factor is CPU, not network bandwidth.
 The \fB-Z\fP option is only available if SSLsplit was built against a version
 of OpenSSL which supports disabling compression.
 .SH "PROXY SPECIFICATIONS"
-Proxy specifications (\fIspecs\fP) consist of the connection type, listen
+Proxy specifications (\fIproxyspecs\fP) consist of the connection type, listen
 address and static forward address or address resolution mechanism (NAT engine,
 SNI DNS lookup):
 .LP
@@ -278,7 +277,7 @@ is used, connections are forwarded to the given server address and port.
 \fBsni\fP \fIport\fP
 Use the Server Name Indication (SNI) hostname sent by the client in the
 ClientHello SSL/TLS message to determine the IP address of the server to
-connect to.  This only works for \fBssl\fP and \fBhttps\fP \fIspecs\fP and
+connect to.  This only works for \fBssl\fP and \fBhttps\fP \fIproxyspecs\fP and
 needs a port or service name as an argument.
 This is the only way to redirect traffic transparently using NAT rules and run
 \fBsslsplit\fP on a different system than the NAT engine.

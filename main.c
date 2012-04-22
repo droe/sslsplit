@@ -98,8 +98,8 @@ main_usage(void)
 
 	fprintf(stderr,
 "Usage: %s [options...] [proxyspecs...]\n"
-"  -k pemfile  use CA key from pemfile to sign forged certs\n"
-"  -c pemfile  use CA cert from pemfile to sign forged certs\n"
+"  -c pemfile  use CA cert (and key) from pemfile to sign forged certs\n"
+"  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
@@ -226,6 +226,33 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
 	                    "k:c:C:K:t:OPs:e:Eu:j:p:l:L:S:dDVh")) != -1) {
 		switch (ch) {
+			case 'c':
+				if (opts->cacrt)
+					X509_free(opts->cacrt);
+				opts->cacrt = ssl_x509_load(optarg);
+				if (!opts->cacrt) {
+					fprintf(stderr, "%s: error loading CA "
+					                "cert from '%s':\n",
+					                argv0, optarg);
+					if (errno) {
+						fprintf(stderr, "%s\n",
+						        strerror(errno));
+					} else {
+						ERR_print_errors_fp(stderr);
+					}
+					exit(EXIT_FAILURE);
+				}
+				ssl_x509_refcount_inc(opts->cacrt);
+				sk_X509_insert(opts->chain, opts->cacrt, 0);
+				if (!opts->cakey) {
+					opts->cakey = ssl_key_load(optarg);
+				}
+#ifndef OPENSSL_NO_DH
+				if (!opts->dh) {
+					opts->dh = ssl_dh_load(optarg);
+				}
+#endif /* !OPENSSL_NO_DH */
+				break;
 			case 'k':
 				if (opts->cakey)
 					EVP_PKEY_free(opts->cakey);
@@ -244,34 +271,18 @@ main(int argc, char *argv[])
 				}
 				if (!opts->cacrt) {
 					opts->cacrt = ssl_x509_load(optarg);
+					if (opts->cacrt) {
+						ssl_x509_refcount_inc(
+						               opts->cacrt);
+						sk_X509_insert(opts->chain,
+						               opts->cacrt, 0);
+					}
 				}
 #ifndef OPENSSL_NO_DH
 				if (!opts->dh) {
 					opts->dh = ssl_dh_load(optarg);
 				}
 #endif /* !OPENSSL_NO_DH */
-				break;
-			case 'c':
-				if (opts->cacrt)
-					X509_free(opts->cacrt);
-				opts->cacrt = ssl_x509_load(optarg);
-				if (!opts->cacrt) {
-					fprintf(stderr, "%s: error loading CA "
-					                "cert from '%s':\n",
-					                argv0, optarg);
-					if (errno) {
-						fprintf(stderr, "%s\n",
-						        strerror(errno));
-					} else {
-						ERR_print_errors_fp(stderr);
-					}
-					exit(EXIT_FAILURE);
-				}
-				if (!opts->cakey) {
-					opts->cakey = ssl_key_load(optarg);
-				}
-				ssl_x509_refcount_inc(opts->cacrt);
-				sk_X509_insert(opts->chain, opts->cacrt, 0);
 				break;
 			case 'C':
 				if (ssl_x509chain_load(NULL, &opts->chain,
