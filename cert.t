@@ -74,11 +74,11 @@ cert_suite(void)
 
 	s = suite_create("cert");
 
-	tc = tcase_create("cert_new_load_01");
+	tc = tcase_create("cert_new_load");
 	tcase_add_test(tc, cert_new_load_01);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("cert_refcount_inc_01");
+	tc = tcase_create("cert_refcount_inc");
 	tcase_add_test(tc, cert_refcount_inc_01);
 	suite_add_tcase(s, tc);
 
