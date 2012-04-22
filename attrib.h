@@ -47,6 +47,7 @@
 #define WUNRES          __attribute__((warn_unused_result))
 #define MALLOC          __attribute__((malloc))
 #define NONNULL(...)    __attribute__((nonnull(__VA_ARGS__)))
+#define PURE            __attribute__((pure))
 
 #endif /* !ATTRIB_H */
 
