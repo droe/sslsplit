@@ -1,8 +1,8 @@
+-   Handle strdup() failure more gracefully in pxyconn.c (low mem conditions)
 -   Parse some information from HTTP responses (status, size)
 -   Handle renego & client cert authentication more gracefully
 -   Separate orig cert retrieval from actual fwd address/proto config
--   OCSP denial mode based on targetdir cert's OCSP servers
--   CRL "denial" mode based on targetdir cert's CDPs
+-   CRL denial mode based on targetdir cert's CDPs or by identifying CRL ASN.1
 -   Client fingerprinting: only intercept clients with headers matching regex
 -   Configurable and/or scriptable modification of requests and/or responses
 -   STARTTLS for various protocols

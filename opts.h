@@ -58,6 +58,7 @@ typedef struct opts {
 	unsigned int detach : 1;
 	unsigned int sslcomp : 1;
 	unsigned int passthrough : 1;
+	unsigned int deny_ocsp : 1;
 	unsigned int contentlogdir : 1;
 	char *ciphers;
 	char *tgcrtdir;

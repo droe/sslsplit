@@ -18,7 +18,7 @@ subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
 Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
 ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
 private key is available, instead of generating forged ones.  SSLsplit supports
-NULL-prefix CN certificates.
+NULL-prefix CN certificates and can deny OCSP requests in a generic way.
 
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.

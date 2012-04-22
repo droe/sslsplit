@@ -104,6 +104,7 @@ main_usage(void)
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
+"  -O          deny all OCSP requests on all proxyspecs\n"
 "  -P          passthrough SSL connections if they cannot be split because of\n"
 "              client cert auth or no matching cert and no CA (default: drop)\n"
 #ifndef OPENSSL_NO_DH
@@ -223,7 +224,7 @@ main(int argc, char *argv[])
 	natengine = strdup(nat_getdefaultname());
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
-	                    "k:c:C:K:t:Ps:e:Eu:j:p:l:L:S:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:e:Eu:j:p:l:L:S:dDVh")) != -1) {
 		switch (ch) {
 			case 'k':
 				if (opts->cakey)
@@ -319,6 +320,9 @@ main(int argc, char *argv[])
 				if (opts->tgcrtdir)
 					free(opts->tgcrtdir);
 				opts->tgcrtdir = strdup(optarg);
+				break;
+			case 'O':
+				opts->deny_ocsp = 1;
 				break;
 			case 'P':
 				opts->passthrough = 1;

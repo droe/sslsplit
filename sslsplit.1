@@ -30,18 +30,18 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-PZdDgGseujplLS\fP]
+[\fB-OPZdDgGseujplLS\fP]
 \fB-k\fP \fIpem\fP \fB-c\fP \fIpem\fP [\fB-C\fP \fIpem\fP] \
 [\fB-K\fP \fIpem\fP]
 \fIspecs\fP
 .br
 .B sslsplit
-[\fB-PZdDgGseujplLS\fP]
+[\fB-OPZdDgGseujplLS\fP]
 \fB-t\fP \fIdir\fP
 \fIspecs\fP
 .br
 .B sslsplit
-[\fB-PZdDgGseujplLS\fP]
+[\fB-OPZdDgGseujplLS\fP]
 \fB-t\fP \fIdir\fP
 \fB-k\fP \fIpem\fP \fB-c\fP \fIpem\fP [\fB-C\fP \fIpem\fP] \
 [\fB-K\fP \fIpem\fP]
@@ -68,7 +68,7 @@ subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
 Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
 ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
 private key is available, instead of generating forged ones.  SSLsplit supports
-NULL-prefix CN certificates.
+NULL-prefix CN certificates and can deny OCSP requests in a generic way.
 .LP
 SSLsplit supports a number of NAT engines, static forwarding and SNI DNS
 lookups to determine the original destination of redirected connections
@@ -166,6 +166,19 @@ including addresses and ports and some HTTP and SSL information, if available.
 Log connection content to \fIlogfile\fP.  The content log will contain a
 parsable log format with transmitted data, prepended with headers identifying
 the connection and the data length of each logged segment.
+.TP
+.B \-O
+Deny all Online Certificate Status Protocol (OCSP) requests on all proxy
+\fIspecs\fP and for all OCSP servers with an OCSP response of \fBtryLater\fP,
+causing OCSP clients to temporarily accept even revoked certificates.
+HTTP requests are being treated as OCSP requests if the method is \fBGET\fP
+and the URI contains a syntactically valid OCSPRequest ASN.1 structure
+parsable by OpenSSL, or if the method is \fBPOST\fP and the \fBContent-Type\fP
+is \fBapplication/ocsp-request\fP.
+For this to be effective, SSLsplit must be handling traffic destined to the
+port used by the OCSP server.  In particular, SSLsplit must be configured to
+receive traffic to all ports used by OCSP servers of targetted certificates
+within the \fIcertdir\fP specified by \fB-t\fP.
 .TP
 .B \-p \fIpidfile\fP
 Write the process ID to \fIpidfile\fP and refuse to run if the \fIpidfile\fP

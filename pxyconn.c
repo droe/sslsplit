@@ -34,6 +34,8 @@
 #include "opts.h"
 #include "sys.h"
 #include "util.h"
+#include "base64.h"
+#include "url.h"
 #include "log.h"
 #include "attrib.h"
 
@@ -104,6 +106,7 @@ typedef struct pxy_conn_ctx {
 	unsigned int seen_req_header : 1; /* 0 until HTTP header is complete */
 	unsigned int sent_http_conn_close : 1;   /* 0 until Conn: close sent */
 	unsigned int passthrough : 1;      /* 1 if SSL passthrough is active */
+	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 
 	/* server name indicated by client in SNI TLS extension */
@@ -115,6 +118,7 @@ typedef struct pxy_conn_ctx {
 	char *http_method;
 	char *http_uri;
 	char *http_host;
+	char *http_content_type;
 	char *ssl_names;
 	char *ssl_orignames;
 
@@ -195,6 +199,9 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->http_host) {
 		free(ctx->http_host);
+	}
+	if (ctx->http_content_type) {
+		free(ctx->http_content_type);
 	}
 	if (ctx->ssl_names) {
 		free(ctx->ssl_names);
@@ -317,15 +324,16 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #endif
 
 	if (!ctx->spec->ssl) {
-		rv = asprintf(&msg, "http %s %s %s %s %s\n",
+		rv = asprintf(&msg, "http %s %s %s %s %s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
 		              STRORDASH(ctx->http_method),
-		              STRORDASH(ctx->http_uri));
+		              STRORDASH(ctx->http_uri),
+		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	} else {
 		rv = asprintf(&msg, "https %s %s %s %s %s "
-		              "sni:%s crt:%s origcrt:%s\n",
+		              "sni:%s crt:%s origcrt:%s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -333,7 +341,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->http_uri),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
-		              STRORDASH(ctx->ssl_orignames));
+		              STRORDASH(ctx->ssl_orignames),
+		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	}
 	if ((rv == -1) || !msg)
 		return;
@@ -864,6 +873,8 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		/* not first line */
 		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
 			ctx->http_host = strdup(util_skipws(line + 6));
+		} else if (!strncasecmp(line, "Content-Type: ", 14)) {
+			ctx->http_content_type = strdup(util_skipws(line + 14));
 		} else if (!strncasecmp(line, "Connection: ", 12)) {
 			ctx->sent_http_conn_close = 1;
 			return strdup("Connection: close");
@@ -879,6 +890,99 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 	}
 
 	return (char*)line;
+}
+
+/*
+ * Return 1 if uri is an OCSP GET URI, 0 if not.
+ */
+static int
+pxy_ocsp_is_valid_uri(const char *uri)
+{
+	char *buf_url;
+	char *buf_b64;
+	size_t sz_b64;
+	unsigned char *buf_asn1;
+	size_t sz_asn1;
+	int ret;
+
+	buf_url = strrchr(uri, '/');
+	if (!buf_url)
+		return 0;
+	buf_b64 = url_dec(buf_url, strlen(buf_url), &sz_b64);
+	if (!buf_b64)
+		return 0;
+	buf_asn1 = base64_dec(buf_b64, sz_b64, &sz_asn1);
+	if (!buf_asn1) {
+		free(buf_b64);
+		return 0;
+	}
+	ret = ssl_is_ocspreq(buf_asn1, sz_asn1);
+	free(buf_asn1);
+	free(buf_b64);
+	return ret;
+}
+
+/*
+ * Called after a request header was completely read.
+ * If the request is an OCSP request, deny the request by sending an
+ * OCSP response of type tryLater and close the connection to the server.
+ *
+ * Reference:
+ * RFC 2560: X.509 Internet PKI Online Certificate Status Protocol (OCSP)
+ */
+static void
+pxy_ocsp_deny(pxy_conn_ctx_t *ctx)
+{
+	struct evbuffer *inbuf, *outbuf;
+	static const char ocspresp[] =
+		"HTTP/1.0 200 OK\r\n"
+		"Content-Type: application/ocsp-response\r\n"
+		"Content-Length: 5\r\n"
+		"Connection: close\r\n"
+		"\r\n"
+		"\x30\x03"      /* OCSPResponse: SEQUENCE */
+		"\x0a\x01"      /* OCSPResponseStatus: ENUMERATED */
+		"\x03";         /* tryLater (3) */
+
+	if (!ctx->http_method)
+		return;
+	if (!strncasecmp(ctx->http_method, "GET", 3) &&
+	    pxy_ocsp_is_valid_uri(ctx->http_uri))
+		goto deny;
+	if (!strncasecmp(ctx->http_method, "POST", 4) &&
+	    ctx->http_content_type &&
+	    !strncasecmp(ctx->http_content_type,
+	                 "application/ocsp-request", 24))
+		goto deny;
+	return;
+
+deny:
+	inbuf = bufferevent_get_input(ctx->src.bev);
+	outbuf = bufferevent_get_output(ctx->src.bev);
+
+	if (evbuffer_get_length(inbuf) > 0) {
+		if (WANT_CONTENT_LOG(ctx)) {
+			logbuf_t *lb;
+			lb = logbuf_new_alloc(evbuffer_get_length(inbuf),
+			                      -1, NULL);
+			if (lb &&
+			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
+				log_content_submit(&ctx->logctx, lb, 0);
+			}
+		}
+		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
+	}
+	bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
+	ctx->dst.closed = 1;
+	evbuffer_add_printf(outbuf, ocspresp);
+	ctx->ocsp_denied = 1;
+	if (WANT_CONTENT_LOG(ctx)) {
+		logbuf_t *lb;
+		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1, -1, NULL);
+		if (lb) {
+			log_content_submit(&ctx->logctx, lb, 1);
+		}
+	}
 }
 
 /*
@@ -940,6 +1044,9 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 			free(line);
 			if (ctx->seen_req_header) {
+				if (ctx->opts->deny_ocsp) {
+					pxy_ocsp_deny(ctx);
+				}
 				if (WANT_CONNECT_LOG(ctx)) {
 					pxy_log_connect_http(ctx);
 				}
