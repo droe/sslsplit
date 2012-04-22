@@ -861,8 +861,7 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		}
 	} else {
 		/* not first line */
-		if (!ctx->http_host &&
-		    !strncasecmp(line, "Host: ", 6)) {
+		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
 			ctx->http_host = strdup(line + 6);
 		} else if (!strncasecmp(line, "Connection: ", 12)) {
 			ctx->sent_http_conn_close = 1;
@@ -960,11 +959,9 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
 		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), -1, NULL);
-		if (lb) {
-			if (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1) {
-				log_content_submit(&ctx->logctx, lb,
-				                   (bev != ctx->src.bev));
-			}
+		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
+			log_content_submit(&ctx->logctx, lb,
+			                   (bev != ctx->src.bev));
 		}
 	}
 	evbuffer_add_buffer(outbuf, inbuf);
