@@ -238,8 +238,8 @@ ssl_init(void)
 {
 #ifndef PURIFY
 	int fd;
-	char buf[256];
 #endif /* !PURIFY */
+	char buf[256];
 
 	if (ssl_initialized)
 		return 0;
@@ -293,6 +293,7 @@ ssl_init(void)
 		return -1;
 	}
 #else /* PURIFY */
+	log_err_printf("Warning: not seeding OpenSSL RAND due to PURITY!\n");
 	memset(buf, 0, sizeof(buf));
 	while (!RAND_status()) {
 		RAND_seed(buf, sizeof(buf));
