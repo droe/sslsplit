@@ -67,7 +67,7 @@
 /*
  * Print helper for logging code.
  */
-#define STRORDASH(x)	((x)?(x):"-")
+#define STRORDASH(x)	(((x)&&*(x))?(x):"-")
 
 /*
  * Context used for all server sessions.
