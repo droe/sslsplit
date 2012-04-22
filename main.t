@@ -73,6 +73,7 @@ Suite * cachedsess_suite(void);
 Suite * cachessess_suite(void);
 Suite * ssl_suite(void);
 Suite * sys_suite(void);
+Suite * base64_suite(void);
 
 int
 main(UNUSED int argc, UNUSED char *argv[])
@@ -91,6 +92,7 @@ main(UNUSED int argc, UNUSED char *argv[])
 	srunner_add_suite(sr, cachessess_suite());
 	srunner_add_suite(sr, ssl_suite());
 	srunner_add_suite(sr, sys_suite());
+	srunner_add_suite(sr, base64_suite());
 	srunner_run_all(sr, CK_NORMAL);
 	nfail = srunner_ntests_failed(sr);
 	srunner_free(sr);
