@@ -26,80 +26,96 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "attrib.h"
-#include "opts.h"
-#include "version.h"
-
 #include <check.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
 
-Suite *
-blank_suite(void)
+#include "url.h"
+
+static const char *plain01 = "===1234===";
+static const char *plain02 = "\x00\x01\x7F\xFF";
+
+static const char *coded01 = "%3D%3D%3D1234%3D%3D%3D";
+static const char *coded02 = "%00%01%7F%FF";
+
+static const char *coded03 = "%";
+static const char *coded04 = "foo%zzbar";
+static const char *coded05 = "foo%a%3Dbar";
+
+START_TEST(url_dec_01)
 {
-	Suite *s;
-	s = suite_create("");
-	return s;
+	char *buf;
+	size_t sz;
+
+	buf = url_dec(coded01, strlen(coded01), &sz);
+	fail_unless(!!buf, "no buffer returned");
+	fail_unless(sz == strlen(plain01), "wrong length");
+	fail_unless(!memcmp(plain01, buf, sz), "wrong data");
+	free(buf);
 }
+END_TEST
 
-START_TEST(build_date_01)
+START_TEST(url_dec_02)
 {
-	fail_unless(strlen(build_date) == 10, "length mismatch");
-	fail_unless(build_date[4] == '-', "year/month separator not dash");
-	fail_unless(build_date[7] == '-', "month/day separator not dash");
+	char *buf;
+	size_t sz;
+
+	buf = url_dec(coded02, strlen(coded02), &sz);
+	fail_unless(!!buf, "no buffer returned");
+	fail_unless(sz == strlen(plain02 + 1) + 1, "wrong length");
+	fail_unless(!memcmp(plain02, buf, sz), "wrong data");
+	free(buf);
+}
+END_TEST
+
+START_TEST(url_dec_03)
+{
+	char *buf;
+	size_t sz;
+
+	buf = url_dec(coded03, strlen(coded03), &sz);
+	fail_unless(!buf, "buffer returned");
+}
+END_TEST
+
+START_TEST(url_dec_04)
+{
+	char *buf;
+	size_t sz;
+
+	buf = url_dec(coded04, strlen(coded04), &sz);
+	fail_unless(!buf, "buffer returned");
+}
+END_TEST
+
+START_TEST(url_dec_05)
+{
+	char *buf;
+	size_t sz;
+
+	buf = url_dec(coded05, strlen(coded05), &sz);
+	fail_unless(!buf, "buffer returned");
 }
 END_TEST
 
 Suite *
-main_suite(void)
+url_suite(void)
 {
 	Suite *s;
 	TCase *tc;
-	s = suite_create("main");
 
-	tc = tcase_create("build_date");
-	tcase_add_test(tc, build_date_01);
+	s = suite_create("url");
+
+	tc = tcase_create("url_dec");
+	tcase_add_test(tc, url_dec_01);
+	tcase_add_test(tc, url_dec_02);
+	tcase_add_test(tc, url_dec_03);
+	tcase_add_test(tc, url_dec_04);
+	tcase_add_test(tc, url_dec_05);
 	suite_add_tcase(s, tc);
 
 	return s;
-}
-
-Suite * opts_suite(void);
-Suite * cert_suite(void);
-Suite * cachemgr_suite(void);
-Suite * cachefkcrt_suite(void);
-Suite * cachetgcrt_suite(void);
-Suite * cachedsess_suite(void);
-Suite * cachessess_suite(void);
-Suite * ssl_suite(void);
-Suite * sys_suite(void);
-Suite * base64_suite(void);
-Suite * url_suite(void);
-
-int
-main(UNUSED int argc, UNUSED char *argv[])
-{
-	int nfail;
-	SRunner *sr;
-
-	sr = srunner_create(blank_suite());
-	srunner_add_suite(sr, main_suite());
-	srunner_add_suite(sr, opts_suite());
-	srunner_add_suite(sr, cert_suite());
-	srunner_add_suite(sr, cachemgr_suite());
-	srunner_add_suite(sr, cachefkcrt_suite());
-	srunner_add_suite(sr, cachetgcrt_suite());
-	srunner_add_suite(sr, cachedsess_suite());
-	srunner_add_suite(sr, cachessess_suite());
-	srunner_add_suite(sr, ssl_suite());
-	srunner_add_suite(sr, sys_suite());
-	srunner_add_suite(sr, base64_suite());
-	srunner_add_suite(sr, url_suite());
-	srunner_run_all(sr, CK_NORMAL);
-	nfail = srunner_ntests_failed(sr);
-	srunner_free(sr);
-
-	return !nfail ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /* vim: set noet ft=c: */
