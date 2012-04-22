@@ -101,6 +101,8 @@ void ssl_x509chain_use(SSL_CTX *, X509 *, STACK_OF(X509) *) NONNULL();
 char * ssl_session_to_str(SSL_SESSION *) NONNULL() MALLOC;
 int ssl_session_is_valid(SSL_SESSION *) NONNULL();
 
+int ssl_is_ocspreq(const unsigned char *, size_t) NONNULL();
+
 #ifndef OPENSSL_NO_TLSEXT
 char * ssl_tls_clienthello_parse_sni(const unsigned char *, ssize_t *) \
        NONNULL() MALLOC;

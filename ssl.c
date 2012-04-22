@@ -46,6 +46,7 @@
 #endif /* !OPENSSL_NO_DH */
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <openssl/ocsp.h>
 
 /*
  * Collection of helper functions on top of the OpenSSL API.
@@ -1369,6 +1370,24 @@ ssl_session_is_valid(SSL_SESSION *sess)
 	if (curtime > LONG_MAX - timeout)
 		return 0;
 	return (SSL_SESSION_get_time(sess) < curtime + timeout);
+}
+
+/*
+ * Returns 1 if buf contains a DER encoded OCSP request which can be parsed.
+ * Returns 0 otherwise.
+ */
+int
+ssl_is_ocspreq(const unsigned char *buf, size_t sz)
+{
+	OCSP_REQUEST *req;
+	const unsigned char *p;
+
+	p = (const unsigned char *)buf;
+	req = d2i_OCSP_REQUEST(NULL, &p, sz); /* increments p */
+	if (!req)
+		return 0;
+	OCSP_REQUEST_free(req);
+	return 1;
 }
 
 #ifndef OPENSSL_NO_TLSEXT

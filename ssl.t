@@ -28,6 +28,7 @@
 
 #include <check.h>
 
+#include "base64.h"
 #include "ssl.h"
 
 #define TESTCERT "extra/pki/server.crt"
@@ -490,6 +491,21 @@ START_TEST(ssl_x509_ocsps_02)
 }
 END_TEST
 
+static char ocspreq01[] =
+	"MEIwQDA+MDwwOjAJBgUrDgMCGgUABBT4cyABkyiCIhU4JpmIB"
+	"ewdDnn8ZgQUbyBZ44kgy35o7xW5BMzM8FTvyTwCAQE=";
+
+START_TEST(ssl_is_ocspreq_01)
+{
+	unsigned char *buf;
+	size_t sz;
+
+	buf = base64_dec(ocspreq01, sizeof(ocspreq01) - 1, &sz);
+	fail_unless(!!buf, "failed to base64 decode");
+	fail_unless(ssl_is_ocspreq(buf, sz), "is not ocsp req");
+}
+END_TEST
+
 START_TEST(ssl_features_01)
 {
 	int have_threads = 0;
@@ -560,6 +576,10 @@ ssl_suite(void)
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_x509_ocsps_01);
 	tcase_add_test(tc, ssl_x509_ocsps_02);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ssl_is_ocspreq");
+	tcase_add_test(tc, ssl_is_ocspreq_01);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_features");
