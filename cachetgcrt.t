@@ -26,13 +26,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include "ssl.h"
 #include "cert.h"
 #include "cachemgr.h"
+
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <check.h>
 
 #define TESTCERT "extra/pki/targets/daniel.roe.ch.pem"
 

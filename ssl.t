@@ -26,10 +26,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
-
 #include "base64.h"
 #include "ssl.h"
+
+#include <stdlib.h>
+
+#include <check.h>
 
 #define TESTCERT "extra/pki/server.crt"
 #define TESTCERT2 "extra/pki/rsa.crt"

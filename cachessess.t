@@ -26,14 +26,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
+#include "ssl.h"
+#include "cachemgr.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
-#include "ssl.h"
-#include "cachemgr.h"
+#include <check.h>
 
 #define TMP_SESS_FILE "extra/pki/session.pem"
 

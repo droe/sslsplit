@@ -31,6 +31,8 @@
 
 #include "attrib.h"
 
+#include <stdlib.h>
+
 char * url_dec(const char *, size_t, size_t *) NONNULL() MALLOC;
 
 #endif /* !URL_H */

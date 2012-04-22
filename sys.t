@@ -26,7 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
+#include "sys.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -35,7 +36,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "sys.h"
+#include <check.h>
 
 static char basedir[] = "/tmp/" BNAME ".test.XXXXXX";
 static char *file, *lfile, *dir, *ldir, *notexist;

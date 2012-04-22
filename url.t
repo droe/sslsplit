@@ -26,12 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
+#include "url.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "url.h"
+#include <check.h>
 
 static const char *plain01 = "===1234===";
 static const char *plain02 = "\x00\x01\x7F\xFF";

@@ -26,12 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
+#include "base64.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "base64.h"
+#include <check.h>
 
 static const char *plain01 = "any carnal pleasure.";
 static const char *plain02 = "any carnal pleasure";

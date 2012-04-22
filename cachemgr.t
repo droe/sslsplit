@@ -26,12 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <check.h>
+#include "cachemgr.h"
+#include "khash.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "cachemgr.h"
-#include "khash.h"
+#include <check.h>
 
 START_TEST(cache_types_01)
 {

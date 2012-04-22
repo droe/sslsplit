@@ -30,9 +30,10 @@
 #include "opts.h"
 #include "version.h"
 
-#include <check.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <check.h>
 
 Suite *
 blank_suite(void)
