@@ -899,6 +899,7 @@ static int
 pxy_ocsp_is_valid_uri(const char *uri)
 {
 	char *buf_url;
+	size_t sz_url;
 	char *buf_b64;
 	size_t sz_b64;
 	unsigned char *buf_asn1;
@@ -908,7 +909,24 @@ pxy_ocsp_is_valid_uri(const char *uri)
 	buf_url = strrchr(uri, '/');
 	if (!buf_url)
 		return 0;
-	buf_b64 = url_dec(buf_url, strlen(buf_url), &sz_b64);
+	buf_url++;
+
+	/*
+	 * Do some quick checks to avoid unnecessary buffer allocations and
+	 * decoding URL, Base64 and ASN.1:
+	 * -   OCSP requests begin with a SEQUENCE (0x30), so the first Base64
+	 *     byte is 'M' or, unlikely but legal, the URL encoding thereof.
+	 * -   There should be no query string in OCSP GET requests.
+	 * -   Encoded OCSP request ASN.1 blobs are longer than 32 bytes.
+	 */
+	if (buf_url[0] != 'M' && buf_url[0] != '%')
+		return 0;
+	if (strchr(uri, '?'))
+		return 0;
+	sz_url = strlen(buf_url);
+	if (sz_url < 32)
+		return 0;
+	buf_b64 = url_dec(buf_url, sz_url, &sz_b64);
 	if (!buf_b64)
 		return 0;
 	buf_asn1 = base64_dec(buf_b64, sz_b64, &sz_asn1);
