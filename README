@@ -43,9 +43,10 @@ make
 make test       # optional unit tests
 make install    # optional install
 
-Dependencies are autoconfigured using pkgconfig.  If dependencies are not
-picked up, you can specify their respective locations manually by setting
-OPENSSL_BASE, LIBEVENT_BASE and/or CHECK_BASE to the respective prefixes.
+Dependencies are autoconfigured using pkg-config.  If dependencies are not
+picked up and fixing PKG_CONFIG_PATH does not help, you can specify their
+respective locations manually by setting OPENSSL_BASE, LIBEVENT_BASE and/or
+CHECK_BASE to the respective prefixes.
 
 You can override the default install prefix (/usr/local) by setting PREFIX.
 
