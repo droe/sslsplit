@@ -12,6 +12,7 @@
 /extra/pki/ec.pem
 /extra/pki/ec.crt
 /extra/pki/ec.key
+/extra/pki/pwd.key
 /extra/pki/rsa.pem
 /extra/pki/rsa.crt
 /extra/pki/rsa.key

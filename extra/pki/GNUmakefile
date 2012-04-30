@@ -11,14 +11,17 @@ CRT_SUBJECT?=	'/C=CH/O=SSLsplit Test Certificate/CN=daniel.roe.ch/'
 CRT_DAYS?=	365
 CRT_EXT:=	v3_crt
 CONFIG:=	x509v3ca.cnf
+PASSWORD:=	test
 
-all: rsa dsa ec targets server
+all: rsa dsa ec targets server pwd
 
 session: session.pem
 
 dh: dh512.param dh1024.param dh2048.param
 
 rsa: rsa.pem
+
+pwd: pwd.key
 
 dsa: dsa.pem
 
@@ -43,6 +46,9 @@ dsa.key: dsa.param
 
 rsa.key:
 	$(OPENSSL) genrsa -out $@ 1024
+
+pwd.key: rsa.key
+	echo $(PASSWORD) | $(OPENSSL) rsa -in $< -out $@ -aes128 -passout stdin
 
 ec.key:
 	$(OPENSSL) ecparam -out $@ -name prime192v1 -genkey
