@@ -124,6 +124,8 @@ START_TEST(proxyspec_parse_03)
 
 	close(2);
 	spec = proxyspec_parse(&argc, &argv, NATENGINE);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
@@ -135,6 +137,8 @@ START_TEST(proxyspec_parse_04)
 
 	close(2);
 	spec = proxyspec_parse(&argc, &argv, NATENGINE);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
@@ -237,6 +241,8 @@ START_TEST(proxyspec_parse_09)
 
 	close(2);
 	spec = proxyspec_parse(&argc, &argv, NATENGINE);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
@@ -248,6 +254,8 @@ START_TEST(proxyspec_parse_10)
 
 	close(2);
 	spec = proxyspec_parse(&argc, &argv, NATENGINE);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
@@ -282,6 +290,8 @@ START_TEST(proxyspec_parse_12)
 
 	close(2);
 	spec = proxyspec_parse(&argc, &argv, NATENGINE);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
