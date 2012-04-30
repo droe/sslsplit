@@ -3,6 +3,8 @@
 -   Handle renego & client cert authentication more gracefully
 -   Separate orig cert retrieval from actual fwd address/proto config
 -   CRL denial mode based on targetdir cert's CDPs or by identifying CRL ASN.1
+-   Browser update denial mode
+-   Extendable approach to broken certificate verification implementations
 -   Client fingerprinting: only intercept clients with headers matching regex
 -   Configurable and/or scriptable modification of requests and/or responses
 -   STARTTLS for various protocols
