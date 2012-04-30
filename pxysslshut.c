@@ -123,6 +123,7 @@ pxy_ssl_shutdown_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 		case SSL_ERROR_ZERO_RETURN:
 			goto retry;
 		case SSL_ERROR_SYSCALL:
+		case SSL_ERROR_SSL:
 			goto complete;
 		default:
 			log_err_printf("Unhandled SSL_shutdown() "
