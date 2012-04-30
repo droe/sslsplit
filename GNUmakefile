@@ -103,12 +103,12 @@ TAR?=		tar
 
 TARGET:=	sslsplit
 PNAME:=		SSLsplit
-SRCS:=		$(wildcard *.c)
+SRCS:=		$(filter-out $(wildcard *.t.c),$(wildcard *.c))
 HDRS:=		$(wildcard *.h)
 OBJS:=		$(SRCS:.c=.o)
 
-TSRCS:=		$(wildcard *.t)
-TOBJS:=		$(TSRCS:.t=.ot)
+TSRCS:=		$(wildcard *.t.c)
+TOBJS:=		$(TSRCS:.t.c=.t.o)
 TOBJS+=		$(filter-out main.o,$(OBJS))
 
 VFILE:=		$(wildcard VERSION)
@@ -275,12 +275,12 @@ test: extra/pki/rsa.pem extra/pki/server.pem $(TARGET).test
 $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
-%.ot: %.t $(HDRS) GNUmakefile
+%.t.o: %.t.c $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(TPKG_CPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
 		-x c $<
 
 clean:
-	$(RM) -f $(TARGET) *.o $(TARGET).test *.ot *.core *~
+	$(RM) -f $(TARGET) *.o $(TARGET).test *.core *~
 	$(RM) -rf *.dSYM
 
 install: $(TARGET)
