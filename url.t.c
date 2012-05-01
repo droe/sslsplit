@@ -100,6 +100,20 @@ START_TEST(url_dec_05)
 }
 END_TEST
 
+START_TEST(url_dec_06)
+{
+	char *buf;
+	size_t sz;
+
+	buf = url_dec("", 0, &sz);
+	fail_unless(!!buf, "no buffer returned");
+	fail_unless(!sz, "length not 0");
+	fail_unless(!buf[0], "not empty string");
+	free(buf);
+}
+END_TEST
+
+
 Suite *
 url_suite(void)
 {
@@ -114,6 +128,7 @@ url_suite(void)
 	tcase_add_test(tc, url_dec_03);
 	tcase_add_test(tc, url_dec_04);
 	tcase_add_test(tc, url_dec_05);
+	tcase_add_test(tc, url_dec_06);
 	suite_add_tcase(s, tc);
 
 	return s;

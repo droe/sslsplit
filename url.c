@@ -27,6 +27,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 /*
  * URL decode insz bytes from in.
@@ -73,11 +74,18 @@ url_dec(const char *in, size_t insz, size_t *outsz)
 	int hi, lo;
 	char *out;
 
+	if (insz == 0) {
+		*outsz = 0;
+		return strdup("");
+	}
+
 	for (i = 0, o = 0; i < insz; i++)
 		if (in[i] == '%')
 			o++;
-	if (2 * o > insz)
+	if (2 * o > insz) {
+		*outsz = 0;
 		return NULL;
+	}
 	*outsz = insz - (2 * o);
 
 	if (!(out = malloc((*outsz) + 1))) {
