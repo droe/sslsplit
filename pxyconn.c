@@ -107,6 +107,7 @@ typedef struct pxy_conn_ctx {
 	unsigned int sent_http_conn_close : 1;   /* 0 until Conn: close sent */
 	unsigned int passthrough : 1;      /* 1 if SSL passthrough is active */
 	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
+	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 
 	/* server name indicated by client in SNI TLS extension */
@@ -297,8 +298,10 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->ssl_names),
 		              STRORDASH(ctx->ssl_orignames));
 	}
-	if ((rv == -1) || !msg)
+	if ((rv == -1) || !msg) {
+		ctx->enomem = 1;
 		return;
+	}
 	if (!ctx->opts->detach) {
 		log_err_printf("%s", msg);
 	}
@@ -344,8 +347,10 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->ssl_orignames),
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	}
-	if ((rv == -1) || !msg)
+	if ((rv == -1) || !msg) {
+		ctx->enomem = 1;
 		return;
+	}
 	if (!ctx->opts->detach) {
 		log_err_printf("%s", msg);
 	}
@@ -432,6 +437,8 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
                      EVP_PKEY *key)
 {
 	SSL_CTX *sslctx = SSL_CTX_new(SSLv23_method());
+	if (!sslctx)
+		return NULL;
 	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
 #ifdef SSL_OP_TLS_ROLLBACK_BUG
 	SSL_CTX_set_options(sslctx, SSL_OP_TLS_ROLLBACK_BUG);
@@ -594,8 +601,12 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 	ctx->origcrt = SSL_get_peer_certificate(origssl);
 
 	if (ctx->opts->debug) {
-		log_dbg_printf("===> Original server certificate:\n");
-		pxy_debug_crt(ctx->origcrt);
+		if (ctx->origcrt) {
+			log_dbg_printf("===> Original server certificate:\n");
+			pxy_debug_crt(ctx->origcrt);
+		} else {
+			log_dbg_printf("===> Original server has no cert!\n");
+		}
 	}
 
 	cert = pxy_srccert_create(ctx);
@@ -609,13 +620,26 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 
 	if (WANT_CONNECT_LOG(ctx)) {
 		ctx->ssl_names = ssl_x509_names_to_str(cert->crt);
-		ctx->ssl_orignames = ssl_x509_names_to_str(ctx->origcrt);
+		if (!ctx->ssl_names)
+			ctx->enomem = 1;
+		if (ctx->origcrt) {
+			ctx->ssl_orignames = ssl_x509_names_to_str(
+			                     ctx->origcrt);
+			if (!ctx->ssl_orignames)
+				ctx->enomem = 1;
+		}
 	}
 
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
 	                                       cert->key);
 	cert_free(cert);
+	if (!sslctx)
+		return NULL;
 	SSL *ssl = SSL_new(sslctx);
+	if (!ssl) {
+		SSL_CTX_free(sslctx);
+		return NULL;
+	}
 #ifdef USE_FOOTPRINT_HACKS
 	/* lower memory footprint for idle connections */
 	SSL_set_mode(ssl, SSL_get_mode(ssl) | SSL_MODE_RELEASE_BUFFERS);
@@ -665,11 +689,16 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 	 * and replace it both in the current SSL ctx and in the cert cache */
 	if (!ctx->immutable_cert &&
 	    !ssl_x509_names_match((sslcrt = SSL_get_certificate(ssl)), sn)) {
-		if (ctx->opts->debug)
+		if (ctx->opts->debug) {
 			log_dbg_printf("Certificate cache: UPDATE "
 			               "(SNI mismatch)\n");
+		}
 		newcrt = ssl_x509_forge(ctx->opts->cacrt, ctx->opts->cakey,
 		                        sslcrt, sn, ctx->opts->key);
+		if (!newcrt) {
+			ctx->enomem = 1;
+			return SSL_TLSEXT_ERR_NOACK;
+		}
 		cachemgr_fkcrt_set(ctx->origcrt, newcrt);
 		if (ctx->opts->debug) {
 			log_dbg_printf("===> Updated forged server "
@@ -681,10 +710,18 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 				free(ctx->ssl_names);
 			}
 			ctx->ssl_names = ssl_x509_names_to_str(newcrt);
+			if (!ctx->ssl_names) {
+				ctx->enomem = 1;
+			}
 		}
 		SSL_CTX *sslctx, *newsslctx;
 		newsslctx = pxy_srcsslctx_create(ctx, newcrt, ctx->opts->chain,
 		                                 ctx->opts->key);
+		if (!newsslctx) {
+			X509_free(newcrt);
+			ctx->enomem = 1;
+			return SSL_TLSEXT_ERR_NOACK;
+		}
 		sslctx = SSL_get_SSL_CTX(ssl);
 		SSL_set_SSL_CTX(ssl, newsslctx);
 		SSL_CTX_free(sslctx);
@@ -710,6 +747,9 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	SSL_SESSION *sess;
 
 	sslctx = SSL_CTX_new(SSLv23_method());
+	if (!sslctx)
+		return NULL;
+
 	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
 #ifdef SSL_OP_TLS_ROLLBACK_BUG
 	SSL_CTX_set_options(sslctx, SSL_OP_TLS_ROLLBACK_BUG);
@@ -837,7 +877,7 @@ pxy_bufferevent_setup(pxy_conn_ctx_t *ctx, evutil_socket_t fd, SSL *ssl)
 static char *
 pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 {
-	char *space1, *space2;
+	char *space1, *space2, *newhdr;
 
 	/* parse information for connect log */
 	if (!ctx->http_method) {
@@ -853,7 +893,8 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				memcpy(ctx->http_method, line, space1 - line);
 				ctx->http_method[space1 - line] = '\0';
 			} else {
-				log_err_printf("Warning: Out of memory\n");
+				ctx->enomem = 1;
+				return NULL;
 			}
 			space1++;
 			if (!space2) {
@@ -866,25 +907,43 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				memcpy(ctx->http_uri, space1, space2 - space1);
 				ctx->http_uri[space2 - space1] = '\0';
 			} else {
-				log_err_printf("Warning: Out of memory\n");
+				ctx->enomem = 1;
+				return NULL;
 			}
 		}
 	} else {
 		/* not first line */
 		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
 			ctx->http_host = strdup(util_skipws(line + 6));
+			if (!ctx->http_host) {
+				ctx->enomem = 1;
+				return NULL;
+			}
 		} else if (!strncasecmp(line, "Content-Type: ", 14)) {
 			ctx->http_content_type = strdup(util_skipws(line + 14));
+			if (!ctx->http_content_type) {
+				ctx->enomem = 1;
+				return NULL;
+			}
 		} else if (!strncasecmp(line, "Connection: ", 12)) {
 			ctx->sent_http_conn_close = 1;
-			return strdup("Connection: close");
+			if (!(newhdr = strdup("Connection: close"))) {
+				ctx->enomem = 1;
+				return NULL;
+			}
+			return newhdr;
 		} else if (!strncasecmp(line, "Accept-Encoding: ", 17) ||
 		           !strncasecmp(line, "Keep-Alive: ", 12)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_req_header = 1;
 			if (!ctx->sent_http_conn_close) {
-				return strdup("Connection: close\r\n");
+				newhdr = strdup("Connection: close\r\n");
+				if (!newhdr) {
+					ctx->enomem = 1;
+					return NULL;
+				}
+				return newhdr;
 			}
 		}
 	}
@@ -896,7 +955,7 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
  * Return 1 if uri is an OCSP GET URI, 0 if not.
  */
 static int
-pxy_ocsp_is_valid_uri(const char *uri)
+pxy_ocsp_is_valid_uri(const char *uri, pxy_conn_ctx_t *ctx)
 {
 	char *buf_url;
 	size_t sz_url;
@@ -927,10 +986,13 @@ pxy_ocsp_is_valid_uri(const char *uri)
 	if (sz_url < 32)
 		return 0;
 	buf_b64 = url_dec(buf_url, sz_url, &sz_b64);
-	if (!buf_b64)
+	if (!buf_b64) {
+		ctx->enomem = 1;
 		return 0;
+	}
 	buf_asn1 = base64_dec(buf_b64, sz_b64, &sz_asn1);
 	if (!buf_asn1) {
+		ctx->enomem = 1;
 		free(buf_b64);
 		return 0;
 	}
@@ -965,7 +1027,7 @@ pxy_ocsp_deny(pxy_conn_ctx_t *ctx)
 	if (!ctx->http_method)
 		return;
 	if (!strncasecmp(ctx->http_method, "GET", 3) &&
-	    pxy_ocsp_is_valid_uri(ctx->http_uri))
+	    pxy_ocsp_is_valid_uri(ctx->http_uri, ctx))
 		goto deny;
 	if (!strncasecmp(ctx->http_method, "POST", 4) &&
 	    ctx->http_content_type &&
@@ -1001,6 +1063,20 @@ deny:
 			log_content_submit(&ctx->logctx, lb, 1);
 		}
 	}
+}
+
+void
+pxy_conn_terminate_free(pxy_conn_ctx_t *ctx)
+{
+	log_err_printf("Terminating connection%s!\n",
+	               ctx->enomem ? " (out of memory)" : "");
+	if (ctx->dst.bev && !ctx->dst.closed) {
+		bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
+	}
+	if (ctx->src.bev && !ctx->src.closed) {
+		bufferevent_free_and_close_fd(ctx->src.bev, ctx);
+	}
+	pxy_conn_ctx_free(ctx);
 }
 
 /*
@@ -1076,6 +1152,12 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		}
 		if (!ctx->seen_req_header)
 			return;
+	}
+
+	/* out of memory condition? */
+	if (ctx->enomem) {
+		pxy_conn_terminate_free(ctx);
+		return;
 	}
 
 	/* no data left after parsing headers? */
@@ -1193,6 +1275,11 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			ctx->dst_str = sys_sockaddr_str((struct sockaddr *)
 			                                &ctx->addr,
 			                                ctx->addrlen);
+			if (!ctx->dst_str) {
+				ctx->enomem = 1;
+				pxy_conn_terminate_free(ctx);
+				return;
+			}
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			log_content_open(&ctx->logctx, ctx->src_str,
@@ -1366,9 +1453,6 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 		pxy_conn_ctx_free(ctx);
 		return;
 	}
-
-	/* TODO determine if we should terminate or redirect this connection,
-	 *      for example for OCSP denial, redirection to evilgrade, etc. */
 
 	/* create server-side socket and eventbuffer */
 	if (ctx->spec->ssl && !ctx->passthrough) {
@@ -1574,16 +1658,27 @@ pxy_conn_setup(evutil_socket_t fd,
 	/* prepare logging, part 1 */
 	if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
 		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
+		if (!ctx->src_str)
+			goto memout;
 	}
 
 	/* for SSL, defer dst connection setup to initial_readcb */
 	if (ctx->spec->ssl) {
 		ctx->ev = event_new(ctx->evbase, fd, EV_READ, pxy_fd_readcb,
 		                    ctx);
+		if (!ctx->ev)
+			goto memout;
 		event_add(ctx->ev, NULL);
 	} else {
 		pxy_fd_readcb(fd, 0, ctx);
 	}
+	return;
+
+memout:
+	log_err_printf("Aborting connection setup (out of memory)!\n");
+	evutil_closesocket(fd);
+	pxy_conn_ctx_free(ctx);
+	return;
 }
 
 /* vim: set noet ft=c: */
