@@ -537,10 +537,17 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 			cert = cachemgr_tgcrt_get(ctx->sni);
 			if (!cert) {
 				wildcarded = ssl_wildcardify(ctx->sni);
+				if (!wildcarded) {
+					ctx->enomem = 1;
+					return NULL;
+				}
 				cert = cachemgr_tgcrt_get(wildcarded);
 				free(wildcarded);
 			}
-		} else {
+			if (cert && ctx->opts->debug) {
+				log_dbg_printf("Target cert by SNI\n");
+			}
+		} else if (ctx->origcrt) {
 			char **names = ssl_x509_names(ctx->origcrt);
 			for (char **p = names; *p; p++) {
 				if (!cert) {
@@ -548,12 +555,23 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 				}
 				if (!cert) {
 					wildcarded = ssl_wildcardify(*p);
-					cert = cachemgr_tgcrt_get(wildcarded);
-					free(wildcarded);
+					if (!wildcarded) {
+						ctx->enomem = 1;
+					} else {
+						cert = cachemgr_tgcrt_get(
+						       wildcarded);
+						free(wildcarded);
+					}
 				}
 				free(*p);
 			}
 			free(names);
+			if (ctx->enomem) {
+				return NULL;
+			}
+			if (cert && ctx->opts->debug) {
+				log_dbg_printf("Target cert by origcrt\n");
+			}
 		}
 
 		if (cert) {
@@ -561,7 +579,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		}
 	}
 
-	if (!cert && ctx->opts->key) {
+	if (!cert && ctx->origcrt && ctx->opts->key) {
 		cert = cert_new();
 
 		cert->crt = cachemgr_fkcrt_get(ctx->origcrt);
@@ -633,10 +651,13 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
 	                                       cert->key);
 	cert_free(cert);
-	if (!sslctx)
+	if (!sslctx) {
+		ctx->enomem = 1;
 		return NULL;
+	}
 	SSL *ssl = SSL_new(sslctx);
 	if (!ssl) {
+		ctx->enomem = 1;
 		SSL_CTX_free(sslctx);
 		return NULL;
 	}
@@ -747,8 +768,10 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	SSL_SESSION *sess;
 
 	sslctx = SSL_CTX_new(SSLv23_method());
-	if (!sslctx)
+	if (!sslctx) {
+		ctx->enomem = 1;
 		return NULL;
+	}
 
 	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
 #ifdef SSL_OP_TLS_ROLLBACK_BUG
@@ -1245,7 +1268,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			ctx->src.ssl = pxy_srcssl_create(ctx, this->ssl);
 			if (!ctx->src.ssl) {
 				bufferevent_free_and_close_fd(bev, ctx);
-				if (ctx->opts->passthrough) {
+				if (ctx->opts->passthrough && !ctx->enomem) {
 					ctx->passthrough = 1;
 					log_dbg_printf("No cert found; "
 					               "falling back "
