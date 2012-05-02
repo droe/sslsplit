@@ -30,6 +30,10 @@
 #include <string.h>
 
 /*
+ * Base64 encoding functions.
+ */
+
+/*
  * Base64 decode insz bytes from in.
  * Returns allocated buffer containing outsz bytes.
  * The buffer is null-terminated, but the terminator is not included in outsz.

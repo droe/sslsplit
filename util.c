@@ -29,6 +29,10 @@
 #include <string.h>
 
 /*
+ * Various utility functions.
+ */
+
+/*
  * Returns a pointer to the first non-whitespace character in s.
  */
 const char *

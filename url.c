@@ -30,6 +30,10 @@
 #include <string.h>
 
 /*
+ * URL encoding functions.
+ */
+
+/*
  * URL decode insz bytes from in.
  * Returns allocated buffer containing outsz bytes plus a '\0' terminator.
  * If in does not contain valid URL encoded data, returns NULL.
