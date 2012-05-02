@@ -165,7 +165,8 @@ OPENSSL_FIND:=	$(wildcard \
 endif
 OPENSSL_FOUND:=	$(OPENSSL_FIND:/$(OPENSSL_PAT)=)
 ifndef OPENSSL_FOUND
-$(error OpenSSL not found; please point OPENSSL_BASE to base path)
+$(error dependency 'OpenSSL' not found; \
+	install it or point OPENSSL_BASE to base path)
 endif
 endif
 ifeq (,$(filter libevent,$(PKGS)))
@@ -180,7 +181,8 @@ LIBEVENT_FIND:=	$(wildcard \
 endif
 LIBEVENT_FOUND:=$(LIBEVENT_FIND:/$(LIBEVENT_PAT)=)
 ifndef LIBEVENT_FOUND
-$(error libevent 2.x not found; please point LIBEVENT_BASE to base path)
+$(error dependency 'libevent 2.x' not found; \
+	install it or point LIBEVENT_BASE to base path)
 endif
 endif
 ifeq (,$(filter check,$(TPKGS)))
@@ -195,7 +197,7 @@ CHECK_FIND:=	$(wildcard \
 endif
 CHECK_FOUND:=	$(CHECK_FIND:/$(CHECK_PAT)=)
 ifndef CHECK_FOUND
-$(warning check not found; please point CHECK_BASE to base path [optional])
+CHECK_MISSING:=	1
 endif
 endif
 
@@ -259,10 +261,18 @@ endif
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+version.o: version.c version.h GNUmakefile $(VFILE) FORCE
+
+%.t.o: %.t.c $(HDRS) GNUmakefile
+ifdef CHECK_MISSING
+	$(error unit test dependency 'check' not found; \
+	install it or point CHECK_BASE to base path)
+endif
+	$(CC) -c $(CPPFLAGS) $(TPKG_CPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
+		-x c $<
+
 %.o: %.c $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
-
-version.o: version.c version.h GNUmakefile $(VFILE) FORCE
 
 extra/pki/%.pem:
 	$(MAKE) -C extra/pki
@@ -274,10 +284,6 @@ test: extra/pki/rsa.pem extra/pki/server.pem $(TARGET).test
 
 $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
-
-%.t.o: %.t.c $(HDRS) GNUmakefile
-	$(CC) -c $(CPPFLAGS) $(TPKG_CPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
-		-x c $<
 
 clean:
 	$(RM) -f $(TARGET) *.o $(TARGET).test *.core *~
