@@ -112,10 +112,10 @@ NAT ENGINES for a list of NAT engines currently supported by SSLsplit.
 .B \-g \fIpemfile\fP
 Use Diffie-Hellman group parameters from \fIpemfile\fP for Ephemereal
 Diffie-Hellman (EDH/DHE) cipher suites.  If \fB-g\fP is not given, SSLsplit
-first tries to load DH parameters from the key files given by \fB-K\fP and
-\fB-k\fP.  If no DH parameters are found in the key files, built-in 512 or 1024
-bit group parameters are automatically used iff a non-RSA private key is given
-with \fB-K\fP.
+first tries to load DH parameters from the PEM files given by \fB-K\fP,
+\fB-k\fP or \fB-c\fP.  If no DH parameters are found in the key files, built-in
+512 or 1024 bit group parameters are automatically used iff a non-RSA private
+key is given with \fB-K\fP.
 This is because DSA/DSS private keys can by themselves only be used for signing
 and thus require DH to exchange an SSL/TLS session key.
 If \fB-g\fP is given, the parameters from the given \fIpemfile\fP will always
