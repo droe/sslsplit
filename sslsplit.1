@@ -194,10 +194,11 @@ alternative if unmonitored connections must be prevented.
 .TP
 .B \-s \fIciphers\fP
 Use OpenSSL \fIciphers\fP specification for both server and client SSL/TLS
-connections.  If \fB-s\fP is not given, a cipher list of \fBALL\fP is used.
+connections.  If \fB-s\fP is not given, a cipher list of \fBALL:-aNULL\fP is
+used.
 Normally, SSL/TLS implementations choose the most secure cipher suites, not the
 fastest ones.  By specifying an appropriate OpenSSL cipher list, the set of
-cipher suites can be limited to fast algorithms, or \fBNULL\fP cipher suites
+cipher suites can be limited to fast algorithms, or \fBeNULL\fP cipher suites
 can be added.  Not that for connections to be successful, the SSLsplit cipher
 suites must include at least one cipher suite supported by both the client and
 the server of each connection.

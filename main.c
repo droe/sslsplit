@@ -125,7 +125,7 @@ main_usage(void)
 #else /* !SSL_OP_NO_COMPRESSION */
 #define OPT_Z 
 #endif /* !SSL_OP_NO_COMPRESSION */
-"  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL)\n"
+"  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL:-aNULL)\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
@@ -499,7 +499,7 @@ main(int argc, char *argv[])
 
 	/* dynamic defaults */
 	if (!opts->ciphers) {
-		opts->ciphers = strdup("ALL");
+		opts->ciphers = strdup("ALL:-aNULL");
 		if (!opts->ciphers) {
 			fprintf(stderr, "%s: out of memory.\n", argv0);
 			exit(EXIT_FAILURE);
