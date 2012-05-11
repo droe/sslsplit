@@ -38,6 +38,11 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+/*
+ * ECDH is disabled when building against OpenSSL < 1.0.0e due to issues with
+ * thread-safety and security in server mode ephemereal ECDH cipher suites.
+ * http://www.openssl.org/news/secadv_20110906.txt
+ */
 #if (OPENSSL_VERSION_NUMBER < 0x10000000L) && !defined(OPENSSL_NO_THREADID)
 #define OPENSSL_NO_THREADID
 #endif
