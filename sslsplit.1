@@ -127,8 +127,8 @@ of OpenSSL which supports Diffie-Hellman cipher suites.
 .TP
 .B \-G \fIcurve\fP
 Use the named \fIcurve\fP for Ephemereal Elliptic Curve Diffie-Hellman (EECDH)
-cipher suites.  If \fB-G\fP is not given, the curve \fBprime256v1\fP is used
-automatically iff a non-RSA private key is given with \fB-K\fP.
+cipher suites.  If \fB-G\fP is not given, a default curve (\fBsecp160r2\fP) is
+used automatically iff a non-RSA private key is given with \fB-K\fP.
 This is because ECDSA/ECDSS private keys can by themselves only be used for
 signing and thus require ECDH to exchange an SSL/TLS session key.
 If \fB-G\fP is given, the named \fIcurve\fP will always be used, even with RSA
