@@ -64,10 +64,10 @@ DH * ssl_dh_load(const char *) NONNULL() MALLOC;
 void ssl_dh_refcount_inc(DH *) NONNULL();
 #endif /* !OPENSSL_NO_DH */
 
-#ifndef OPENSSL_NO_ECDH
-#define SSL_EC_KEY_CURVE_DEFAULT "prime256v1"
-EC_KEY * ssl_ecdh_by_name(const char *) MALLOC;
-#endif /* !OPENSSL_NO_ECDH */
+#ifndef OPENSSL_NO_EC
+#define SSL_EC_KEY_CURVE_DEFAULT "secp160r2"
+EC_KEY * ssl_ec_by_name(const char *) MALLOC;
+#endif /* !OPENSSL_NO_EC */
 
 EVP_PKEY * ssl_key_load(const char *) NONNULL() MALLOC;
 EVP_PKEY * ssl_key_genrsa(const int) MALLOC;

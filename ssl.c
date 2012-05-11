@@ -106,6 +106,11 @@ ssl_openssl_version(void)
 #else /* OPENSSL_NO_ECDH */
 	fprintf(stderr, " !ECDH");
 #endif /* OPENSSL_NO_ECDH */
+#ifndef OPENSSL_NO_EC
+	fprintf(stderr, " EC");
+#else /* OPENSSL_NO_EC */
+	fprintf(stderr, " !EC");
+#endif /* OPENSSL_NO_EC */
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "OpenSSL option availability:");
@@ -444,13 +449,13 @@ ssl_dh_load(const char *filename)
 }
 #endif /* !OPENSSL_NO_DH */
 
-#ifndef OPENSSL_NO_ECDH
+#ifndef OPENSSL_NO_EC
 /*
  * Load an Elliptic Curve by name.  If curvename is NULL, a default curve is
  * loaded.
  */
 EC_KEY *
-ssl_ecdh_by_name(const char *curvename)
+ssl_ec_by_name(const char *curvename)
 {
 	int nid;
 
@@ -462,7 +467,7 @@ ssl_ecdh_by_name(const char *curvename)
 	}
 	return EC_KEY_new_by_curve_name(nid);
 }
-#endif /* !OPENSSL_NO_ECDH */
+#endif /* !OPENSSL_NO_EC */
 
 /*
  * Add a X509v3 extension to a certificate and handle errors.

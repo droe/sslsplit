@@ -487,11 +487,11 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
 	if (ctx->opts->ecdhcurve) {
-		EC_KEY *ecdh = ssl_ecdh_by_name(ctx->opts->ecdhcurve);
+		EC_KEY *ecdh = ssl_ec_by_name(ctx->opts->ecdhcurve);
 		SSL_CTX_set_tmp_ecdh(sslctx, ecdh);
 		EC_KEY_free(ecdh);
 	} else if (EVP_PKEY_type(ctx->opts->key->type) != EVP_PKEY_RSA) {
-		EC_KEY *ecdh = ssl_ecdh_by_name(NULL);
+		EC_KEY *ecdh = ssl_ec_by_name(NULL);
 		SSL_CTX_set_tmp_ecdh(sslctx, ecdh);
 		EC_KEY_free(ecdh);
 	}

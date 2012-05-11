@@ -360,16 +360,16 @@ main(int argc, char *argv[])
 #ifndef OPENSSL_NO_ECDH
 			case 'G':
 			{
-				EC_KEY *ecdh;
+				EC_KEY *ec;
 				if (opts->ecdhcurve)
 					free(opts->ecdhcurve);
-				if (!(ecdh = ssl_ecdh_by_name(optarg))) {
+				if (!(ec = ssl_ec_by_name(optarg))) {
 					fprintf(stderr, "%s: unknown curve "
 					                "'%s'\n",
 					                argv0, optarg);
 					exit(EXIT_FAILURE);
 				}
-				EC_KEY_free(ecdh);
+				EC_KEY_free(ec);
 				opts->ecdhcurve = strdup(optarg);
 				break;
 			}
