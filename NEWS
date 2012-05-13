@@ -1,0 +1,22 @@
+### SSLsplit 0.4.4 3742404 2012-05-11
+
+-   Improve OCSP denial for GET based OCSP requests.
+-   Default elliptic curve is now 'secp160r2' for better ECDH performance.
+-   More user-friendly handling of -c, -k and friends.
+-   Unit test source code renamed from *.t to *.t.c to prevent them from being
+    misdetected as perl instead of c by Github et al.
+-   Minor bugfixes.
+
+
+### SSLsplit 0.4.3 ee98c04 2012-04-22
+
+-   Add generic OCSP denial (-O).  OCSP requests transmitted over HTTP or HTTPS
+    are recognized and denied with OCSP tryLater(3) responses.
+-   Minor bugfixes.
+
+
+### SSLsplit 0.4.2 4cfdef4 2012-04-13
+
+-   First public release.
+
+
