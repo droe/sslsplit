@@ -63,11 +63,6 @@ ifneq ($(wildcard /usr/include/linux/netfilter.h),)
 FEATURES+=	-DHAVE_NETFILTER
 endif
 
-# Autodetect glibc
-ifneq ($(wildcard /usr/include/gnu/libc-version.h),)
-CPPFLAGS+=	-D_GNU_SOURCE
-endif
-
 
 ### Variables you might need to override
 
@@ -129,9 +124,10 @@ BUILD_DATE:=	$(shell date +%Y-%m-%d)
 
 CFLAGS+=	$(PKG_CFLAGS) -pthread \
 		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
-CPPFLAGS+=	$(PKG_CPPFLAGS) $(FEATURES) -D"BNAME=\"$(TARGET)\"" \
-		-D"PNAME=\"$(PNAME)\"" -D"VERSION=\"$(VERSION)\"" \
-		-D"FEATURES=\"$(FEATURES)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\""
+CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
+		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
+		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
+		-D"FEATURES=\"$(FEATURES)\""
 LDFLAGS+=	$(PKG_LDFLAGS) -pthread
 LIBS+=		$(PKG_LIBS)
 
