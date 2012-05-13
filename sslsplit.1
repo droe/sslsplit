@@ -281,8 +281,10 @@ Use the Server Name Indication (SNI) hostname sent by the client in the
 ClientHello SSL/TLS message to determine the IP address of the server to
 connect to.  This only works for \fBssl\fP and \fBhttps\fP \fIproxyspecs\fP and
 needs a port or service name as an argument.
-This is the only way to redirect traffic transparently using NAT rules and run
-\fBsslsplit\fP on a different system than the NAT engine.
+Because this requires DNS lookups, it is preferrable to use NAT engine
+lookups (see above), except when that is not possible, such as when there is
+no supported NAT engine or when running \fBsslsplit\fP on a different system
+than the NAT rules redirecting the actual connections.
 .LP
 .SH "NAT ENGINES"
 SSLsplit currently supports the following NAT engines:
@@ -485,6 +487,7 @@ handling.
 Care has been taken to choose scalable data structures for caching certificates
 and SSL sessions.  Logging is implemented in separate disk writer threads to
 ensure that socket event handling threads don't have to block on disk I/O.
+DNS lookups are performed asynchroniously.
 SSLsplit uses SSL session caching on both ends to minimize the amount of full
 SSL handshakes, but even then, the limiting factor in handling SSL connections
 are the actual bignum computations.
