@@ -166,7 +166,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
 #ifdef DEBUG_PROXY
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("%p             pxy_conn_ctx_new\n",
 		               (void*)ctx);
 	}
@@ -180,7 +180,7 @@ static void
 pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 {
 #ifdef DEBUG_PROXY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("%p             pxy_conn_ctx_free\n",
 		                (void*)ctx);
 	}
@@ -505,7 +505,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 	}
 
 #ifdef DEBUG_SESSION_CACHE
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		int mode = SSL_CTX_get_session_cache_mode(sslctx);
 		log_dbg_printf("SSL session cache mode: %08x\n", mode);
 		if (mode == SSL_SESS_CACHE_OFF)
@@ -544,7 +544,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 				cert = cachemgr_tgcrt_get(wildcarded);
 				free(wildcarded);
 			}
-			if (cert && ctx->opts->debug) {
+			if (cert && OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Target cert by SNI\n");
 			}
 		} else if (ctx->origcrt) {
@@ -569,7 +569,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 			if (ctx->enomem) {
 				return NULL;
 			}
-			if (cert && ctx->opts->debug) {
+			if (cert && OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Target cert by origcrt\n");
 			}
 		}
@@ -584,10 +584,10 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 
 		cert->crt = cachemgr_fkcrt_get(ctx->origcrt);
 		if (cert->crt) {
-			if (ctx->opts->debug)
+			if (OPTS_DEBUG(ctx->opts))
 				log_dbg_printf("Certificate cache: HIT\n");
 		} else {
-			if (ctx->opts->debug)
+			if (OPTS_DEBUG(ctx->opts))
 				log_dbg_printf("Certificate cache: MISS\n");
 			cert->crt = ssl_x509_forge(ctx->opts->cacrt,
 			                           ctx->opts->cakey,
@@ -618,7 +618,7 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 
 	ctx->origcrt = SSL_get_peer_certificate(origssl);
 
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		if (ctx->origcrt) {
 			log_dbg_printf("===> Original server certificate:\n");
 			pxy_debug_crt(ctx->origcrt);
@@ -631,7 +631,7 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 	if (!cert)
 		return NULL;
 
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("===> Forged server certificate:\n");
 		pxy_debug_crt(cert->crt);
 	}
@@ -688,7 +688,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 	if (!(sn = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)))
 		return SSL_TLSEXT_ERR_NOACK;
 
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		if (!!strcmp(sn, ctx->sni)) {
 			/*
 			 * This may happen if the client resumes a session, but
@@ -710,7 +710,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 	 * and replace it both in the current SSL ctx and in the cert cache */
 	if (!ctx->immutable_cert &&
 	    !ssl_x509_names_match((sslcrt = SSL_get_certificate(ssl)), sn)) {
-		if (ctx->opts->debug) {
+		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("Certificate cache: UPDATE "
 			               "(SNI mismatch)\n");
 		}
@@ -721,7 +721,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			return SSL_TLSEXT_ERR_NOACK;
 		}
 		cachemgr_fkcrt_set(ctx->origcrt, newcrt);
-		if (ctx->opts->debug) {
+		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("===> Updated forged server "
 			               "certificate:\n");
 			pxy_debug_crt(newcrt);
@@ -747,7 +747,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 		SSL_set_SSL_CTX(ssl, newsslctx);
 		SSL_CTX_free(sslctx);
 		X509_free(newcrt);
-	} else if (ctx->opts->debug) {
+	} else if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Certificate cache: KEEP (SNI match or "
 		               "target mode)\n");
 	}
@@ -810,7 +810,7 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	sess = cachemgr_dsess_get((struct sockaddr *)&ctx->addr,
 	                          ctx->addrlen, ctx->sni);
 	if (sess) {
-		if (ctx->opts->debug) {
+		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("Attempt reuse dst SSL session\n");
 		}
 		SSL_set_session(ssl, sess);
@@ -835,7 +835,7 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	}
 
 #ifdef DEBUG_PROXY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("            %p free_and_close_fd\n",
 		               (void*)bev);
 	}
@@ -889,7 +889,7 @@ pxy_bufferevent_setup(pxy_conn_ctx_t *ctx, evutil_socket_t fd, SSL *ssl)
 	                  pxy_bev_eventcb, ctx);
 	bufferevent_enable(bev, EV_READ|EV_WRITE);
 #ifdef DEBUG_PROXY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("            %p pxy_bufferevent_setup\n",
 		               (void*)bev);
 	}
@@ -1113,7 +1113,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	pxy_conn_desc_t *other = (bev==ctx->src.bev) ? &ctx->dst : &ctx->src;
 
 #ifdef DEBUG_PROXY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("%p %p %s readcb\n", arg, (void*)bev,
 		               (bev == ctx->src.bev) ? "src" : "dst");
 	}
@@ -1217,7 +1217,7 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 	pxy_conn_desc_t *other = (bev==ctx->src.bev) ? &ctx->dst : &ctx->src;
 
 #ifdef DEBUG_PROXY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("%p %p %s writecb\n", arg, (void*)bev,
 		               (bev == ctx->src.bev) ? "src" : "dst");
 	}
@@ -1251,7 +1251,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 	pxy_conn_desc_t *other = (bev==ctx->src.bev) ? &ctx->dst : &ctx->src;
 
 #ifdef DEBUG_PROXY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("%p %p eventcb %s %s%s%s\n", arg, (void*)bev,
 		               (bev == ctx->src.bev) ? "src" : "dst",
 		               events & BEV_EVENT_CONNECTED ? "connected" : "",
@@ -1334,7 +1334,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			               "bufferevent (errno=0,sslerr=0)\n");
 #else /* LIBEVENT_VERSION_NUMBER < 0x02010000 */
 			/* Older versions of libevent will report these. */
-			if (ctx->opts->debug) {
+			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Unclean SSL shutdown.\n");
 			}
 #endif /* LIBEVENT_VERSION_NUMBER < 0x02010000 */
@@ -1567,7 +1567,7 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 		}
 
 		ctx->sni = ssl_tls_clienthello_parse_sni(buf, &n);
-		if (ctx->opts->debug) {
+		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("SNI peek: [%s]\n",
 			               ctx->sni ? ctx->sni : "n/a");
 		}

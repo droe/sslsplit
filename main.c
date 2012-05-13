@@ -184,7 +184,7 @@ main_loadtgcrt(const char *filename, void *arg)
 	log_dbg_print_free(ssl_x509_to_pem(cert->crt));
 #endif /* DEBUG_CERTIFICATE */
 
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("Targets for '%s':", filename);
 	}
 	names = ssl_x509_names(cert->crt);
@@ -194,13 +194,13 @@ main_loadtgcrt(const char *filename, void *arg)
 		if ((sep = strchr(*p, '!'))) {
 			*sep = '\0';
 		}
-		if (opts->debug) {
+		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf(" '%s'", *p);
 		}
 		cachemgr_tgcrt_set(*p, cert);
 		free(*p);
 	}
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("\n");
 	}
 	free(names);
@@ -449,7 +449,7 @@ main(int argc, char *argv[])
 	opts->spec = proxyspec_parse(&argc, &argv, natengine);
 
 	/* usage checks */
-	if (opts->detach && opts->debug) {
+	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
 		                argv0);
 		exit(EXIT_FAILURE);
@@ -514,7 +514,7 @@ main(int argc, char *argv[])
 	}
 
 	/* debugging */
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		main_version();
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
@@ -561,7 +561,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: failed to init cachemgr.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		if (opts->cacrt) {
 			char *subj = ssl_x509_subject(opts->cacrt);
 			log_dbg_printf("Loaded CA: '%s'\n", subj);
@@ -582,7 +582,7 @@ main(int argc, char *argv[])
 			ERR_print_errors_fp(stderr);
 			exit(EXIT_FAILURE);
 		}
-		if (opts->debug) {
+		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("Generated RSA key for leaf certs.\n");
 		}
 	}

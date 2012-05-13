@@ -243,7 +243,7 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 {
 	proxy_ctx_t *ctx = arg;
 
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Received signal %i\n", fd);
 	}
 
@@ -262,12 +262,12 @@ proxy_gc_cb(UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 {
 	proxy_ctx_t *ctx = arg;
 
-	if (ctx->opts->debug)
+	if (OPTS_DEBUG(ctx->opts))
 		log_dbg_printf("Garbage collecting caches started.\n");
 
 	cachemgr_gc();
 
-	if (ctx->opts->debug)
+	if (OPTS_DEBUG(ctx->opts))
 		log_dbg_printf("Garbage collecting caches done.\n");
 }
 
@@ -285,7 +285,7 @@ proxy_new(opts_t *opts)
 	evthread_use_pthreads();
 
 #ifndef PURIFY
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		event_enable_debug_mode();
 	}
 #endif /* PURIFY */
@@ -304,7 +304,7 @@ proxy_new(opts_t *opts)
 		goto leave1;
 	}
 
-	if (opts->debug) {
+	if (OPTS_DEBUG(opts)) {
 		proxy_debug_base(ctx->evbase);
 	}
 
@@ -374,15 +374,15 @@ proxy_run(proxy_ctx_t *ctx)
 		event_reinit(ctx->evbase);
 	}
 #ifndef PURIFY
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		event_base_dump_events(ctx->evbase, stderr);
 	}
 #endif /* PURIFY */
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Starting main event loop.\n");
 	}
 	event_base_dispatch(ctx->evbase);
-	if (ctx->opts->debug) {
+	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Main event loop stopped.\n");
 	}
 }
