@@ -28,7 +28,7 @@ the various NAT engines.
 ## Requirements
 
 SSLsplit depends on the OpenSSL and libevent 2.x libraries.
-The build depends on GNU make and a POSIX.2 environment in PATH.
+The build depends on GNU make and a POSIX.2 environment in `PATH`.
 The (optional) unit tests depend on check.
 
 SSLsplit currently supports the following operating systems and NAT engines:
@@ -40,16 +40,16 @@ SSLsplit currently supports the following operating systems and NAT engines:
 
 ## Installation
 
-make
-make test       # optional unit tests
-make install    # optional install
+    make
+    make test       # optional unit tests
+    make install    # optional install
 
 Dependencies are autoconfigured using pkg-config.  If dependencies are not
-picked up and fixing PKG_CONFIG_PATH does not help, you can specify their
-respective locations manually by setting OPENSSL_BASE, LIBEVENT_BASE and/or
-CHECK_BASE to the respective prefixes.
+picked up and fixing `PKG_CONFIG_PATH` does not help, you can specify their
+respective locations manually by setting `OPENSSL_BASE`, `LIBEVENT_BASE` and/or
+`CHECK_BASE` to the respective prefixes.
 
-You can override the default install prefix (/usr/local) by setting PREFIX.
+You can override the default install prefix (`/usr/local`) by setting `PREFIX`.
 
 
 ## Development
@@ -69,9 +69,9 @@ See the respective source file headers for details.
 
 ## Credits
 
-SSLsplit was inspired by ssl-mitm by Claes M. Nyberg and sslsniff by Moxie
+SSLsplit was inspired by mitm-ssl by Claes M. Nyberg and sslsniff by Moxie
 Marlinspike, but shares no source code with them.
 
-SSLsplit includes khash by Attractive Chaos (khash.h).
+SSLsplit includes khash.h by Attractive Chaos.
 
 
