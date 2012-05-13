@@ -365,8 +365,14 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
  * Called by OpenSSL when a new src SSL session is created.
  * Return 0 means remove session from internal session cache.
  */
+#ifdef DISABLE_SSLV2_SESSION_CACHE
+#define MAYBE_UNUSED 
+#else /* !DISABLE_SSLV2_SESSION_CACHE */
+#define MAYBE_UNUSED UNUSED
+#endif /* !DISABLE_SSLV2_SESSION_CACHE */
 static int
-pxy_ossl_sessnew_cb(SSL *ssl, SSL_SESSION *sess)
+pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
+#undef MAYBE_UNUSED
 {
 #ifdef DEBUG_SESSION_CACHE
 	log_dbg_printf("===> OpenSSL new session callback:\n");
