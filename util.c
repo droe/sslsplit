@@ -34,11 +34,12 @@
 
 /*
  * Returns a pointer to the first non-whitespace character in s.
+ * Only space and tab characters are considered whitespace.
  */
-const char *
+char *
 util_skipws(const char *s)
 {
-	return s + strspn(s, " \t\r\n");
+	return (char*) s + strspn(s, " \t");
 }
 
 /* vim: set noet ft=c: */
