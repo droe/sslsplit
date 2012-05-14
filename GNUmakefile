@@ -82,8 +82,10 @@ SED?=		sed
 ### Variables only used for developer targets
 
 KHASH_URL?=	https://github.com/attractivechaos/klib/raw/master/khash.h
+GPGSIGNKEY?=	0xB5D3397E
 
 CPPCHECK?=	cppcheck
+GPG?=		gpg
 GIT?=		git
 WGET?=		wget
 
@@ -319,7 +321,10 @@ manclean:
 fetchdeps:
 	$(WGET) --no-check-certificate -O- $(KHASH_URL) >khash.h
 
-dist: $(TARGET)-$(VERSION).tar.bz2
+dist: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
+
+%.asc: %
+	$(GPG) -u $(GPGSIGNKEY) --armor --output $@ --detach-sig $<
 
 $(TARGET)-$(VERSION).tar.bz2:
 	$(MKDIR) -p $(TARGET)-$(VERSION)
@@ -331,13 +336,14 @@ $(TARGET)-$(VERSION).tar.bz2:
 	$(RM) $(TARGET)-$(VERSION).tar
 	$(RM) -r $(TARGET)-$(VERSION)
 
-disttest: $(TARGET)-$(VERSION).tar.bz2
-	$(BZIP2) -d < $(TARGET)-$(VERSION).tar.bz2 | $(TAR) -x -f -
+disttest: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
+	$(GPG) --verify $<.asc $<
+	$(BZIP2) -d < $< | $(TAR) -x -f -
 	cd $(TARGET)-$(VERSION) && $(MAKE) && $(MAKE) test && ./$(TARGET) -V
 	$(RM) -r $(TARGET)-$(VERSION)
 
 distclean:
-	$(RM) -f $(TARGET)-*.tar.bz2
+	$(RM) -f $(TARGET)-*.tar.bz2*
 
 realclean: distclean manclean clean
 	$(MAKE) -C extra/pki clean
