@@ -362,6 +362,21 @@ START_TEST(proxyspec_parse_14)
 }
 END_TEST
 
+START_TEST(opts_debug_01)
+{
+	opts_t *opts;
+
+	opts = opts_new();
+	opts->debug = 0;
+	fail_unless(!opts->debug, "plain 0");
+	fail_unless(!OPTS_DEBUG(opts), "macro 0");
+	opts->debug = 1;
+	fail_unless(!!opts->debug, "plain 1");
+	fail_unless(!!OPTS_DEBUG(opts), "macro 1");
+	opts_free(opts);
+}
+END_TEST
+
 Suite *
 opts_suite(void)
 {
@@ -384,6 +399,10 @@ opts_suite(void)
 	tcase_add_exit_test(tc, proxyspec_parse_12, EXIT_FAILURE);
 	tcase_add_test(tc, proxyspec_parse_13);
 	tcase_add_test(tc, proxyspec_parse_14);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("opts_debug");
+	tcase_add_test(tc, opts_debug_01);
 	suite_add_tcase(s, tc);
 
 	return s;
