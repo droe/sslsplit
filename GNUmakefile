@@ -124,15 +124,6 @@ CFLAGS+=	$(DEBUG_CFLAGS)
 endif
 BUILD_DATE:=	$(shell date +%Y-%m-%d)
 
-CFLAGS+=	$(PKG_CFLAGS) -pthread \
-		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
-CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
-		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
-		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
-		-D"FEATURES=\"$(FEATURES)\""
-LDFLAGS+=	$(PKG_LDFLAGS) -pthread
-LIBS+=		$(PKG_LIBS)
-
 # Autodetect dependencies known to pkg-config
 PKGS:=		
 ifndef OPENSSL_BASE
@@ -233,6 +224,18 @@ TPKG_CPPFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-I $(TPKGS))
 TPKG_LDFLAGS+=	$(shell $(PKGCONFIG) --libs-only-L --libs-only-other $(TPKGS))
 TPKG_LIBS+=	$(shell $(PKGCONFIG) --libs-only-l $(TPKGS))
 endif
+
+PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
+TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
+
+CFLAGS+=	$(PKG_CFLAGS) -pthread \
+		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
+CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
+		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
+		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
+		-D"FEATURES=\"$(FEATURES)\""
+LDFLAGS+=	$(PKG_LDFLAGS) -pthread
+LIBS+=		$(PKG_LIBS)
 
 export VERSION
 export OPENSSL
