@@ -17,7 +17,7 @@ FEATURES+=	-DDISABLE_SSLV2_SESSION_CACHE
 
 ### Debugging
 
-# These CFLAGS are added when building from git
+# These flags are added to CFLAGS iff building from a git repo.
 DEBUG_CFLAGS?=	-g
 #DEBUG_CFLAGS+=	-Werror
 
