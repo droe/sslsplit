@@ -1,3 +1,4 @@
+-   Consider memory pools for use by per-connection state
 -   Parse some information from HTTP responses (status, size)
 -   Handle renego & client cert authentication more gracefully
 -   Separate orig cert retrieval from actual fwd address/proto config
