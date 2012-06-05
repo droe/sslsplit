@@ -275,12 +275,9 @@ endif
 %.o: %.c $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-extra/pki/%.pem:
-	$(MAKE) -C extra/pki
-
-test: extra/pki/rsa.pem extra/pki/server.pem $(TARGET).test
+test: $(TARGET).test
 	$(RM) extra/pki/session.pem
-	$(MAKE) -C extra/pki session
+	$(MAKE) -C extra/pki testreqs session
 	./$(TARGET).test
 
 $(TARGET).test: $(TOBJS)

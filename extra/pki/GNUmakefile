@@ -15,6 +15,8 @@ PASSWORD:=	test
 
 all: rsa dsa ec targets server pwd
 
+testreqs: rsa targets server
+
 session: session.pem
 
 dh: dh512.param dh1024.param dh2048.param
