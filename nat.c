@@ -298,53 +298,32 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 /*
  * It seems that SO_ORIGINAL_DST only works for IPv4 and that there
  * is no IPv6 equivalent yet.  Someone please port pf to Linux...
- * We try to do something sensible for IPv6 anyway, expect it to fail.
  *
  * http://lists.netfilter.org/pipermail/netfilter/2007-July/069259.html
  *
  * It looks like TPROXY is the only way to go on Linux with IPv6.
  */
-#ifndef IPV6_ORIGINAL_DST
-#define IPV6_ORIGINAL_DST SO_ORIGINAL_DST
-#define IPV6_ORIGINAL_DST_UNDEF 
-#endif /* !IPV6_ORIGINAL_DST */
-#ifndef SOL_IPV6
-#define SOL_IPV6 SOL_IP
-#define SOL_IPV6_UNDEF 
-#endif /* !SOL_IPV6 */
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
                         evutil_socket_t s,
-                        struct sockaddr *src_addr,
+                        UNUSED struct sockaddr *src_addr,
                         UNUSED socklen_t src_addrlen)
 {
 	int rv;
 
-	if (src_addr->sa_family == AF_INET6) {
-		rv = getsockopt(s, SOL_IPV6, IPV6_ORIGINAL_DST,
-		                dst_addr, dst_addrlen);
-	} else {
-		rv = getsockopt(s, SOL_IP, SO_ORIGINAL_DST,
-		                dst_addr, dst_addrlen);
+	if (dst_addr->sa_family != AF_INET) {
+		log_err_printf("The netfilter NAT engine only "
+		               "supports IPv4 state lookups\n");
+		return -1;
 	}
+
+	rv = getsockopt(s, SOL_IP, SO_ORIGINAL_DST, dst_addr, dst_addrlen);
 	if (rv == -1) {
 		log_err_printf("Error from getsockopt(SO_ORIGINAL_DST): %s\n",
 		               strerror(errno));
-		if (errno == ENOPROTOOPT) {
-			log_err_printf("Looks like your Linux kernel doesn't "
-			               "support SO_ORIGINAL_DST for IPv6.\n");
-		}
 	}
 	return rv;
 }
-#ifdef IPV6_ORIGINAL_DST_UNDEF
-#undef IPV6_ORIGINAL_DST
-#undef IPV6_ORIGINAL_DST_UNDEF
-#endif /* IPV6_ORIGINAL_DST_UNDEF */
-#ifdef SOL_IPV6_UNDEF
-#undef SOL_IPV6
-#undef SOL_IPV6_UNDEF
-#endif /* SOL_IPV6_UNDEF */
 
 #ifdef IP_TRANSPARENT
 /*
