@@ -352,6 +352,7 @@ nat_iptransparent_socket_cb(evutil_socket_t s)
  * generic
  */
 
+#if defined(HAVE_IPFW) || (defined(HAVE_NETFILTER) && defined(IP_TRANSPARENT))
 /*
  * Generic getsockname based implementation.  This assumes that getsockname,
  * by kernel magic, gives us the original destination.
@@ -369,6 +370,7 @@ nat_getsockname_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 	}
 	return 0;
 }
+#endif
 
 
 /*
