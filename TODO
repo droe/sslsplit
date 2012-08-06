@@ -1,3 +1,5 @@
+-   Optionally add ephemeral RSA key to SSL_CTX to allow export cipher suites
+    http://www.openssl.org/docs/ssl/SSL_CTX_set_tmp_rsa_callback.html
 -   Consider memory pools for use by per-connection state
 -   Parse some information from HTTP responses (status, size)
 -   Handle renego & client cert authentication more gracefully
