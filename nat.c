@@ -306,12 +306,12 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
                         evutil_socket_t s,
-                        UNUSED struct sockaddr *src_addr,
+                        struct sockaddr *src_addr,
                         UNUSED socklen_t src_addrlen)
 {
 	int rv;
 
-	if (dst_addr->sa_family != AF_INET) {
+	if (src_addr->sa_family != AF_INET) {
 		log_err_printf("The netfilter NAT engine only "
 		               "supports IPv4 state lookups\n");
 		return -1;
