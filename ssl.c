@@ -453,7 +453,7 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 	DH *dh;
 
 	if (!(dh = DH_new())) {
-		log_err_printf("failed to load DH p and g from memory\n");
+		log_err_printf("DH_new() failed\n");
 		return NULL;
 	}
 	switch (keylength) {
@@ -470,7 +470,7 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 			dh->p = BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL);
 			break;
 		default:
-			log_err_printf("unhandled DH keylength %i%s\n",
+			log_err_printf("Unhandled DH keylength %i%s\n",
 			               keylength,
 			               (is_export ? " (export)" : ""));
 			DH_free(dh);
@@ -478,7 +478,7 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 	}
 	dh->g = BN_bin2bn(dh_g, sizeof(dh_g), NULL);
 	if (!dh->p || !dh->g) {
-		log_err_printf("failed to load DH p and g from memory\n");
+		log_err_printf("Failed to load DH p and g from memory\n");
 		DH_free(dh);
 		return NULL;
 	}
