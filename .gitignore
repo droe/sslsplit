@@ -3,8 +3,7 @@
 /*.dSYM
 /sslsplit
 /sslsplit.test
-/extra/pki/dh1024.param
-/extra/pki/dh512.param
+/extra/pki/dh*.param
 /extra/pki/dsa.pem
 /extra/pki/dsa.crt
 /extra/pki/dsa.key
