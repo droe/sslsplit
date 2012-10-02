@@ -112,5 +112,5 @@ session.pem:
 clean:
 	rm -rf rsa.* dsa.* ec.* dh*.param targets *.srl session.pem server.*
 
-.PHONY: all clean rsa dsa ec dh dhall session
+.PHONY: all clean rsa dsa ec dh session
 
