@@ -19,7 +19,7 @@ testreqs: rsa targets server
 
 session: session.pem
 
-dh: dh512.param dh1024.param dh2048.param
+dh: dh512.param dh1024.param dh2048.param dh4096.param
 
 rsa: rsa.pem
 
@@ -39,6 +39,9 @@ dh1024.param:
 
 dh2048.param:
 	$(OPENSSL) dhparam -out $@ -2 2048
+
+dh4096.param:
+	$(OPENSSL) dhparam -out $@ -2 4096
 
 dsa.param:
 	$(OPENSSL) dsaparam -out $@ 1024
