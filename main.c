@@ -159,21 +159,19 @@ main_usage(void)
 static void
 main_loadtgcrt(const char *filename, void *arg)
 {
-	void **args = arg;
-	const char *argv0 = args[0];
-	opts_t *opts = args[1];
+	opts_t *opts = arg;
 	cert_t *cert;
 	char **names;
 
 	cert = cert_new_load(filename);
 	if (!cert) {
-		fprintf(stderr, "%s: error loading cert and key from PEM file "
-		                "'%s'\n", argv0, filename);
+		log_err_printf("Failed to load cert and key from PEM file "
+		                "'%s'\n", filename);
 		exit(EXIT_FAILURE);
 	}
 	if (X509_check_private_key(cert->crt, cert->key) != 1) {
-		fprintf(stderr, "%s: cert does not match key in PEM file "
-		                "'%s':\n", argv0, filename);
+		log_err_printf("Cert does not match key in PEM file "
+		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
 		exit(EXIT_FAILURE);
 	}
@@ -584,12 +582,6 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: failed to preinit cachemgr.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
-	if (opts->tgcrtdir) {
-		const void *arg[2];
-		arg[0] = argv0;
-		arg[1] = opts;
-		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, arg);
-	}
 	if (log_preinit(opts) == -1) {
 		fprintf(stderr, "%s: failed to preinit logging.\n", argv0);
 		exit(EXIT_FAILURE);
@@ -633,11 +625,16 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (opts->tgcrtdir) {
+		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, opts);
+	}
+
 	proxy_ctx_t *proxy = proxy_new(opts);
 	if (!proxy) {
 		log_err_printf("Failed to initialize proxy.\n");
 		exit(EXIT_FAILURE);
 	}
+
 	proxy_run(proxy);
 	proxy_free(proxy);
 	cachemgr_fini();
