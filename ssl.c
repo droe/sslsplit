@@ -317,6 +317,22 @@ ssl_init(void)
 }
 
 /*
+ * Re-initialize OpenSSL after forking.
+ */
+void
+ssl_reinit(void)
+{
+	if (!ssl_initialized)
+		return;
+
+#ifdef OPENSSL_THREADS
+	for (int i = 0; i < ssl_mutex_num; i++) {
+		pthread_mutex_init(&ssl_mutex[i], NULL);
+	}
+#endif /* OPENSSL_THREADS */
+}
+
+/*
  * Deinitialize OpenSSL and free as much memory as possible.
  * Some 10k-100k will still remain resident no matter what.
  */

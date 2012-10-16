@@ -61,6 +61,7 @@
 
 void ssl_openssl_version(void);
 int ssl_init(void) WUNRES;
+void ssl_reinit(void);
 void ssl_fini(void);
 
 #ifndef OPENSSL_NO_DH

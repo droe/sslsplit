@@ -604,6 +604,7 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 		log_err_mode(LOG_ERR_MODE_SYSLOG);
+		ssl_reinit();
 	}
 	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
 		log_err_printf("Failed to write PID to PID file '%s': %s\n",
