@@ -606,19 +606,19 @@ main(int argc, char *argv[])
 		log_err_mode(LOG_ERR_MODE_SYSLOG);
 		ssl_reinit();
 	}
+
+	/* Post-privdrop/chroot/detach initialization, thread spawning */
+	if (log_init(opts) == -1) {
+		log_err_printf("Failed to init log facility.\n");
+		exit(EXIT_FAILURE);
+	}
 	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
 		log_err_printf("Failed to write PID to PID file '%s': %s\n",
 		               opts->pidfile, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-
-	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (cachemgr_init() == -1) {
 		log_err_printf("Failed to init cache manager.\n");
-		exit(EXIT_FAILURE);
-	}
-	if (log_init(opts) == -1) {
-		log_err_printf("Failed to init log facility.\n");
 		exit(EXIT_FAILURE);
 	}
 	if (nat_init() == -1) {
