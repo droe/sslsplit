@@ -497,6 +497,17 @@ main(int argc, char *argv[])
 		}
 	}
 
+	/* prevent multiple instances running */
+	if (opts->pidfile) {
+		pidfd = sys_pidf_open(opts->pidfile);
+		if (pidfd == -1) {
+			fprintf(stderr, "%s: cannot open PID file '%s' "
+			                "- process already running?\n",
+			                argv0, opts->pidfile);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	/* dynamic defaults */
 	if (!opts->ciphers) {
 		opts->ciphers = strdup("ALL:-aNULL");
@@ -511,6 +522,18 @@ main(int argc, char *argv[])
 	if (!opts->dropuser && !geteuid() && !getuid() &&
 	    !opts->contentlogdir) {
 		opts->dropuser = strdup("nobody");
+	}
+	if (opts_has_ssl_spec(opts) && !opts->key) {
+		opts->key = ssl_key_genrsa(1024);
+		if (!opts->key) {
+			fprintf(stderr, "%s: error generating RSA key:\n",
+			                argv0);
+			ERR_print_errors_fp(stderr);
+			exit(EXIT_FAILURE);
+		}
+		if (OPTS_DEBUG(opts)) {
+			log_dbg_printf("Generated RSA key for leaf certs.\n");
+		}
 	}
 
 	/* debugging */
@@ -540,28 +563,6 @@ main(int argc, char *argv[])
 			if (cbuf)
 				free(cbuf);
 		}
-	}
-
-	/* prevent multiple instances running */
-	if (opts->pidfile) {
-		pidfd = sys_pidf_open(opts->pidfile);
-		if (pidfd == -1) {
-			fprintf(stderr, "%s: cannot open PID file '%s' "
-			                "- process already running?\n",
-			                argv0, opts->pidfile);
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	/*
-	 * Initialize as much as possible before daemon() in order to be
-	 * able to provide direct feedback to the user when failing.
-	 */
-	if (cachemgr_init() == -1) {
-		fprintf(stderr, "%s: failed to init cachemgr.\n", argv0);
-		exit(EXIT_FAILURE);
-	}
-	if (OPTS_DEBUG(opts)) {
 		if (opts->cacrt) {
 			char *subj = ssl_x509_subject(opts->cacrt);
 			log_dbg_printf("Loaded CA: '%s'\n", subj);
@@ -574,17 +575,14 @@ main(int argc, char *argv[])
 			log_dbg_printf("No CA loaded.\n");
 		}
 	}
-	if (opts_has_ssl_spec(opts) && !opts->key) {
-		opts->key = ssl_key_genrsa(1024);
-		if (!opts->key) {
-			fprintf(stderr, "%s: error generating RSA key:\n",
-			                argv0);
-			ERR_print_errors_fp(stderr);
-			exit(EXIT_FAILURE);
-		}
-		if (OPTS_DEBUG(opts)) {
-			log_dbg_printf("Generated RSA key for leaf certs.\n");
-		}
+
+	/*
+	 * Initialize as much as possible before daemon() in order to be
+	 * able to provide direct feedback to the user when failing.
+	 */
+	if (cachemgr_init() == -1) {
+		fprintf(stderr, "%s: failed to init cachemgr.\n", argv0);
+		exit(EXIT_FAILURE);
 	}
 	if (opts->tgcrtdir) {
 		const void *arg[2];
