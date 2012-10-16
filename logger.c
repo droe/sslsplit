@@ -70,7 +70,7 @@ logger_new(logger_write_func_t writefunc)
 		return NULL;
 	logger_clear(logger);
 	logger->write = writefunc;
-	logger->queue = thrqueue_new(1024);
+	logger->queue = NULL;
 	return logger;
 }
 
@@ -80,7 +80,9 @@ logger_new(logger_write_func_t writefunc)
  */
 void
 logger_free(logger_t *logger) {
-	thrqueue_free(logger->queue);
+	if (logger->queue) {
+		thrqueue_free(logger->queue);
+	}
 	free(logger);
 }
 
@@ -117,6 +119,11 @@ logger_thread(void *arg)
 int
 logger_start(logger_t *logger) {
 	int rv;
+
+	if (logger->queue) {
+		thrqueue_free(logger->queue);
+	}
+	logger->queue = thrqueue_new(1024);
 
 	rv = pthread_create(&logger->thr, NULL, logger_thread, logger);
 	if (rv)
