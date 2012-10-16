@@ -56,12 +56,12 @@ cachemgr_gc_thread(UNUSED void * arg)
 }
 
 /*
- * Initialize the caches.
+ * Pre-initialize the caches.
  * The caches may be initialized before or after libevent and OpenSSL.
  * Returns -1 on error, 0 on success.
  */
 int
-cachemgr_init(void)
+cachemgr_preinit(void)
 {
 	if (!(cachemgr_fkcrt = cache_new(cachefkcrt_init_cb)))
 		goto out4;
@@ -81,6 +81,20 @@ out3:
 	cache_free(cachemgr_fkcrt);
 out4:
 	return -1;
+}
+
+/*
+ * Post-fork initialization.
+ * Returns -1 on error, 0 on success.
+ */
+int
+cachemgr_init(void)
+{
+	cache_reinit(cachemgr_fkcrt);
+	cache_reinit(cachemgr_tgcrt);
+	cache_reinit(cachemgr_ssess);
+	cache_reinit(cachemgr_dsess);
+	return 0;
 }
 
 /*

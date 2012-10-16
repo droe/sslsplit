@@ -580,8 +580,8 @@ main(int argc, char *argv[])
 	 * Initialize as much as possible before daemon() in order to be
 	 * able to provide direct feedback to the user when failing.
 	 */
-	if (cachemgr_init() == -1) {
-		fprintf(stderr, "%s: failed to init cachemgr.\n", argv0);
+	if (cachemgr_preinit() == -1) {
+		fprintf(stderr, "%s: failed to preinit cachemgr.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->tgcrtdir) {
@@ -625,6 +625,10 @@ main(int argc, char *argv[])
 	}
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
+	if (cachemgr_init() == -1) {
+		log_err_printf("Failed to init cache manager.\n");
+		exit(EXIT_FAILURE);
+	}
 	if (log_init(opts) == -1) {
 		log_err_printf("Failed to init log facility.\n");
 		exit(EXIT_FAILURE);

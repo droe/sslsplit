@@ -56,6 +56,15 @@ cache_new(cache_init_cb_t init_cb)
 }
 
 /*
+ * Reinitialize cache after fork().
+ */
+void
+cache_reinit(cache_t *cache)
+{
+	pthread_mutex_init(&cache->mutex, NULL);
+}
+
+/*
  * Free a cache and all associated resources.
  * This function is not thread-safe.
  */

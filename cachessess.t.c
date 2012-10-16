@@ -55,7 +55,7 @@ ssl_session_from_file(const char *filename)
 static void
 cachemgr_setup(void)
 {
-	if ((ssl_init() == -1) || (cachemgr_init() == -1))
+	if ((ssl_init() == -1) || (cachemgr_preinit() == -1))
 		exit(EXIT_FAILURE);
 }
 
