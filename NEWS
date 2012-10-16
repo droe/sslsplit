@@ -1,6 +1,7 @@
 ### SSLsplit current
 
 -   Add support for 2048 and 4096 bit Diffie-Hellman.
+-   Fix threading issues in daemon mode (issue #5).
 -   Fix address family check in netfilter NAT lookup (issue #4).
 -   Fix build on recent glibc systems (issue #2).
 -   Minor code and build process improvements.
