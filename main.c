@@ -598,11 +598,6 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: failed to preinit NAT lookup.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
-	proxy_ctx_t *proxy = proxy_new(opts);
-	if (!proxy) {
-		fprintf(stderr, "%s: error initializing proxy.\n", argv0);
-		exit(EXIT_FAILURE);
-	}
 
 	/* Drop privs, chroot, detach from TTY */
 	if (sys_privdrop(opts->dropuser, opts->jaildir) == -1) {
@@ -638,6 +633,11 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	proxy_ctx_t *proxy = proxy_new(opts);
+	if (!proxy) {
+		log_err_printf("Failed to initialize proxy.\n");
+		exit(EXIT_FAILURE);
+	}
 	proxy_run(proxy);
 	proxy_free(proxy);
 	cachemgr_fini();
