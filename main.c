@@ -216,6 +216,7 @@ main(int argc, char *argv[])
 	opts_t *opts;
 	char *natengine;
 	int pidfd = -1;
+	int rv = EXIT_FAILURE;
 
 	argv0 = argv[0];
 	opts = opts_new();
@@ -598,6 +599,10 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	if (opts->detach) {
+		if (OPTS_DEBUG(opts)) {
+			log_dbg_printf("Detaching from TTY, see syslog for "
+			               "errors after this point\n");
+		}
 		if (daemon(1, 0) == -1) {
 			fprintf(stderr, "%s: failed to detach from TTY: %s\n",
 			                argv0, strerror(errno));
@@ -609,21 +614,21 @@ main(int argc, char *argv[])
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (log_init(opts) == -1) {
-		log_err_printf("Failed to init log facility.\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "%s: failed to init log facility.\n", argv0);
+		goto out_log_failed;
 	}
 	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
 		log_err_printf("Failed to write PID to PID file '%s': %s\n",
 		               opts->pidfile, strerror(errno));
-		exit(EXIT_FAILURE);
+		goto out_pidwrite_failed;
 	}
 	if (cachemgr_init() == -1) {
 		log_err_printf("Failed to init cache manager.\n");
-		exit(EXIT_FAILURE);
+		goto out_cachemgr_failed;
 	}
 	if (nat_init() == -1) {
 		log_err_printf("Failed to init NAT state table lookup.\n");
-		exit(EXIT_FAILURE);
+		goto out_nat_failed;
 	}
 
 	if (opts->tgcrtdir) {
@@ -633,20 +638,26 @@ main(int argc, char *argv[])
 	proxy_ctx_t *proxy = proxy_new(opts);
 	if (!proxy) {
 		log_err_printf("Failed to initialize proxy.\n");
-		exit(EXIT_FAILURE);
+		goto out_proxy_failed;
 	}
+	rv = EXIT_SUCCESS;
 
 	proxy_run(proxy);
 	proxy_free(proxy);
-	cachemgr_fini();
+out_proxy_failed:
 	nat_fini();
-	log_fini();
+out_nat_failed:
+	cachemgr_fini();
+out_cachemgr_failed:
 	if (opts->pidfile) {
 		sys_pidf_close(pidfd, opts->pidfile);
 	}
+out_pidwrite_failed:
+	log_fini();
+out_log_failed:
 	opts_free(opts);
 	ssl_fini();
-	return EXIT_SUCCESS;
+	return rv;
 }
 
 /* vim: set noet ft=c: */

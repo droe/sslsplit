@@ -1128,6 +1128,8 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	if (!ctx->connected) {
 		log_err_printf("readcb called when other end not connected - "
 		               "aborting.\n");
+		/* XXX should signal main loop instead of calling exit() */
+		log_fini();
 		exit(EXIT_FAILURE);
 	}
 
