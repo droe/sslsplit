@@ -197,6 +197,7 @@ thrqueue_unblock_enqueue(thrqueue_t *queue)
 {
 	queue->block_enqueue = 0;
 	pthread_cond_broadcast(&queue->notfull);
+	sched_yield();
 }
 
 /*
@@ -210,6 +211,7 @@ thrqueue_unblock_dequeue(thrqueue_t *queue)
 {
 	queue->block_dequeue = 0;
 	pthread_cond_broadcast(&queue->notempty);
+	sched_yield();
 }
 
 /* vim: set noet ft=c: */

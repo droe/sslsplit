@@ -47,6 +47,7 @@ typedef struct pxy_thr_ctx {
 	size_t load;
 	struct event_base *evbase;
 	struct evdns_base *dnsbase;
+	int running;
 } pxy_thr_ctx_t;
 
 struct pxy_thrmgr_ctx {
@@ -81,6 +82,7 @@ pxy_thrmgr_thr(void *arg)
 	if (!ev)
 		return NULL;
 	evtimer_add(ev, &timer_delay);
+	ctx->running = 1;
 	event_base_dispatch(ctx->evbase);
 	event_free(ev);
 
@@ -102,6 +104,8 @@ pxy_thrmgr_new(UNUSED opts_t *opts)
 
 	ctx->num_thr = 2 * sys_get_cpu_cores();
 
+	pthread_mutex_init(&ctx->mutex, NULL);
+
 	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(void*))))
 		goto leave;
 
@@ -116,18 +120,21 @@ pxy_thrmgr_new(UNUSED opts_t *opts)
 		if (!ctx->thr[idx]->dnsbase)
 			goto leave;
 		ctx->thr[idx]->load = 0;
+		ctx->thr[idx]->running = 0;
 	}
 
 	for (idx = 0; idx < ctx->num_thr; idx++) {
 		if (pthread_create(&ctx->thr[idx]->thr, NULL,
 		                   pxy_thrmgr_thr, ctx->thr[idx]))
 			goto leave_thr;
+		while (!ctx->thr[idx]->running) {
+			sched_yield();
+		}
 	}
 
 	log_dbg_printf("Started %d connection handling threads\n",
 	               ctx->num_thr);
 
-	pthread_mutex_init(&ctx->mutex, NULL);
 	return ctx;
 
 leave_thr:
@@ -152,6 +159,7 @@ leave:
 		}
 		idx--;
 	}
+	pthread_mutex_destroy(&ctx->mutex);
 	if (ctx->thr)
 		free(ctx->thr);
 	free(ctx);
@@ -167,6 +175,7 @@ pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
 	pthread_mutex_destroy(&ctx->mutex);
 	for (int idx = 0; idx < ctx->num_thr; idx++) {
 		event_base_loopbreak(ctx->thr[idx]->evbase);
+		sched_yield();
 	}
 	for (int idx = 0; idx < ctx->num_thr; idx++) {
 		pthread_join(ctx->thr[idx]->thr, NULL);

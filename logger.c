@@ -128,6 +128,7 @@ logger_start(logger_t *logger) {
 	rv = pthread_create(&logger->thr, NULL, logger_thread, logger);
 	if (rv)
 		return -1;
+	sched_yield();
 	return 0;
 }
 
@@ -138,6 +139,7 @@ logger_start(logger_t *logger) {
 void
 logger_leave(logger_t *logger) {
 	thrqueue_unblock_dequeue(logger->queue);
+	sched_yield();
 }
 
 /*
