@@ -167,13 +167,15 @@ main_loadtgcrt(const char *filename, void *arg)
 	if (!cert) {
 		log_err_printf("Failed to load cert and key from PEM file "
 		                "'%s'\n", filename);
-		exit(EXIT_FAILURE);
+		log_fini();
+		exit(EXIT_FAILURE); /* XXX */
 	}
 	if (X509_check_private_key(cert->crt, cert->key) != 1) {
 		log_err_printf("Cert does not match key in PEM file "
 		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
-		exit(EXIT_FAILURE);
+		log_fini();
+		exit(EXIT_FAILURE); /* XXX */
 	}
 
 #ifdef DEBUG_CERTIFICATE
