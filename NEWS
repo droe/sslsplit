@@ -1,4 +1,4 @@
-### SSLsplit current
+### SSLsplit 0.4.5 2012-11-07
 
 -   Add support for 2048 and 4096 bit Diffie-Hellman.
 -   Fix syslog error messages (issue #6).
