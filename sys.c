@@ -180,7 +180,7 @@ sys_pidf_close(int fd, const char *fn)
 /*
  * Parse an ascii host/IP and port tuple into a sockaddr_storage.
  * On success, returns address family and fills in addr, addrlen.
- * Exit and don't return on errors.
+ * Returns -1 on error.
  */
 int
 sys_sockaddr_parse(struct sockaddr_storage *addr, socklen_t *addrlen,
