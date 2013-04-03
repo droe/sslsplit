@@ -255,7 +255,7 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 }
 
 /*
- * Garbace collection handler.
+ * Garbage collection handler.
  */
 static void
 proxy_gc_cb(UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
