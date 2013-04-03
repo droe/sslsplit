@@ -3,6 +3,7 @@
 
 -   Work around segmentation fault when loading certificates caused by a bug
     in OpenSSL 1.0.0k and 1.0.1e.
+-   Fix binding to ports < 1024 with default settings (issue #8).
 
 
 ### SSLsplit 0.4.5 2012-11-07

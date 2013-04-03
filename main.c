@@ -594,6 +594,13 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Bind listeners before dropping privileges */
+	proxy_ctx_t *proxy = proxy_new(opts);
+	if (!proxy) {
+		fprintf(stderr, "%s: failed to initialize proxy.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+
 	/* Drop privs, chroot, detach from TTY */
 	if (sys_privdrop(opts->dropuser, opts->jaildir) == -1) {
 		fprintf(stderr, "%s: failed to drop privileges: %s\n",
@@ -637,16 +644,10 @@ main(int argc, char *argv[])
 		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, opts);
 	}
 
-	proxy_ctx_t *proxy = proxy_new(opts);
-	if (!proxy) {
-		log_err_printf("Failed to initialize proxy.\n");
-		goto out_proxy_failed;
-	}
 	rv = EXIT_SUCCESS;
 
 	proxy_run(proxy);
 	proxy_free(proxy);
-out_proxy_failed:
 	nat_fini();
 out_nat_failed:
 	cachemgr_fini();
