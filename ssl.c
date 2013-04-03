@@ -65,6 +65,12 @@ ssl_openssl_version(void)
 	fprintf(stderr, "rtlinked against %s (%lx)\n",
 	                SSLeay_version(SSLEAY_VERSION),
 	                SSLeay());
+#if OPENSSL_VERSION_NUMBER == 0x1000105f
+	fprintf(stderr, "  *\n");
+	fprintf(stderr, "  *  Warning: Bug in OpenSSL 1.0.1e causes segmentation fault!\n");
+	fprintf(stderr, "  *  http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031\n");
+	fprintf(stderr, "  *\n");
+#endif
 #ifndef OPENSSL_NO_TLSEXT
 	fprintf(stderr, "TLS Server Name Indication (SNI) supported\n");
 #else /* OPENSSL_NO_TLSEXT */
