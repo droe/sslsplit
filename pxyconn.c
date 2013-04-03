@@ -1576,8 +1576,10 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 
 		ctx->sni = ssl_tls_clienthello_parse_sni(buf, &n);
 		if (OPTS_DEBUG(ctx->opts)) {
-			log_dbg_printf("SNI peek: [%s]\n",
-			               ctx->sni ? ctx->sni : "n/a");
+			log_dbg_printf("SNI peek: [%s] [%s]\n",
+			               ctx->sni ? ctx->sni : "n/a",
+			               (!ctx->sni && (n == -1)) ?
+			               "incomplete" : "complete");
 		}
 		if (!ctx->sni && (n == -1) && (ctx->sni_peek_retries++ < 50)) {
 			/* ssl_tls_clienthello_parse_sni indicates that we
