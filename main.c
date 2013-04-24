@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent and scalable SSL/TLS interception
- * Copyright (c) 2009-2012, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2013, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -67,7 +67,7 @@ static void
 main_version(void)
 {
 	fprintf(stderr, "%s %s (built %s)\n", PNAME, version, build_date);
-	fprintf(stderr, "Copyright (c) 2009-2012, "
+	fprintf(stderr, "Copyright (c) 2009-2013, "
 	                "Daniel Roethlisberger <daniel@roe.ch>\n");
 	fprintf(stderr, "http://www.roe.ch/SSLsplit\n");
 	if (features[0]) {
