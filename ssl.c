@@ -61,6 +61,9 @@
  */
 #if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
     (OPENSSL_VERSION_NUMBER == 0x1000105fL)
+/*
+ * OpenSSL internal declarations from ssl_locl.h, reduced to what is needed.
+ */
 struct cert_pkey_st {
 	X509 *x509;
 	/*
@@ -72,6 +75,15 @@ struct cert_st {
 	struct cert_pkey_st *key;
 	/* ... */
 };
+
+/*
+ * Replacement function for SSL_get_certificate().
+ */
+X509 *
+ssl_ssl_cert_get(SSL *s)
+{
+	return s->cert ? s->cert->key->x509 : NULL;
+}
 #endif /* OpenSSL 1.0.0k or 1.0.1e */
 
 
@@ -842,15 +854,7 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 	if (rv != 1 || !tmpssl)
 		goto leave2;
 
-#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
-    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
-	/*
-	 * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e (see above)
-	 */
-	tmpcrt = tmpssl->cert ? tmpssl->cert->key->x509 : NULL;
-#else /* !OpenSSL 1.0.0k or 1.0.1e */
 	tmpcrt = SSL_get_certificate(tmpssl);
-#endif /* !OpenSSL 1.0.0k or 1.0.1e */
 	if (!tmpcrt)
 		goto leave3;
 
@@ -928,15 +932,7 @@ ssl_x509_load(const char *filename)
 	if (rv != 1 || !tmpssl)
 		goto leave2;
 
-#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
-    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
-	/*
-	 * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e (see above)
-	 */
-	crt = tmpssl->cert ? tmpssl->cert->key->x509 : NULL;
-#else /* !OpenSSL 1.0.0k or 1.0.1e */
 	crt = SSL_get_certificate(tmpssl);
-#endif /* !OpenSSL 1.0.0k or 1.0.1e */
 	if (crt)
 		ssl_x509_refcount_inc(crt);
 	SSL_free(tmpssl);

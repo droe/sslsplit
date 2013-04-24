@@ -59,6 +59,17 @@
 #define OPENSSL_NO_EC
 #endif
 
+/*
+ * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e
+ * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031
+ * http://openssl.6102.n7.nabble.com/NULL-ptr-deref-when-calling-SSL-get-certificate-with-1-0-0k-td43636.html
+ */
+#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
+#define SSL_get_certificate(x) ssl_ssl_cert_get(x)
+X509 * ssl_ssl_cert_get(SSL *);
+#endif /* OpenSSL 1.0.0k or 1.0.1e */
+
 void ssl_openssl_version(void);
 int ssl_init(void) WUNRES;
 void ssl_reinit(void);
