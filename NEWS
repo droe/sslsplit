@@ -1,3 +1,10 @@
+
+### SSLsplit master
+
+-   Work around segmentation fault when loading certificates caused by a bug
+    in OpenSSL 1.0.0k and 1.0.1e.
+
+
 ### SSLsplit 0.4.5 2012-11-07
 
 -   Add support for 2048 and 4096 bit Diffie-Hellman.

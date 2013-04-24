@@ -48,9 +48,32 @@
 #include <openssl/x509v3.h>
 #include <openssl/ocsp.h>
 
+
 /*
  * Collection of helper functions on top of the OpenSSL API.
  */
+
+
+/*
+ * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e
+ * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031
+ * http://openssl.6102.n7.nabble.com/NULL-ptr-deref-when-calling-SSL-get-certificate-with-1-0-0k-td43636.html
+ */
+#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
+struct cert_pkey_st {
+	X509 *x509;
+	/*
+	EVP_PKEY *privatekey;
+	const EVP_MD *digest;
+	*/
+};
+struct cert_st {
+	struct cert_pkey_st *key;
+	/* ... */
+};
+#endif /* OpenSSL 1.0.0k or 1.0.1e */
+
 
 /*
  * Print OpenSSL version and build-time configuration to standard error and
@@ -65,12 +88,6 @@ ssl_openssl_version(void)
 	fprintf(stderr, "rtlinked against %s (%lx)\n",
 	                SSLeay_version(SSLEAY_VERSION),
 	                SSLeay());
-#if OPENSSL_VERSION_NUMBER == 0x1000105f
-	fprintf(stderr, "  *\n");
-	fprintf(stderr, "  *  Warning: Bug in OpenSSL 1.0.1e causes segmentation fault!\n");
-	fprintf(stderr, "  *  http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031\n");
-	fprintf(stderr, "  *\n");
-#endif
 #ifndef OPENSSL_NO_TLSEXT
 	fprintf(stderr, "TLS Server Name Indication (SNI) supported\n");
 #else /* OPENSSL_NO_TLSEXT */
@@ -85,6 +102,10 @@ ssl_openssl_version(void)
 #else /* !OPENSSL_THREADS */
 	fprintf(stderr, "OpenSSL is not thread-safe\n");
 #endif /* !OPENSSL_THREADS */
+#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
+	fprintf(stderr, "Using direct access workaround when loading certs\n");
+#endif /* OpenSSL 1.0.0k or 1.0.1e */
 
 	fprintf(stderr, "SSL/TLS algorithm availability:");
 #ifndef OPENSSL_NO_RSA
@@ -821,7 +842,15 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 	if (rv != 1 || !tmpssl)
 		goto leave2;
 
+#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
+	/*
+	 * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e (see above)
+	 */
+	tmpcrt = tmpssl->cert ? tmpssl->cert->key->x509 : NULL;
+#else /* !OpenSSL 1.0.0k or 1.0.1e */
 	tmpcrt = SSL_get_certificate(tmpssl);
+#endif /* !OpenSSL 1.0.0k or 1.0.1e */
 	if (!tmpcrt)
 		goto leave3;
 
@@ -898,7 +927,16 @@ ssl_x509_load(const char *filename)
 	tmpssl = SSL_new(tmpctx);
 	if (rv != 1 || !tmpssl)
 		goto leave2;
+
+#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+    (OPENSSL_VERSION_NUMBER == 0x1000105fL)
+	/*
+	 * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e (see above)
+	 */
+	crt = tmpssl->cert ? tmpssl->cert->key->x509 : NULL;
+#else /* !OpenSSL 1.0.0k or 1.0.1e */
 	crt = SSL_get_certificate(tmpssl);
+#endif /* !OpenSSL 1.0.0k or 1.0.1e */
 	if (crt)
 		ssl_x509_refcount_inc(crt);
 	SSL_free(tmpssl);
