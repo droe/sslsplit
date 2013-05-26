@@ -1505,6 +1505,14 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 		return;
 	}
 
+	if (OPTS_DEBUG(ctx->opts)) {
+		char *ip = sys_sockaddr_str((struct sockaddr *)&ctx->addr,
+		                            ctx->addrlen);
+		log_dbg_printf("Connecting to %s\n", ip);
+		if (ip)
+			free(ip);
+	}
+
 	/* initiate connection */
 	bufferevent_socket_connect(ctx->dst.bev,
 	                           (struct sockaddr *)&ctx->addr,
