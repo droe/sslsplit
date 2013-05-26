@@ -1,6 +1,8 @@
 
 ### SSLsplit master
 
+-   Fix fallback to passthrough (-P) when no matching certificate is found
+    for a connection (issue #9).
 -   Work around segmentation fault when loading certificates caused by a bug
     in OpenSSL 1.0.0k and 1.0.1e.
 -   Fix binding to ports < 1024 with default settings (issue #8).
