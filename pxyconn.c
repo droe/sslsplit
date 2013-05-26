@@ -1276,8 +1276,10 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			ctx->src.ssl = pxy_srcssl_create(ctx, this->ssl);
 			if (!ctx->src.ssl) {
 				bufferevent_free_and_close_fd(bev, ctx);
+				ctx->dst.ssl = NULL;
 				if (ctx->opts->passthrough && !ctx->enomem) {
 					ctx->passthrough = 1;
+					ctx->connected = 0;
 					log_dbg_printf("No cert found; "
 					               "falling back "
 					               "to passthrough\n");
