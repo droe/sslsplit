@@ -524,7 +524,7 @@ main(int argc, char *argv[])
 	    !opts->contentlogdir) {
 		opts->dropuser = strdup("nobody");
 	}
-	if (opts_has_ssl_spec(opts) && !opts->key) {
+	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
 		opts->key = ssl_key_genrsa(1024);
 		if (!opts->key) {
 			fprintf(stderr, "%s: error generating RSA key:\n",
