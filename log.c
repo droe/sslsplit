@@ -425,12 +425,14 @@ out:
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(UNUSED opts_t *opts)
+log_init(opts_t *opts)
 {
 	if (err_log)
 		if (logger_start(err_log) == -1)
 			return -1;
-	err_started = 1;
+	if (!opts->debug) {
+		err_started = 1;
+	}
 	if (connect_log)
 		if (logger_start(connect_log) == -1)
 			return -1;
