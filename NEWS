@@ -1,5 +1,5 @@
 
-### SSLsplit master
+### SSLsplit 0.4.6 2013-06-03
 
 -   Fix fallback to passthrough (-P) when no matching certificate is found
     for a connection (issue #9).
