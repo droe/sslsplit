@@ -103,7 +103,8 @@ typedef struct pxy_conn_ctx {
 	/* status flags */
 	unsigned int immutable_cert : 1;  /* 1 if the cert cannot be changed */
 	unsigned int connected : 1;       /* 0 until both ends are connected */
-	unsigned int seen_req_header : 1; /* 0 until HTTP header is complete */
+	unsigned int seen_req_header : 1; /* 0 until request header complete */
+	unsigned int seen_resp_header : 1;  /* 0 until response hdr complete */
 	unsigned int sent_http_conn_close : 1;   /* 0 until Conn: close sent */
 	unsigned int passthrough : 1;      /* 1 if SSL passthrough is active */
 	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
@@ -113,13 +114,21 @@ typedef struct pxy_conn_ctx {
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
 
-	/* strings for logging */
+	/* log strings from socket */
 	char *src_str;
 	char *dst_str;
+
+	/* log strings from HTTP request */
 	char *http_method;
 	char *http_uri;
 	char *http_host;
 	char *http_content_type;
+
+	/* log strings from HTTP response */
+	char *http_status_code;
+	char *http_status_text;
+
+	/* log strings from SSL context */
 	char *ssl_names;
 	char *ssl_orignames;
 
@@ -203,6 +212,12 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->http_content_type) {
 		free(ctx->http_content_type);
+	}
+	if (ctx->http_status_code) {
+		free(ctx->http_status_code);
+	}
+	if (ctx->http_status_text) {
+		free(ctx->http_status_text);
 	}
 	if (ctx->ssl_names) {
 		free(ctx->ssl_names);
@@ -327,21 +342,23 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #endif
 
 	if (!ctx->spec->ssl) {
-		rv = asprintf(&msg, "http %s %s %s %s %s%s\n",
+		rv = asprintf(&msg, "http %s %s %s %s %s %s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
 		              STRORDASH(ctx->http_method),
 		              STRORDASH(ctx->http_uri),
+		              STRORDASH(ctx->http_status_code),
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	} else {
-		rv = asprintf(&msg, "https %s %s %s %s %s "
+		rv = asprintf(&msg, "https %s %s %s %s %s %s "
 		              "sni:%s crt:%s origcrt:%s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
 		              STRORDASH(ctx->http_method),
 		              STRORDASH(ctx->http_uri),
+		              STRORDASH(ctx->http_status_code),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
 		              STRORDASH(ctx->ssl_orignames),
@@ -903,8 +920,16 @@ pxy_bufferevent_setup(pxy_conn_ctx_t *ctx, evutil_socket_t fd, SSL *ssl)
 	return bev;
 }
 
+/*
+ * Filter a single line of HTTP request headers.
+ * Also fills in some context fields for logging.
+ *
+ * Returns NULL if the current line should be deleted from the request.
+ * Returns a newly allocated string if the current line should be replaced.
+ * Returns `line' if the line should be kept.
+ */
 static char *
-pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
+pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 {
 	char *space1, *space2, *newhdr;
 
@@ -974,6 +999,62 @@ pxy_http_header_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				}
 				return newhdr;
 			}
+		}
+	}
+
+	return (char*)line;
+}
+
+/*
+ * Filter a single line of HTTP response headers.
+ *
+ * Returns NULL if the current line should be deleted from the response.
+ * Returns a newly allocated string if the current line should be replaced.
+ * Returns `line' if the line should be kept.
+ */
+static char *
+pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
+{
+	char *space1, *space2;
+	size_t len_code, len_text;
+
+	/* parse information for connect log */
+	if (!ctx->http_status_code) {
+		/* first line */
+		space1 = strchr(line, ' ');
+		space2 = space1 ? strchr(space1 + 1, ' ') : NULL;
+		if (!space1 || !!strncmp(line, "HTTP", 4)) {
+			/* not HTTP or HTTP/0.9 */
+			ctx->seen_resp_header = 1;
+		} else {
+			if (space2) {
+				len_code = space2 - space1 - 1;
+				len_text = strlen(space2 + 1);
+			} else {
+				len_code = strlen(space1 + 1);
+				len_text = 0;
+			}
+			ctx->http_status_code = malloc(len_code + 1);
+			ctx->http_status_text = malloc(len_text + 1);
+			if (!ctx->http_status_code || !ctx->http_status_text) {
+				ctx->enomem = 1;
+				return NULL;
+			}
+			memcpy(ctx->http_status_code, space1 + 1, len_code);
+			ctx->http_status_code[len_code] = '\0';
+			if (space2) {
+				memcpy(ctx->http_status_text,
+				       space2 + 1, len_text);
+			}
+			ctx->http_status_text[len_text] = '\0';
+		}
+	} else {
+		/* not first line */
+		if (!strncasecmp(line, "Public-Key-Pins: ", 17) ||
+		    !strncasecmp(line, "Public-Key-Pins-Report-Only: ", 29)) {
+			return NULL;
+		} else if (line[0] == '\0') {
+			ctx->seen_resp_header = 1;
 		}
 	}
 
@@ -1141,6 +1222,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 
 	struct evbuffer *outbuf = bufferevent_get_output(other->bev);
 
+	/* request header munging */
 	if (ctx->spec->http && !ctx->seen_req_header && (bev == ctx->src.bev)
 	    && !ctx->passthrough) {
 		logbuf_t *lb = NULL, *tail = NULL;
@@ -1160,7 +1242,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 					lb = tail = tmp;
 				}
 			}
-			replace = pxy_http_header_filter_line(line, ctx);
+			replace = pxy_http_reqhdr_filter_line(line, ctx);
 			if (replace == line) {
 				evbuffer_add_printf(outbuf, "%s\r\n", line);
 			} else if (replace) {
@@ -1169,9 +1251,49 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 			free(line);
 			if (ctx->seen_req_header) {
+				/* request header complete */
 				if (ctx->opts->deny_ocsp) {
 					pxy_ocsp_deny(ctx);
 				}
+				break;
+			}
+		}
+		if (lb && WANT_CONTENT_LOG(ctx)) {
+			log_content_submit(&ctx->logctx, lb, 0);
+		}
+		if (!ctx->seen_req_header)
+			return;
+	} else
+	/* response header munging */
+	if (ctx->spec->http && !ctx->seen_resp_header && (bev == ctx->dst.bev)
+	    && !ctx->passthrough) {
+		logbuf_t *lb = NULL, *tail = NULL;
+		char *line, *replace;
+		while ((line = evbuffer_readln(inbuf, NULL,
+		                               EVBUFFER_EOL_CRLF))) {
+			if (WANT_CONTENT_LOG(ctx)) {
+				logbuf_t *tmp;
+				tmp = logbuf_new_printf(-1, NULL,
+				                        "%s\r\n", line);
+				if (tail) {
+					if (tmp) {
+						tail->next = tmp;
+						tail = tail->next;
+					}
+				} else {
+					lb = tail = tmp;
+				}
+			}
+			replace = pxy_http_resphdr_filter_line(line, ctx);
+			if (replace == line) {
+				evbuffer_add_printf(outbuf, "%s\r\n", line);
+			} else if (replace) {
+				evbuffer_add_printf(outbuf, "%s\r\n", replace);
+				free(replace);
+			}
+			free(line);
+			if (ctx->seen_resp_header) {
+				/* response header complete: log connection */
 				if (WANT_CONNECT_LOG(ctx)) {
 					pxy_log_connect_http(ctx);
 				}
@@ -1181,7 +1303,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		if (lb && WANT_CONTENT_LOG(ctx)) {
 			log_content_submit(&ctx->logctx, lb, 0);
 		}
-		if (!ctx->seen_req_header)
+		if (!ctx->seen_resp_header)
 			return;
 	}
 

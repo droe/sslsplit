@@ -1,4 +1,11 @@
 
+### SSLsplit feature/resphdrfilter
+
+-   Filter HPKP header lines from HTTP(S) response headers in order to prevent
+    public key pinning.
+-   Add HTTP status code to connection log.
+
+
 ### SSLsplit 0.4.6 2013-06-03
 
 -   Fix fallback to passthrough (-P) when no matching certificate is found
