@@ -1,12 +1,9 @@
--   Strip HPKP headers from responses to prevent pinning
--   Rewrite header munging
 -   Control SSL_OP_SINGLE_ECDH_USE and other de-optimizations by a
     "prefer speed to security" command line option
 -   Optionally add ephemeral RSA key to SSL_CTX to allow export cipher suites
     http://www.openssl.org/docs/ssl/SSL_CTX_set_tmp_rsa_callback.html
 -   Dump cipher suites sent by the client in debug mode
 -   Consider memory pools for use by per-connection state
--   Parse some information from HTTP responses (status, size)
 -   Handle renego & client cert authentication more gracefully
 -   Separate orig cert retrieval from actual fwd address/proto config
 -   CRL denial mode based on targetdir cert's CDPs or by identifying CRL ASN.1

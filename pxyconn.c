@@ -127,6 +127,7 @@ typedef struct pxy_conn_ctx {
 	/* log strings from HTTP response */
 	char *http_status_code;
 	char *http_status_text;
+	char *http_content_length;
 
 	/* log strings from SSL context */
 	char *ssl_names;
@@ -218,6 +219,9 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->http_status_text) {
 		free(ctx->http_status_text);
+	}
+	if (ctx->http_content_length) {
+		free(ctx->http_content_length);
 	}
 	if (ctx->ssl_names) {
 		free(ctx->ssl_names);
@@ -342,16 +346,17 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #endif
 
 	if (!ctx->spec->ssl) {
-		rv = asprintf(&msg, "http %s %s %s %s %s %s%s\n",
+		rv = asprintf(&msg, "http %s %s %s %s %s %s %s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
 		              STRORDASH(ctx->http_method),
 		              STRORDASH(ctx->http_uri),
 		              STRORDASH(ctx->http_status_code),
+		              STRORDASH(ctx->http_content_length),
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	} else {
-		rv = asprintf(&msg, "https %s %s %s %s %s %s "
+		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
 		              "sni:%s crt:%s origcrt:%s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
@@ -359,6 +364,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->http_method),
 		              STRORDASH(ctx->http_uri),
 		              STRORDASH(ctx->http_status_code),
+		              STRORDASH(ctx->http_content_length),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
 		              STRORDASH(ctx->ssl_orignames),
@@ -1050,7 +1056,15 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		}
 	} else {
 		/* not first line */
-		if (!strncasecmp(line, "Public-Key-Pins: ", 17) ||
+		if (!ctx->http_content_length &&
+		    !strncasecmp(line, "Content-Length: ", 16)) {
+			ctx->http_content_length =
+				strdup(util_skipws(line + 16));
+			if (!ctx->http_content_length) {
+				ctx->enomem = 1;
+				return NULL;
+			}
+		} else if (!strncasecmp(line, "Public-Key-Pins: ", 17) ||
 		    !strncasecmp(line, "Public-Key-Pins-Report-Only: ", 29)) {
 			return NULL;
 		} else if (line[0] == '\0') {
