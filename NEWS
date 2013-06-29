@@ -1,5 +1,5 @@
 
-### SSLsplit feature/resphdrfilter
+### SSLsplit master
 
 -   Filter HPKP header lines from HTTP(S) response headers in order to prevent
     public key pinning.
