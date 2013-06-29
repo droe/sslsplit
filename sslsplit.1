@@ -64,6 +64,7 @@ Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
 ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
 private key is available, instead of generating forged ones.  SSLsplit supports
 NULL-prefix CN certificates and can deny OCSP requests in a generic way.
+SSLsplit removes HPKP response headers in order to prevent public key pinning.
 .LP
 SSLsplit supports a number of NAT engines, static forwarding and SNI DNS
 lookups to determine the original destination of redirected connections
