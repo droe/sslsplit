@@ -1,9 +1,9 @@
 
-### SSLsplit master
+### SSLsplit 0.4.7 2013-07-02
 
 -   Fix remaining threading issues in daemon mode.
 -   Filter HPKP header lines from HTTP(S) response headers in order to prevent
-    public key pinning.
+    public key pinning based on draft-ietf-websec-key-pinning-06.
 -   Add HTTP status code and content-length to connection log.
 
 
