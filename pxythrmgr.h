@@ -41,7 +41,8 @@
 typedef struct pxy_thrmgr_ctx pxy_thrmgr_ctx_t;
 
 pxy_thrmgr_ctx_t * pxy_thrmgr_new(opts_t *) MALLOC;
-void pxy_thrmgr_free(pxy_thrmgr_ctx_t *);
+int pxy_thrmgr_run(pxy_thrmgr_ctx_t *) NONNULL(1) WUNRES;
+void pxy_thrmgr_free(pxy_thrmgr_ctx_t *) NONNULL(1);
 
 int pxy_thrmgr_attach(pxy_thrmgr_ctx_t *, struct event_base **,
                       struct evdns_base **) WUNRES;

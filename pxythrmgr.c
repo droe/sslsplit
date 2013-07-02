@@ -90,19 +90,35 @@ pxy_thrmgr_thr(void *arg)
 }
 
 /*
- * Create new thread manager and start threads.
+ * Create new thread manager but do not start any threads yet.
+ * This gets called before forking to background.
  */
 pxy_thrmgr_ctx_t *
 pxy_thrmgr_new(UNUSED opts_t *opts)
 {
 	pxy_thrmgr_ctx_t *ctx;
-	int idx = -1;
 
 	if (!(ctx = malloc(sizeof(pxy_thrmgr_ctx_t))))
 		return NULL;
 	memset(ctx, 0, sizeof(pxy_thrmgr_ctx_t));
 
 	ctx->num_thr = 2 * sys_get_cpu_cores();
+	return ctx;
+}
+
+/*
+ * Start the thread manager and associated threads.
+ * This must be called after forking.
+ *
+ * Returns -1 on failure, 0 on success.
+ */
+int
+pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
+{
+	int idx = -1;
+
+	if (!ctx)
+		return -1;
 
 	pthread_mutex_init(&ctx->mutex, NULL);
 
@@ -135,7 +151,7 @@ pxy_thrmgr_new(UNUSED opts_t *opts)
 	log_dbg_printf("Started %d connection handling threads\n",
 	               ctx->num_thr);
 
-	return ctx;
+	return 0;
 
 leave_thr:
 	idx--;
@@ -163,7 +179,7 @@ leave:
 	if (ctx->thr)
 		free(ctx->thr);
 	free(ctx);
-	return NULL;
+	return -1;
 }
 
 /*

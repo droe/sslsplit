@@ -1,6 +1,7 @@
 
 ### SSLsplit master
 
+-   Fix remaining threading issues in daemon mode.
 -   Filter HPKP header lines from HTTP(S) response headers in order to prevent
     public key pinning.
 -   Add HTTP status code and content-length to connection log.

@@ -365,7 +365,8 @@ leave0:
 }
 
 /*
- * Run the event loop.  Returns when the event loop is cancelled by a signal.
+ * Run the event loop.  Returns when the event loop is cancelled by a signal
+ * or on failure.
  */
 void
 proxy_run(proxy_ctx_t *ctx)
@@ -378,6 +379,10 @@ proxy_run(proxy_ctx_t *ctx)
 		event_base_dump_events(ctx->evbase, stderr);
 	}
 #endif /* PURIFY */
+	if (pxy_thrmgr_run(ctx->thrmgr) == -1) {
+		log_err_printf("Failed to start thread manager\n");
+		return;
+	}
 	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Starting main event loop.\n");
 	}
