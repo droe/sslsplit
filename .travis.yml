@@ -2,8 +2,7 @@ language: c
 compiler:
   - gcc
   - clang
-# make test omitted because of missing libcheck on Ubuntu
-script: make config && make
+script: make config && make && make test && ./sslsplit -V
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq libssl-dev libevent-dev
+  - sudo apt-get install -qq libssl-dev libevent-dev check
