@@ -139,6 +139,9 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 		ctx->thr[idx]->running = 0;
 	}
 
+	log_dbg_printf("Initialized %d connection handling threads\n",
+	               ctx->num_thr);
+
 	for (idx = 0; idx < ctx->num_thr; idx++) {
 		if (pthread_create(&ctx->thr[idx]->thr, NULL,
 		                   pxy_thrmgr_thr, ctx->thr[idx]))
