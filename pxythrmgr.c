@@ -176,9 +176,10 @@ leave:
 		idx--;
 	}
 	pthread_mutex_destroy(&ctx->mutex);
-	if (ctx->thr)
+	if (ctx->thr) {
 		free(ctx->thr);
-	free(ctx);
+		ctx->thr = NULL;
+	}
 	return -1;
 }
 
@@ -188,20 +189,24 @@ leave:
 void
 pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
 {
+	if (!ctx)
+		return;
 	pthread_mutex_destroy(&ctx->mutex);
-	for (int idx = 0; idx < ctx->num_thr; idx++) {
-		event_base_loopbreak(ctx->thr[idx]->evbase);
-		sched_yield();
+	if (ctx->thr) {
+		for (int idx = 0; idx < ctx->num_thr; idx++) {
+			event_base_loopbreak(ctx->thr[idx]->evbase);
+			sched_yield();
+		}
+		for (int idx = 0; idx < ctx->num_thr; idx++) {
+			pthread_join(ctx->thr[idx]->thr, NULL);
+		}
+		for (int idx = 0; idx < ctx->num_thr; idx++) {
+			evdns_base_free(ctx->thr[idx]->dnsbase, 0);
+			event_base_free(ctx->thr[idx]->evbase);
+			free(ctx->thr[idx]);
+		}
+		free(ctx->thr);
 	}
-	for (int idx = 0; idx < ctx->num_thr; idx++) {
-		pthread_join(ctx->thr[idx]->thr, NULL);
-	}
-	for (int idx = 0; idx < ctx->num_thr; idx++) {
-		evdns_base_free(ctx->thr[idx]->dnsbase, 0);
-		event_base_free(ctx->thr[idx]->evbase);
-		free(ctx->thr[idx]);
-	}
-	free(ctx->thr);
 	free(ctx);
 }
 

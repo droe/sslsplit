@@ -405,10 +405,16 @@ proxy_free(proxy_ctx_t *ctx)
 		proxy_listener_ctx_free(ctx->lctx);
 	}
 	for (size_t i = 0; i < (sizeof(ctx->sev) / sizeof(ctx->sev[0])); i++) {
-		event_free(ctx->sev[i]);
+		if (ctx->sev[i]) {
+			event_free(ctx->sev[i]);
+		}
 	}
-	pxy_thrmgr_free(ctx->thrmgr);
-	event_base_free(ctx->evbase);
+	if (ctx->thrmgr) {
+		pxy_thrmgr_free(ctx->thrmgr);
+	}
+	if (ctx->evbase) {
+		event_base_free(ctx->evbase);
+	}
 	free(ctx);
 }
 
