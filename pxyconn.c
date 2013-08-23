@@ -1404,7 +1404,16 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 	}
 #endif /* DEBUG_PROXY */
 
-	if ((events & BEV_EVENT_CONNECTED) && (bev == ctx->dst.bev)) {
+	if (events & BEV_EVENT_CONNECTED) {
+		if (bev != ctx->dst.bev) {
+			if (OPTS_DEBUG(ctx->opts)) {
+				log_dbg_printf("src buffer event connected: "
+				               "ignoring event\n");
+			}
+			return;
+		}
+
+		/* dst has connected */
 		ctx->connected = 1;
 
 		/* wrap client-side socket in an eventbuffer */
@@ -1596,9 +1605,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		goto leave;
 	}
 
-	if (events & !BEV_EVENT_CONNECTED) {
-		log_err_printf("Unknown bufferevent 0x%02X\n", (int)events);
-	}
+	log_err_printf("Unknown bufferevent 0x%02X\n", (int)events);
 	return;
 
 leave:
