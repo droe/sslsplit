@@ -163,7 +163,7 @@ leave_thr:
 		pthread_join(ctx->thr[idx]->thr, NULL);
 		idx--;
 	}
-	idx = ctx->num_thr;
+	idx = ctx->num_thr - 1;
 
 leave:
 	while (idx >= 0) {
