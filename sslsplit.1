@@ -291,9 +291,11 @@ than the NAT rules redirecting the actual connections.
 SSLsplit currently supports the following NAT engines:
 .TP
 .B pf
-OpenBSD packet filter (pf), also available on FreeBSD and NetBSD.
+OpenBSD packet filter (pf), using NAT redirects (rdr/rdr-to), also available
+on FreeBSD and NetBSD.
 Fully supported, including IPv6.
-Assuming inbound interface \fBem0\fP:
+Assuming inbound interface \fBem0\fP, first in old, then in new OpenBSD 4.7
+syntax:
 .LP
 .RS
 .nf
@@ -307,11 +309,26 @@ Assuming inbound interface \fBem0\fP:
          -> 127.0.0.1 port 10443\fP
 .fi
 .RE
+.LP
+.RS
+.nf
+\fBpass in quick on em0 proto tcp from 2001:db8::/64 to any \\
+         port  80 rdr-to       ::1 port 10080\fP
+\fBpass in quick on em0 proto tcp from 2001:db8::/64 to any \\
+         port 443 rdr-to       ::1 port 10443\fP
+\fBpass in quick on em0 proto tcp from  192.0.2.0/24 to any \\
+         port  80 rdr-to 127.0.0.1 port 10080\fP
+\fBpass in quick on em0 proto tcp from  192.0.2.0/24 to any \\
+         port 443 rdr-to 127.0.0.1 port 10443\fP
+.fi
+.RE
 .TP
 .B ipfw
 FreeBSD IP firewall (IPFW), also available on Mac OS X.
-Fully supported on FreeBSD, including IPv6.
+Available on OpenBSD as pf divert sockets (divert-to).
+Fully supported on FreeBSD and OpenBSD, including IPv6.
 Only supports IPv4 on Mac OS X due to the ancient version of IPFW included.
+First in IPFW, then in OpenBSD pf divert sockets syntax:
 .LP
 .RS
 .nf
@@ -319,6 +336,19 @@ Only supports IPv4 on Mac OS X due to the ancient version of IPFW included.
 \fBipfw add fwd       ::1,10443 tcp from 2001:db8::/64 to any 443\fP
 \fBipfw add fwd 127.0.0.1,10080 tcp from 192.0.2.0/24  to any  80\fP
 \fBipfw add fwd 127.0.0.1,10443 tcp from 192.0.2.0/24  to any 443\fP
+.fi
+.RE
+.LP
+.RS
+.nf
+\fBpass in quick on em0 proto tcp from 2001:db8::/64 to any \\
+         port  80 divert-to       ::1 port 10080\fP
+\fBpass in quick on em0 proto tcp from 2001:db8::/64 to any \\
+         port 443 divert-to       ::1 port 10443\fP
+\fBpass in quick on em0 proto tcp from  192.0.2.0/24 to any \\
+         port  80 divert-to 127.0.0.1 port 10080\fP
+\fBpass in quick on em0 proto tcp from  192.0.2.0/24 to any \\
+         port 443 divert-to 127.0.0.1 port 10443\fP
 .fi
 .RE
 .TP
