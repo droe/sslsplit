@@ -1,4 +1,9 @@
 
+### SSLsplit master
+
+-   Also build ipfw NAT engine if pf is detected to support pf divert-to.
+
+
 ### SSLsplit 0.4.7 2013-07-02
 
 -   Fix remaining threading issues in daemon mode.
