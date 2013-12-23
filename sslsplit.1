@@ -291,11 +291,11 @@ than the NAT rules redirecting the actual connections.
 SSLsplit currently supports the following NAT engines:
 .TP
 .B pf
-OpenBSD packet filter (pf), using NAT redirects (rdr/rdr-to), also available
+OpenBSD packet filter (pf) \fBrdr\fP/\fBrdr-to\fP NAT redirects, also available
 on FreeBSD and NetBSD.
 Fully supported, including IPv6.
-Assuming inbound interface \fBem0\fP, first in old, then in new OpenBSD 4.7
-syntax:
+Assuming inbound interface \fBem0\fP, first in old (FreeBSD), then in new
+(OpenBSD 4.7+) syntax:
 .LP
 .RS
 .nf
@@ -324,11 +324,11 @@ syntax:
 .RE
 .TP
 .B ipfw
-FreeBSD IP firewall (IPFW), also available on Mac OS X.
-Available on OpenBSD as pf divert sockets (divert-to).
+FreeBSD IP firewall (IPFW) divert sockets, also available on Mac OS X.
+Available on OpenBSD using pf \fBdivert-to\fP.
 Fully supported on FreeBSD and OpenBSD, including IPv6.
 Only supports IPv4 on Mac OS X due to the ancient version of IPFW included.
-First in IPFW, then in OpenBSD pf divert sockets syntax:
+First in IPFW, then in OpenBSD pf syntax:
 .LP
 .RS
 .nf

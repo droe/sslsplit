@@ -33,9 +33,9 @@ The build depends on GNU make and a POSIX.2 environment in `PATH`.
 The (optional) unit tests depend on check and on Internet connectivity.
 The latter is necessary to create an SSL session for testing.
 
-SSLsplit currently supports the following operating systems and NAT engines:
+SSLsplit currently supports the following operating systems and NAT mechanisms:
 -   FreeBSD: pf rdr, ipfw fwd, ipfilter rdr
--   OpenBSD: pf rdr
+-   OpenBSD: pf rdr-to and divert-to
 -   Linux: netfilter REDIRECT and TPROXY
 -   Mac OS X: ipfw fwd
 
