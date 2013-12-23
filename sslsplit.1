@@ -325,10 +325,10 @@ Assuming inbound interface \fBem0\fP, first in old (FreeBSD), then in new
 .TP
 .B ipfw
 FreeBSD IP firewall (IPFW) divert sockets, also available on Mac OS X.
-Available on OpenBSD using pf \fBdivert-to\fP.
+Available on FreeBSD and OpenBSD using pf \fBdivert-to\fP.
 Fully supported on FreeBSD and OpenBSD, including IPv6.
 Only supports IPv4 on Mac OS X due to the ancient version of IPFW included.
-First in IPFW, then in OpenBSD pf syntax:
+First in IPFW, then in pf \fBdivert-to\fP syntax:
 .LP
 .RS
 .nf
