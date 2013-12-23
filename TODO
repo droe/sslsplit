@@ -1,4 +1,3 @@
--   Rename "ipfw" into more generic "divert" while keeping ipfw for compat
 -   Control SSL_OP_SINGLE_ECDH_USE and other de-optimizations by a
     "prefer speed to security" command line option
 -   Optionally add ephemeral RSA key to SSL_CTX to allow export cipher suites

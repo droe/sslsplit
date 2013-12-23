@@ -46,6 +46,8 @@ DEBUG_CFLAGS?=	-g
 # Autodetect pf
 ifneq ($(wildcard /usr/include/net/pfvar.h),)
 FEATURES+=	-DHAVE_PF
+# OpenBSD 4.7+ and FreeBSD 9.0+ also include ipfw-style divert-to in pf
+FEATURES+=	-DHAVE_IPFW
 endif
 
 # Autodetect ipfw
