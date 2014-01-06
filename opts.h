@@ -81,12 +81,12 @@ typedef struct opts {
 } opts_t;
 
 opts_t *opts_new(void) MALLOC;
-void opts_free(opts_t *) NONNULL();
-int opts_has_ssl_spec(opts_t *) NONNULL() WUNRES;
+void opts_free(opts_t *) NONNULL(1);
+int opts_has_ssl_spec(opts_t *) NONNULL(1) WUNRES;
 #define OPTS_DEBUG(opts) unlikely((opts)->debug)
 
 proxyspec_t * proxyspec_parse(int *, char **[], const char *) MALLOC;
-void proxyspec_free(proxyspec_t *) NONNULL();
+void proxyspec_free(proxyspec_t *) NONNULL(1);
 
 #endif /* !OPTS_H */
 

@@ -38,17 +38,17 @@
 typedef ssize_t (*logger_write_func_t)(int, const void *, size_t);
 typedef struct logger logger_t;
 
-logger_t * logger_new(logger_write_func_t) NONNULL() MALLOC;
-void logger_free(logger_t *) NONNULL();
-int logger_start(logger_t *) NONNULL();
-void logger_leave(logger_t *) NONNULL();
-int logger_join(logger_t *) NONNULL();
-int logger_stop(logger_t *) NONNULL();
-int logger_submit(logger_t *, logbuf_t *) NONNULL();
+logger_t * logger_new(logger_write_func_t) NONNULL(1) MALLOC;
+void logger_free(logger_t *) NONNULL(1);
+int logger_start(logger_t *) NONNULL(1);
+void logger_leave(logger_t *) NONNULL(1);
+int logger_join(logger_t *) NONNULL(1);
+int logger_stop(logger_t *) NONNULL(1);
+int logger_submit(logger_t *, logbuf_t *) NONNULL(1);
 int logger_printf(logger_t *, int, const char *, ...) PRINTF(3,4) NONNULL(1,3);
-int logger_print(logger_t *, int, const char *) NONNULL();
-int logger_write(logger_t *, int, const void *, size_t) NONNULL();
-int logger_print_freebuf(logger_t *, int, char *) NONNULL();
+int logger_print(logger_t *, int, const char *) NONNULL(1);
+int logger_write(logger_t *, int, const void *, size_t) NONNULL(1);
+int logger_print_freebuf(logger_t *, int, char *) NONNULL(1);
 int logger_write_freebuf(logger_t *, int, void *, size_t) NONNULL(1);
 
 #endif /* !LOGGER_H */

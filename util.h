@@ -31,7 +31,7 @@
 
 #include "attrib.h"
 
-char * util_skipws(const char *) NONNULL() PURE;
+char * util_skipws(const char *) NONNULL(1) PURE;
 
 #endif /* !UTIL_H */
 

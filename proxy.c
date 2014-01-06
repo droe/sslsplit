@@ -97,7 +97,7 @@ proxy_listener_ctx_new(pxy_thrmgr_ctx_t *thrmgr, proxyspec_t *spec,
 }
 
 static void
-proxy_listener_ctx_free(proxy_listener_ctx_t *ctx) NONNULL();
+proxy_listener_ctx_free(proxy_listener_ctx_t *ctx) NONNULL(1);
 static void
 proxy_listener_ctx_free(proxy_listener_ctx_t *ctx)
 {

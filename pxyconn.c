@@ -161,7 +161,7 @@ typedef struct pxy_conn_ctx {
 static pxy_conn_ctx_t *
 pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
                  pxy_thrmgr_ctx_t *thrmgr, evutil_socket_t fd)
-                 MALLOC NONNULL();
+                 MALLOC NONNULL(1,2,3);
 static pxy_conn_ctx_t *
 pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
                  pxy_thrmgr_ctx_t *thrmgr, evutil_socket_t fd)
@@ -185,7 +185,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 }
 
 static void
-pxy_conn_ctx_free(pxy_conn_ctx_t *ctx) NONNULL();
+pxy_conn_ctx_free(pxy_conn_ctx_t *ctx) NONNULL(1);
 static void
 pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 {

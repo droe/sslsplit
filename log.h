@@ -64,12 +64,12 @@ typedef struct log_content_ctx {
 	char *header_in;
 	char *header_out;
 } log_content_ctx_t;
-void log_content_open(log_content_ctx_t *, char *, char *) NONNULL();
-void log_content_submit(log_content_ctx_t *, logbuf_t *, int) NONNULL();
-void log_content_close(log_content_ctx_t *) NONNULL();
+void log_content_open(log_content_ctx_t *, char *, char *) NONNULL(1,2,3);
+void log_content_submit(log_content_ctx_t *, logbuf_t *, int) NONNULL(1,2);
+void log_content_close(log_content_ctx_t *) NONNULL(1);
 
-int log_preinit(opts_t *) NONNULL() WUNRES;
-int log_init(opts_t *) NONNULL() WUNRES;
+int log_preinit(opts_t *) NONNULL(1) WUNRES;
+int log_init(opts_t *) NONNULL(1) WUNRES;
 void log_fini(void);
 
 #endif /* !LOG_H */

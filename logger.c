@@ -211,7 +211,7 @@ logger_print(logger_t *logger, int fd, const char *s)
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new_copy(s, strlen(s), fd, NULL)))
+	if (!(lb = logbuf_new_copy(s, s ? strlen(s) : 0, fd, NULL)))
 		return -1;
 	return logger_submit(logger, lb);
 }
@@ -229,7 +229,7 @@ logger_print_freebuf(logger_t *logger, int fd, char *s)
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new(s, strlen(s), fd, NULL)))
+	if (!(lb = logbuf_new(s, s ? strlen(s) : 0, fd, NULL)))
 		return -1;
 	return logger_submit(logger, lb);
 }

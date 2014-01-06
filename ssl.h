@@ -76,9 +76,9 @@ void ssl_reinit(void);
 void ssl_fini(void);
 
 #ifndef OPENSSL_NO_DH
-DH * ssl_tmp_dh_callback(SSL *, int, int) NONNULL() MALLOC;
-DH * ssl_dh_load(const char *) NONNULL() MALLOC;
-void ssl_dh_refcount_inc(DH *) NONNULL();
+DH * ssl_tmp_dh_callback(SSL *, int, int) NONNULL(1) MALLOC;
+DH * ssl_dh_load(const char *) NONNULL(1) MALLOC;
+void ssl_dh_refcount_inc(DH *) NONNULL(1);
 #endif /* !OPENSSL_NO_DH */
 
 #ifndef OPENSSL_NO_EC
@@ -86,47 +86,47 @@ void ssl_dh_refcount_inc(DH *) NONNULL();
 EC_KEY * ssl_ec_by_name(const char *) MALLOC;
 #endif /* !OPENSSL_NO_EC */
 
-EVP_PKEY * ssl_key_load(const char *) NONNULL() MALLOC;
+EVP_PKEY * ssl_key_load(const char *) NONNULL(1) MALLOC;
 EVP_PKEY * ssl_key_genrsa(const int) MALLOC;
-void ssl_key_refcount_inc(EVP_PKEY *) NONNULL();
+void ssl_key_refcount_inc(EVP_PKEY *) NONNULL(1);
 
 #ifndef OPENSSL_NO_TLSEXT
-int ssl_x509_v3ext_add(X509V3_CTX *, X509 *, char *, char *) NONNULL();
-int ssl_x509_v3ext_copy_by_nid(X509 *, X509 *, int) NONNULL();
+int ssl_x509_v3ext_add(X509V3_CTX *, X509 *, char *, char *) NONNULL(1,2,3,4);
+int ssl_x509_v3ext_copy_by_nid(X509 *, X509 *, int) NONNULL(1,2);
 #endif /* !OPENSSL_NO_TLSEXT */
-int ssl_x509_serial_copyrand(X509 *, X509 *) NONNULL();
+int ssl_x509_serial_copyrand(X509 *, X509 *) NONNULL(1,2);
 X509 * ssl_x509_forge(X509 *, EVP_PKEY *, X509 *, const char *, EVP_PKEY *)
        NONNULL(1,2,3,5) MALLOC;
-X509 * ssl_x509_load(const char *) NONNULL() MALLOC;
-char * ssl_x509_subject(X509 *) NONNULL() MALLOC;
-char * ssl_x509_subject_cn(X509 *, size_t *) NONNULL() MALLOC;
+X509 * ssl_x509_load(const char *) NONNULL(1) MALLOC;
+char * ssl_x509_subject(X509 *) NONNULL(1) MALLOC;
+char * ssl_x509_subject_cn(X509 *, size_t *) NONNULL(1,2) MALLOC;
 #define SSL_X509_FPRSZ 20
-int ssl_x509_fingerprint_sha1(X509 *, unsigned char *) NONNULL();
-char ** ssl_x509_names(X509 *) NONNULL() MALLOC;
-int ssl_x509_names_match(X509 *, const char *) NONNULL();
-char * ssl_x509_names_to_str(X509 *) NONNULL() MALLOC;
+int ssl_x509_fingerprint_sha1(X509 *, unsigned char *) NONNULL(1,2);
+char ** ssl_x509_names(X509 *) NONNULL(1) MALLOC;
+int ssl_x509_names_match(X509 *, const char *) NONNULL(1,2);
+char * ssl_x509_names_to_str(X509 *) NONNULL(1) MALLOC;
 char ** ssl_x509_aias(X509 *, const int) NONNULL(1) MALLOC;
-char ** ssl_x509_ocsps(X509 *) NONNULL() MALLOC;
-int ssl_x509_is_valid(X509 *) NONNULL() WUNRES;
-char * ssl_x509_to_str(X509 *) NONNULL() MALLOC;
-char * ssl_x509_to_pem(X509 *) NONNULL() MALLOC;
-void ssl_x509_refcount_inc(X509 *) NONNULL();
+char ** ssl_x509_ocsps(X509 *) NONNULL(1) MALLOC;
+int ssl_x509_is_valid(X509 *) NONNULL(1) WUNRES;
+char * ssl_x509_to_str(X509 *) NONNULL(1) MALLOC;
+char * ssl_x509_to_pem(X509 *) NONNULL(1) MALLOC;
+void ssl_x509_refcount_inc(X509 *) NONNULL(1);
 
 int ssl_x509chain_load(X509 **, STACK_OF(X509) **, const char *) NONNULL(2,3);
-void ssl_x509chain_use(SSL_CTX *, X509 *, STACK_OF(X509) *) NONNULL();
+void ssl_x509chain_use(SSL_CTX *, X509 *, STACK_OF(X509) *) NONNULL(1,2,3);
 
-char * ssl_session_to_str(SSL_SESSION *) NONNULL() MALLOC;
-int ssl_session_is_valid(SSL_SESSION *) NONNULL();
+char * ssl_session_to_str(SSL_SESSION *) NONNULL(1) MALLOC;
+int ssl_session_is_valid(SSL_SESSION *) NONNULL(1);
 
-int ssl_is_ocspreq(const unsigned char *, size_t) NONNULL() WUNRES;
+int ssl_is_ocspreq(const unsigned char *, size_t) NONNULL(1) WUNRES;
 
 #ifndef OPENSSL_NO_TLSEXT
 char * ssl_tls_clienthello_parse_sni(const unsigned char *, ssize_t *)
-       NONNULL() MALLOC;
+       NONNULL(1,2) MALLOC;
 #endif /* !OPENSSL_NO_TLSEXT */
 int ssl_dnsname_match(const char *, size_t, const char *, size_t)
-    NONNULL() WUNRES;
-char * ssl_wildcardify(const char *) NONNULL() MALLOC;
+    NONNULL(1,3) WUNRES;
+char * ssl_wildcardify(const char *) NONNULL(1) MALLOC;
 
 #endif /* !SSL_H */
 

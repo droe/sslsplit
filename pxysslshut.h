@@ -35,7 +35,7 @@
 #include <event2/event.h>
 #include <event2/util.h>
 
-void pxy_ssl_shutdown(struct event_base *, SSL *, evutil_socket_t) NONNULL();
+void pxy_ssl_shutdown(struct event_base *, SSL *, evutil_socket_t) NONNULL(1,2);
 
 #endif /* !PXYSSLSHUT_H */
 

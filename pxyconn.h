@@ -40,7 +40,8 @@
 #include <event2/util.h>
 
 void pxy_conn_setup(evutil_socket_t, struct sockaddr *, int,
-                    pxy_thrmgr_ctx_t *, proxyspec_t *, opts_t *) NONNULL();
+                    pxy_thrmgr_ctx_t *, proxyspec_t *, opts_t *)
+                    NONNULL(2,4,5,6);
 
 #endif /* !PXYCONN_H */
 
