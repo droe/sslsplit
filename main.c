@@ -623,7 +623,8 @@ main(int argc, char *argv[])
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (log_init(opts) == -1) {
-		fprintf(stderr, "%s: failed to init log facility.\n", argv0);
+		fprintf(stderr, "%s: failed to init log facility: %s\n",
+		                argv0, strerror(errno));
 		goto out_log_failed;
 	}
 	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
