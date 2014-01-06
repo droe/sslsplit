@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent and scalable SSL/TLS interception
- * Copyright (c) 2009-2013, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2014, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
