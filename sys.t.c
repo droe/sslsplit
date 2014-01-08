@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include <check.h>
 
@@ -114,6 +115,26 @@ START_TEST(sys_get_cpu_cores_01)
 }
 END_TEST
 
+void *
+thrmain(void *arg)
+{
+	*((int*)arg) = 1;
+	return (void*) 2;
+}
+
+START_TEST(pthread_create_01)
+{
+	pthread_t tid;
+	int x = 0;
+	void *rv;
+	fail_unless(!pthread_create(&tid, NULL, thrmain, &x),
+	            "Cannot create thread");
+	fail_unless(!pthread_join(tid, &rv), "Cannot join thread");
+	fail_unless(x == 1, "Thread failed to update x");
+	fail_unless(rv == (void*) 2, "Thread return value mismatch");
+}
+END_TEST
+
 Suite *
 sys_suite(void)
 {
@@ -133,6 +154,10 @@ sys_suite(void)
 
 	tc = tcase_create("sys_get_cpu_cores");
 	tcase_add_test(tc, sys_get_cpu_cores_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("pthread_create");
+	tcase_add_test(tc, pthread_create_01);
 	suite_add_tcase(s, tc);
 
 	return s;
