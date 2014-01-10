@@ -46,6 +46,19 @@ int main() {
 */
 
 /*
+  2013-05-02 (0.2.8):
+
+	* Use quadratic probing. When the capacity is power of 2, stepping function
+	  i*(i+1)/2 guarantees to traverse each bucket. It is better than double
+	  hashing on cache performance and is more robust than linear probing.
+
+	  In theory, double hashing should be more robust than quadratic probing.
+	  However, my implementation is probably not for large hash tables, because
+	  the second hash function is closely tied to the first hash function,
+	  which reduce the effectiveness of double hashing.
+
+	Reference: http://research.cs.vt.edu/AVresearch/hashing/quadratic.php
+
   2011-12-29 (0.2.7):
 
     * Minor code clean up; no actual effect.
@@ -110,13 +123,13 @@ int main() {
   Generic hash table library.
  */
 
-#define AC_VERSION_KHASH_H "0.2.6"
+#define AC_VERSION_KHASH_H "0.2.8"
 
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 
-/* compipler specific configuration */
+/* compiler specific configuration */
 
 #if UINT_MAX == 0xffffffffu
 typedef unsigned int khint32_t;
@@ -131,7 +144,9 @@ typedef unsigned long long khint64_t;
 #endif
 
 #ifdef _MSC_VER
-#define inline __inline
+#define kh_inline __inline
+#else
+#define kh_inline inline
 #endif
 
 typedef khint32_t khint_t;
@@ -145,16 +160,23 @@ typedef khint_t khiter_t;
 #define __ac_set_isboth_false(flag, i) (flag[i>>4]&=~(3ul<<((i&0xfU)<<1)))
 #define __ac_set_isdel_true(flag, i) (flag[i>>4]|=1ul<<((i&0xfU)<<1))
 
-#ifdef KHASH_LINEAR
-#define __ac_inc(k, m) 1
-#else
-#define __ac_inc(k, m) (((k)>>3 ^ (k)<<3) | 1) & (m)
-#endif
-
 #define __ac_fsize(m) ((m) < 16? 1 : (m)>>4)
 
 #ifndef kroundup32
 #define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
+#endif
+
+#ifndef kcalloc
+#define kcalloc(N,Z) calloc(N,Z)
+#endif
+#ifndef kmalloc
+#define kmalloc(Z) malloc(Z)
+#endif
+#ifndef krealloc
+#define krealloc(P,Z) realloc(P,Z)
+#endif
+#ifndef kfree
+#define kfree(P) free(P)
 #endif
 
 static const double __ac_HASH_UPPER = 0.77;
@@ -167,27 +189,25 @@ static const double __ac_HASH_UPPER = 0.77;
 		khval_t *vals; \
 	} kh_##name##_t;
 
-#define KHASH_DECLARE(name, khkey_t, khval_t)		 					\
-	__KHASH_TYPE(name, khkey_t, khval_t) 								\
-	extern kh_##name##_t *kh_init_##name();								\
+#define __KHASH_PROTOTYPES(name, khkey_t, khval_t)	 					\
+	extern kh_##name##_t *kh_init_##name(void);							\
 	extern void kh_destroy_##name(kh_##name##_t *h);					\
 	extern void kh_clear_##name(kh_##name##_t *h);						\
 	extern khint_t kh_get_##name(const kh_##name##_t *h, khkey_t key); 	\
-	extern void kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets); \
+	extern int kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets); \
 	extern khint_t kh_put_##name(kh_##name##_t *h, khkey_t key, int *ret); \
 	extern void kh_del_##name(kh_##name##_t *h, khint_t x);
 
-#define KHASH_INIT2(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
-	__KHASH_TYPE(name, khkey_t, khval_t) 								\
-	SCOPE kh_##name##_t *kh_init_##name() {								\
-		return (kh_##name##_t*)calloc(1, sizeof(kh_##name##_t));		\
+#define __KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
+	SCOPE kh_##name##_t *kh_init_##name(void) {							\
+		return (kh_##name##_t*)kcalloc(1, sizeof(kh_##name##_t));		\
 	}																	\
 	SCOPE void kh_destroy_##name(kh_##name##_t *h)						\
 	{																	\
 		if (h) {														\
-			free(h->keys); free(h->flags);								\
-			free(h->vals);												\
-			free(h);													\
+			kfree((void *)h->keys); kfree(h->flags);					\
+			kfree((void *)h->vals);										\
+			kfree(h);													\
 		}																\
 	}																	\
 	SCOPE void kh_clear_##name(kh_##name##_t *h)						\
@@ -200,19 +220,19 @@ static const double __ac_HASH_UPPER = 0.77;
 	SCOPE khint_t kh_get_##name(const kh_##name##_t *h, khkey_t key) 	\
 	{																	\
 		if (h->n_buckets) {												\
-			khint_t inc, k, i, last, mask;								\
+			khint_t k, i, last, mask, step = 0; \
 			mask = h->n_buckets - 1;									\
 			k = __hash_func(key); i = k & mask;							\
-			inc = __ac_inc(k, mask); last = i; /* inc==1 for linear probing */ \
+			last = i; \
 			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(h->keys[i], key))) { \
-				i = (i + inc) & mask; 									\
+				i = (i + (++step)) & mask; \
 				if (i == last) return h->n_buckets;						\
 			}															\
 			return __ac_iseither(h->flags, i)? h->n_buckets : i;		\
 		} else return 0;												\
 	}																	\
-	SCOPE void kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets) \
-	{ /* This function uses 0.25*n_bucktes bytes of working space instead of [sizeof(key_t+val_t)+.25]*n_buckets. */ \
+	SCOPE int kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets) \
+	{ /* This function uses 0.25*n_buckets bytes of working space instead of [sizeof(key_t+val_t)+.25]*n_buckets. */ \
 		khint32_t *new_flags = 0;										\
 		khint_t j = 1;													\
 		{																\
@@ -220,11 +240,18 @@ static const double __ac_HASH_UPPER = 0.77;
 			if (new_n_buckets < 4) new_n_buckets = 4;					\
 			if (h->size >= (khint_t)(new_n_buckets * __ac_HASH_UPPER + 0.5)) j = 0;	/* requested size is too small */ \
 			else { /* hash table size to be changed (shrink or expand); rehash */ \
-				new_flags = (khint32_t*)malloc(__ac_fsize(new_n_buckets) * sizeof(khint32_t));	\
+				new_flags = (khint32_t*)kmalloc(__ac_fsize(new_n_buckets) * sizeof(khint32_t));	\
+				if (!new_flags) return -1;								\
 				memset(new_flags, 0xaa, __ac_fsize(new_n_buckets) * sizeof(khint32_t)); \
 				if (h->n_buckets < new_n_buckets) {	/* expand */		\
-					h->keys = (khkey_t*)realloc(h->keys, new_n_buckets * sizeof(khkey_t)); \
-					if (kh_is_map) h->vals = (khval_t*)realloc(h->vals, new_n_buckets * sizeof(khval_t)); \
+					khkey_t *new_keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
+					if (!new_keys) return -1;							\
+					h->keys = new_keys;									\
+					if (kh_is_map) {									\
+						khval_t *new_vals = (khval_t*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
+						if (!new_vals) return -1;						\
+						h->vals = new_vals;								\
+					}													\
 				} /* otherwise shrink */								\
 			}															\
 		}																\
@@ -238,11 +265,10 @@ static const double __ac_HASH_UPPER = 0.77;
 					if (kh_is_map) val = h->vals[j];					\
 					__ac_set_isdel_true(h->flags, j);					\
 					while (1) { /* kick-out process; sort of like in Cuckoo hashing */ \
-						khint_t inc, k, i;								\
+						khint_t k, i, step = 0; \
 						k = __hash_func(key);							\
 						i = k & new_mask;								\
-						inc = __ac_inc(k, new_mask);					\
-						while (!__ac_isempty(new_flags, i)) i = (i + inc) & new_mask; \
+						while (!__ac_isempty(new_flags, i)) i = (i + (++step)) & new_mask; \
 						__ac_set_isempty_false(new_flags, i);			\
 						if (i < h->n_buckets && __ac_iseither(h->flags, i) == 0) { /* kick out the existing element */ \
 							{ khkey_t tmp = h->keys[i]; h->keys[i] = key; key = tmp; } \
@@ -257,32 +283,38 @@ static const double __ac_HASH_UPPER = 0.77;
 				}														\
 			}															\
 			if (h->n_buckets > new_n_buckets) { /* shrink the hash table */ \
-				h->keys = (khkey_t*)realloc(h->keys, new_n_buckets * sizeof(khkey_t)); \
-				if (kh_is_map) h->vals = (khval_t*)realloc(h->vals, new_n_buckets * sizeof(khval_t)); \
+				h->keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
+				if (kh_is_map) h->vals = (khval_t*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
 			}															\
-			free(h->flags); /* free the working space */				\
+			kfree(h->flags); /* free the working space */				\
 			h->flags = new_flags;										\
 			h->n_buckets = new_n_buckets;								\
 			h->n_occupied = h->size;									\
 			h->upper_bound = (khint_t)(h->n_buckets * __ac_HASH_UPPER + 0.5); \
 		}																\
+		return 0;														\
 	}																	\
 	SCOPE khint_t kh_put_##name(kh_##name##_t *h, khkey_t key, int *ret) \
 	{																	\
 		khint_t x;														\
 		if (h->n_occupied >= h->upper_bound) { /* update the hash table */ \
-			if (h->n_buckets > (h->size<<1)) kh_resize_##name(h, h->n_buckets - 1); /* clear "deleted" elements */ \
-			else kh_resize_##name(h, h->n_buckets + 1); /* expand the hash table */ \
+			if (h->n_buckets > (h->size<<1)) {							\
+				if (kh_resize_##name(h, h->n_buckets - 1) < 0) { /* clear "deleted" elements */ \
+					*ret = -1; return h->n_buckets;						\
+				}														\
+			} else if (kh_resize_##name(h, h->n_buckets + 1) < 0) { /* expand the hash table */ \
+				*ret = -1; return h->n_buckets;							\
+			}															\
 		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		{																\
-			khint_t inc, k, i, site, last, mask = h->n_buckets - 1;		\
+			khint_t k, i, site, last, mask = h->n_buckets - 1, step = 0; \
 			x = site = h->n_buckets; k = __hash_func(key); i = k & mask; \
 			if (__ac_isempty(h->flags, i)) x = i; /* for speed up */	\
 			else {														\
-				inc = __ac_inc(k, mask); last = i;						\
+				last = i; \
 				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(h->keys[i], key))) { \
 					if (__ac_isdel(h->flags, i)) site = i;				\
-					i = (i + inc) & mask; 								\
+					i = (i + (++step)) & mask; \
 					if (i == last) { x = site; break; }					\
 				}														\
 				if (x == h->n_buckets) {								\
@@ -312,8 +344,16 @@ static const double __ac_HASH_UPPER = 0.77;
 		}																\
 	}
 
+#define KHASH_DECLARE(name, khkey_t, khval_t)		 					\
+	__KHASH_TYPE(name, khkey_t, khval_t) 								\
+	__KHASH_PROTOTYPES(name, khkey_t, khval_t)
+
+#define KHASH_INIT2(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
+	__KHASH_TYPE(name, khkey_t, khval_t) 								\
+	__KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
+
 #define KHASH_INIT(name, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
-	KHASH_INIT2(name, static inline, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
+	KHASH_INIT2(name, static kh_inline, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
 
 /* --- BEGIN OF HASH FUNCTIONS --- */
 
@@ -342,10 +382,10 @@ static const double __ac_HASH_UPPER = 0.77;
   @param  s     Pointer to a null terminated string
   @return       The hash value
  */
-static inline khint_t __ac_X31_hash_string(const char *s)
+static kh_inline khint_t __ac_X31_hash_string(const char *s)
 {
-	khint_t h = *s;
-	if (h) for (++s ; *s; ++s) h = (h << 5) - h + *s;
+	khint_t h = (khint_t)*s;
+	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)*s;
 	return h;
 }
 /*! @function
@@ -359,7 +399,7 @@ static inline khint_t __ac_X31_hash_string(const char *s)
  */
 #define kh_str_hash_equal(a, b) (strcmp(a, b) == 0)
 
-static inline khint_t __ac_Wang_hash(khint_t key)
+static kh_inline khint_t __ac_Wang_hash(khint_t key)
 {
     key += ~(key << 15);
     key ^=  (key >> 10);
@@ -415,7 +455,8 @@ static inline khint_t __ac_Wang_hash(khint_t key)
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [khash_t(name)*]
   @param  k     Key [type of keys]
-  @param  r     Extra return code: 0 if the key is present in the hash table;
+  @param  r     Extra return code: -1 if the operation failed;
+                0 if the key is present in the hash table;
                 1 if the bucket is empty (never used); 2 if the element in
 				the bucket has been deleted [int*]
   @return       Iterator to the inserted element [khint_t]
@@ -427,7 +468,7 @@ static inline khint_t __ac_Wang_hash(khint_t key)
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [khash_t(name)*]
   @param  k     Key [type of keys]
-  @return       Iterator to the found element, or kh_end(h) is the element is absent [khint_t]
+  @return       Iterator to the found element, or kh_end(h) if the element is absent [khint_t]
  */
 #define kh_get(name, h, k) kh_get_##name(h, k)
 
@@ -496,6 +537,34 @@ static inline khint_t __ac_Wang_hash(khint_t key)
   @return       Number of buckets in the hash table [khint_t]
  */
 #define kh_n_buckets(h) ((h)->n_buckets)
+
+/*! @function
+  @abstract     Iterate over the entries in the hash table
+  @param  h     Pointer to the hash table [khash_t(name)*]
+  @param  kvar  Variable to which key will be assigned
+  @param  vvar  Variable to which value will be assigned
+  @param  code  Block of code to execute
+ */
+#define kh_foreach(h, kvar, vvar, code) { khint_t __i;		\
+	for (__i = kh_begin(h); __i != kh_end(h); ++__i) {		\
+		if (!kh_exist(h,__i)) continue;						\
+		(kvar) = kh_key(h,__i);								\
+		(vvar) = kh_val(h,__i);								\
+		code;												\
+	} }
+
+/*! @function
+  @abstract     Iterate over the values in the hash table
+  @param  h     Pointer to the hash table [khash_t(name)*]
+  @param  vvar  Variable to which value will be assigned
+  @param  code  Block of code to execute
+ */
+#define kh_foreach_value(h, vvar, code) { khint_t __i;		\
+	for (__i = kh_begin(h); __i != kh_end(h); ++__i) {		\
+		if (!kh_exist(h,__i)) continue;						\
+		(vvar) = kh_val(h,__i);								\
+		code;												\
+	} }
 
 /* More conenient interfaces */
 
