@@ -89,7 +89,6 @@ pxy_ssl_shutdown_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 {
 	pxy_ssl_shutdown_ctx_t *ctx = arg;
 	struct timeval retry_delay = {0, 100};
-	SSL_CTX *sslctx;
 	short want = 0;
 	int rv, sslerr;
 
@@ -147,9 +146,7 @@ retry:
 	               "Cannot create event. Closing fd.\n");
 
 complete:
-	sslctx = SSL_get_SSL_CTX(ctx->ssl);
 	SSL_free(ctx->ssl);
-	SSL_CTX_free(sslctx);
 	evutil_closesocket(fd);
 	pxy_ssl_shutdown_ctx_free(ctx);
 }
@@ -167,9 +164,7 @@ pxy_ssl_shutdown(struct event_base *evbase, SSL *ssl, evutil_socket_t fd)
 
 	sslshutctx = pxy_ssl_shutdown_ctx_new(evbase, ssl);
 	if (!sslshutctx) {
-		SSL_CTX *sslctx = SSL_get_SSL_CTX(ssl);
 		SSL_free(ssl);
-		SSL_CTX_free(sslctx);
 		evutil_closesocket(fd);
 		return;
 	}

@@ -685,9 +685,9 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 		return NULL;
 	}
 	SSL *ssl = SSL_new(sslctx);
+	SSL_CTX_free(sslctx); /* SSL_new() increments refcount */
 	if (!ssl) {
 		ctx->enomem = 1;
-		SSL_CTX_free(sslctx);
 		return NULL;
 	}
 #ifdef USE_FOOTPRINT_HACKS
@@ -824,6 +824,11 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 
 	ssl = SSL_new(sslctx);
+	SSL_CTX_free(sslctx); /* SSL_new() increments refcount */
+	if (!ssl) {
+		ctx->enomem = 1;
+		return NULL;
+	}
 #ifndef OPENSSL_NO_TLSEXT
 	if (ctx->sni) {
 		SSL_set_tlsext_host_name(ssl, ctx->sni);
