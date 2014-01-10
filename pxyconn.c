@@ -1396,20 +1396,23 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 
 #ifdef DEBUG_PROXY
 	if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("%p %p eventcb %s %s%s%s\n", arg, (void*)bev,
+		log_dbg_printf("%p %p eventcb %s %s%s%s%s\n", arg, (void*)bev,
 		               (bev == ctx->src.bev) ? "src" : "dst",
 		               events & BEV_EVENT_CONNECTED ? "connected" : "",
 		               events & BEV_EVENT_ERROR ? "error" : "",
+		               events & BEV_EVENT_TIMEOUT ? "timeout" : "",
 		               events & BEV_EVENT_EOF ? "eof" : "");
 	}
 #endif /* DEBUG_PROXY */
 
 	if (events & BEV_EVENT_CONNECTED) {
 		if (bev != ctx->dst.bev) {
+#ifdef DEBUG_PROXY
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("src buffer event connected: "
 				               "ignoring event\n");
 			}
+#endif /* DEBUG_PROXY */
 			return;
 		}
 
@@ -1470,6 +1473,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				pxy_log_connect_nonhttp(ctx);
 			}
 		}
+
+		return;
 	}
 
 	if (events & BEV_EVENT_ERROR) {
