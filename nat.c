@@ -43,7 +43,13 @@
 #include <sys/fcntl.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#ifdef __APPLE__
+#define PRIVATE
+#endif /* __APPLE__ */
 #include <net/pfvar.h>
+#ifdef __APPLE__
+#undef PRIVATE
+#endif /* __APPLE__ */
 #include <unistd.h>
 #endif /* HAVE_PF */
 
@@ -114,6 +120,11 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
                  evutil_socket_t s,
                  struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
+#ifdef __APPLE__
+#define sport sxport.port
+#define dport dxport.port
+#define rdport rdxport.port
+#endif /* __APPLE__ */
 	struct sockaddr_storage our_addr;
 	socklen_t our_addrlen;
 	struct pfioc_natlook nl;
@@ -180,6 +191,10 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 		*dst_addrlen = sizeof(struct sockaddr_in6);
 	}
 	return 0;
+#ifdef __APPLE__
+#undef sport
+#undef dport
+#endif /* __APPLE__ */
 }
 #endif /* HAVE_PF */
 

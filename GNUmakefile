@@ -41,6 +41,24 @@ DEBUG_CFLAGS?=	-g
 #FEATURES+=	-DDEBUG_THREAD
 
 
+### Mac OS X missing pf headers hacks
+
+ifeq ($(shell uname),Darwin)
+ifeq ($(basename $(basename $(shell uname -r))),11)
+FEATURES+=	-DHAVE_PF
+PKG_CPPFLAGS+=	-I./xnu/10.7
+endif
+ifeq ($(basename $(basename $(shell uname -r))),12)
+FEATURES+=	-DHAVE_PF
+PKG_CPPFLAGS+=	-I./xnu/10.8
+endif
+ifeq ($(basename $(basename $(shell uname -r))),13)
+FEATURES+=	-DHAVE_PF
+PKG_CPPFLAGS+=	-I./xnu/10.9
+endif
+endif
+
+
 ### Autodetected features
 
 # Autodetect pf
@@ -84,12 +102,14 @@ SED?=		sed
 ### Variables only used for developer targets
 
 KHASH_URL?=	https://github.com/attractivechaos/klib/raw/master/khash.h
+XNU_URL?=	https://raw2.github.com/opensource-apple/xnu/
 GPGSIGNKEY?=	0xB5D3397E
 
 CPPCHECK?=	cppcheck
 GPG?=		gpg
 GIT?=		git
 WGET?=		wget
+WGET_FLAGS?=	--no-check-certificate
 
 BZIP2?=		bzip2
 COL?=		col
@@ -321,7 +341,34 @@ manclean:
 	$(RM) -f $(TARGET)-*.1.txt
 
 fetchdeps:
-	$(WGET) --no-check-certificate -O- $(KHASH_URL) >khash.h
+	$(WGET) $(WGET_FLAGS) -O- $(KHASH_URL) >khash.h
+	$(MKDIR) -p xnu/10.7/libkern xnu/10.7/net
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/APPLE_LICENSE \
+		>xnu/10.7/APPLE_LICENSE
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/libkern/libkern/tree.h \
+		>xnu/10.7/libkern/tree.h
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/bsd/net/radix.h \
+		>xnu/10.7/net/radix.h
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/bsd/net/pfvar.h \
+		>xnu/10.7/net/pfvar.h
+	$(MKDIR) -p xnu/10.8/libkern xnu/10.8/net
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/APPLE_LICENSE \
+		>xnu/10.8/APPLE_LICENSE
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/libkern/libkern/tree.h \
+		>xnu/10.8/libkern/tree.h
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/bsd/net/radix.h \
+		>xnu/10.8/net/radix.h
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/bsd/net/pfvar.h \
+		>xnu/10.8/net/pfvar.h
+	$(MKDIR) -p xnu/10.9/libkern xnu/10.9/net
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/APPLE_LICENSE \
+		>xnu/10.9/APPLE_LICENSE
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/libkern/libkern/tree.h \
+		>xnu/10.9/libkern/tree.h
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/bsd/net/radix.h \
+		>xnu/10.9/net/radix.h
+	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/bsd/net/pfvar.h \
+		>xnu/10.9/net/pfvar.h
 
 dist: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
 

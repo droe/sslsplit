@@ -292,10 +292,11 @@ SSLsplit currently supports the following NAT engines:
 .TP
 .B pf
 OpenBSD packet filter (pf) \fBrdr\fP/\fBrdr-to\fP NAT redirects, also available
-on FreeBSD and NetBSD.
-Fully supported, including IPv6.
-Assuming inbound interface \fBem0\fP, first in old (FreeBSD), then in new
-(OpenBSD 4.7+) syntax:
+on FreeBSD, NetBSD and Mac OS X 10.7+.
+Fully supported on BSD, including IPv6.
+Experimental on Mac OS X.
+Assuming inbound interface \fBem0\fP, first in old (FreeBSD, Mac OS X),
+then in new (OpenBSD 4.7+) syntax:
 .LP
 .RS
 .nf
