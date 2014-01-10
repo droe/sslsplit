@@ -194,6 +194,7 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 #ifdef __APPLE__
 #undef sport
 #undef dport
+#undef rdport
 #endif /* __APPLE__ */
 }
 #endif /* HAVE_PF */
