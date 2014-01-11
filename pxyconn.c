@@ -840,12 +840,12 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 
 	/* session resuming based on remote endpoint address and port */
 	sess = cachemgr_dsess_get((struct sockaddr *)&ctx->addr,
-	                          ctx->addrlen, ctx->sni);
+	                          ctx->addrlen, ctx->sni); /* new sess inst */
 	if (sess) {
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("Attempt reuse dst SSL session\n");
 		}
-		SSL_set_session(ssl, sess);
+		SSL_set_session(ssl, sess); /* increments sess refcount */
 		SSL_SESSION_free(sess);
 	}
 
@@ -863,7 +863,7 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	SSL *ssl = NULL;
 
 	if (ctx->spec->ssl && !ctx->passthrough) {
-		ssl = bufferevent_openssl_get_ssl(bev);
+		ssl = bufferevent_openssl_get_ssl(bev); /* does not inc refc */
 	}
 
 #ifdef DEBUG_PROXY
@@ -873,7 +873,8 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	}
 #endif /* DEBUG_PROXY */
 
-	bufferevent_free(bev);
+	bufferevent_free(bev); /* does not free SSL unless the option
+	                          BEV_OPT_CLOSE_ON_FREE was set */
 	if (ssl) {
 		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd);
 	} else {
