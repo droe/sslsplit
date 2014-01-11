@@ -30,12 +30,14 @@
 #define PXYSSLSHUT_H
 
 #include "attrib.h"
+#include "opts.h"
 
 #include <openssl/ssl.h>
 #include <event2/event.h>
 #include <event2/util.h>
 
-void pxy_ssl_shutdown(struct event_base *, SSL *, evutil_socket_t) NONNULL(1,2);
+void pxy_ssl_shutdown(opts_t *, struct event_base *, SSL *, evutil_socket_t)
+     NONNULL(1,2,3);
 
 #endif /* !PXYSSLSHUT_H */
 

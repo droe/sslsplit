@@ -877,7 +877,7 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 
 	bufferevent_free(bev);
 	if (ssl) {
-		pxy_ssl_shutdown(ctx->evbase, ssl, fd);
+		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd);
 	} else {
 		evutil_closesocket(fd);
 	}

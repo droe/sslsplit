@@ -75,6 +75,8 @@ int ssl_init(void) WUNRES;
 void ssl_reinit(void);
 void ssl_fini(void);
 
+char * ssl_ssl_state_to_str(SSL *) NONNULL(1) MALLOC;
+
 #ifndef OPENSSL_NO_DH
 DH * ssl_tmp_dh_callback(SSL *, int, int) NONNULL(1) MALLOC;
 DH * ssl_dh_load(const char *) NONNULL(1) MALLOC;

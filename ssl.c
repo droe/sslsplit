@@ -409,6 +409,24 @@ ssl_fini(void)
 	CRYPTO_cleanup_all_ex_data();
 }
 
+char *
+ssl_ssl_state_to_str(SSL *ssl)
+{
+	char *str;
+
+	asprintf(&str, "%08x = %s%s%s%04x = %s (%s) [%s]",
+	         ssl->state,
+	         (ssl->state & SSL_ST_CONNECT) ? "SSL_ST_CONNECT|" : "",
+	         (ssl->state & SSL_ST_ACCEPT) ? "SSL_ST_ACCEPT|" : "",
+	         (ssl->state & SSL_ST_BEFORE) ? "SSL_ST_BEFORE|" : "",
+	         ssl->state & SSL_ST_MASK,
+	         SSL_state_string(ssl),
+	         SSL_state_string_long(ssl),
+	         (ssl->type == SSL_ST_CONNECT) ? "connect socket"
+	                                       : "accept socket");
+	return str;
+}
+
 #ifndef OPENSSL_NO_DH
 static unsigned char dh_g[] = { 0x02 };
 static unsigned char dh512_p[] = {

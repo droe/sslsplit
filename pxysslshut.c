@@ -51,6 +51,7 @@
  */
 
 typedef struct pxy_ssl_shutdown_ctx {
+	opts_t *opts;
 	struct event_base *evbase;
 	struct event *ev;
 	SSL *ssl;
@@ -58,13 +59,14 @@ typedef struct pxy_ssl_shutdown_ctx {
 } pxy_ssl_shutdown_ctx_t;
 
 static pxy_ssl_shutdown_ctx_t *
-pxy_ssl_shutdown_ctx_new(struct event_base *evbase, SSL *ssl)
+pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl)
 {
 	pxy_ssl_shutdown_ctx_t *ctx;
 
 	ctx = malloc(sizeof(pxy_ssl_shutdown_ctx_t));
 	if (!ctx)
 		return NULL;
+	ctx->opts = opts;
 	ctx->evbase = evbase;
 	ctx->ssl = ssl;
 	ctx->ev = NULL;
@@ -146,6 +148,11 @@ retry:
 	               "Cannot create event. Closing fd.\n");
 
 complete:
+	if (OPTS_DEBUG(ctx->opts)) {
+		log_dbg_printf("SSL_free() in state ");
+		log_dbg_print_free(ssl_ssl_state_to_str(ctx->ssl));
+		log_dbg_printf("\n");
+	}
 	SSL_free(ctx->ssl);
 	evutil_closesocket(fd);
 	pxy_ssl_shutdown_ctx_free(ctx);
@@ -158,12 +165,18 @@ complete:
  * socket is closed, eventually, or in the case of fatal errors, immediately.
  */
 void
-pxy_ssl_shutdown(struct event_base *evbase, SSL *ssl, evutil_socket_t fd)
+pxy_ssl_shutdown(opts_t *opts, struct event_base *evbase, SSL *ssl,
+                 evutil_socket_t fd)
 {
 	pxy_ssl_shutdown_ctx_t *sslshutctx;
 
-	sslshutctx = pxy_ssl_shutdown_ctx_new(evbase, ssl);
+	sslshutctx = pxy_ssl_shutdown_ctx_new(opts, evbase, ssl);
 	if (!sslshutctx) {
+		if (OPTS_DEBUG(opts)) {
+			log_dbg_printf("SSL_free() in state ");
+			log_dbg_print_free(ssl_ssl_state_to_str(ssl));
+			log_dbg_printf("\n");
+		}
 		SSL_free(ssl);
 		evutil_closesocket(fd);
 		return;
