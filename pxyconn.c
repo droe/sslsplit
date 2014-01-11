@@ -1581,7 +1581,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			other->closed = 1;
 		} else if (!other->closed) {
 			/* if the other end is still open and doesn't have data
-			 * to send, close it, otherwise it's writecb will close
+			 * to send, close it, otherwise its writecb will close
 			 * it after writing what's left in the output buffer */
 			struct evbuffer *outbuf;
 			outbuf = bufferevent_get_output(other->bev);
@@ -1602,7 +1602,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				evbuffer_add_buffer(outbuf, inbuf);
 			} else {
 				/* if the other end is still open and doesn't
-				 * have data to send, close it, otherwise it's
+				 * have data to send, close it, otherwise its
 				 * writecb will close it after writing what's
 				 * left in the output buffer. */
 				if (evbuffer_get_length(outbuf) == 0) {
