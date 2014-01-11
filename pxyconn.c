@@ -764,7 +764,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 				ctx->enomem = 1;
 			}
 		}
-		SSL_CTX *sslctx, *newsslctx;
+		SSL_CTX *newsslctx;
 		newsslctx = pxy_srcsslctx_create(ctx, newcrt, ctx->opts->chain,
 		                                 ctx->opts->key);
 		if (!newsslctx) {
