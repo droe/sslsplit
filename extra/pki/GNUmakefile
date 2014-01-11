@@ -101,15 +101,15 @@ targets: rsa.crt
 		>targets/wildcard.roe.ch.pem
 	$(RM) targets/wildcard.roe.ch.{key,csr,crt} rsa.srl
 
-# openssl s_server cannot be easily controlled from scripts; it is
-# more robust to just connect to a real server to create a session
+# localhost network connectivity is required
 session.pem:
-	( \
-	echo 'GET /test/SSLsplit-$(VERSION) HTTP/1.1'; \
-	echo 'Host: daniel.roe.ch'; \
-	echo 'Connection: close'; \
-	echo ) | $(OPENSSL) s_client -connect daniel.roe.ch:443 \
-		-quiet -crlf -no_ign_eof -sess_out $@ >/dev/null 2>&1
+	openssl s_server -accept 44443 -cert server.pem -quiet -no_ssl2 \
+		>/dev/null 2>&1 & \
+		pid=$$! ; \
+		sleep 1 ; \
+		echo Q | $(OPENSSL) s_client -connect localhost:44443 \
+			-quiet -no_ign_eof -sess_out $@ >/dev/null 2>&1 ; \
+		kill $$pid
 	test -r $@
 
 clean:
