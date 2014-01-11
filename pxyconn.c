@@ -1447,6 +1447,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		if (!ctx->src.bev) {
 			if (ctx->src.ssl) {
 				SSL_free(ctx->src.ssl);
+				ctx->src.ssl = NULL;
 			}
 			bufferevent_free_and_close_fd(bev, ctx);
 			evutil_closesocket(ctx->fd);
@@ -1652,6 +1653,7 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 	if (!ctx->dst.bev) {
 		if (ctx->dst.ssl) {
 			SSL_free(ctx->dst.ssl);
+			ctx->dst.ssl = NULL;
 		}
 		evutil_closesocket(ctx->fd);
 		pxy_conn_ctx_free(ctx);
