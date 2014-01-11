@@ -772,9 +772,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			ctx->enomem = 1;
 			return SSL_TLSEXT_ERR_NOACK;
 		}
-		sslctx = SSL_get_SSL_CTX(ssl);
-		SSL_set_SSL_CTX(ssl, newsslctx);
-		SSL_CTX_free(sslctx);
+		SSL_set_SSL_CTX(ssl, newsslctx); /* decr's old ctx refcount */
 		X509_free(newcrt);
 	} else if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Certificate cache: KEEP (SNI match or "
