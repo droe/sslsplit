@@ -2,9 +2,11 @@
 ### SSLsplit master
 
 -   Add experimental support for pf on Mac OS X 10.7+ (issue #15).
+-   Also build ipfw NAT engine if pf is detected to support pf divert-to.
+-   Fix memory corruption after the certificate in the cache had to be updated
+    during connection setup (issue #16).
 -   Fix segmentation fault on connections without SNI hostname, caused by
     compilers optimizing away a NULL pointer check (issue #14).
--   Also build ipfw NAT engine if pf is detected to support pf divert-to.
 
 
 ### SSLsplit 0.4.7 2013-07-02
