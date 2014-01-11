@@ -1428,6 +1428,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			ctx->src.ssl = pxy_srcssl_create(ctx, this->ssl);
 			if (!ctx->src.ssl) {
 				bufferevent_free_and_close_fd(bev, ctx);
+				ctx->dst.bev = NULL;
 				ctx->dst.ssl = NULL;
 				if (ctx->opts->passthrough && !ctx->enomem) {
 					ctx->passthrough = 1;
@@ -1569,7 +1570,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			    ctx->opts->passthrough && have_sslerr) {
 				/* ssl callout failed, fall back to plain
 				 * TCP passthrough of SSL connection */
-				SSL_free(ctx->dst.ssl);
+				bufferevent_free_and_close_fd(bev, ctx);
+				ctx->dst.bev = NULL;
 				ctx->dst.ssl = NULL;
 				ctx->passthrough = 1;
 				log_dbg_printf("SSL dst connection failed; fal"
