@@ -1,9 +1,11 @@
 
 ### SSLsplit master
 
--   Unit tests (make test) no longer require Internet connectivity.
 -   Add experimental support for pf on Mac OS X 10.7+ (issue #15).
 -   Also build ipfw NAT engine if pf is detected to support pf divert-to.
+-   Unit tests (make test) no longer require Internet connectivity.
+-   Always use SSL_MODE_RELEASE_BUFFERS when available, which lowers the per
+    connection memory footprint significantly when using OpenSSL 1.0.0+.
 -   Fix memory corruption after the certificate in the cache had to be updated
     during connection setup (issue #16).
 -   Fix file descriptor leak in passthrough mode (-P) after SSL errors.
