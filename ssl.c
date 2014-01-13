@@ -114,6 +114,11 @@ ssl_openssl_version(void)
 #else /* !OPENSSL_THREADS */
 	fprintf(stderr, "OpenSSL is not thread-safe\n");
 #endif /* !OPENSSL_THREADS */
+#ifdef SSL_MODE_RELEASE_BUFFERS
+	fprintf(stderr, "Using SSL_MODE_RELEASE_BUFFERS\n");
+#else /* !SSL_MODE_RELEASE_BUFFERS */
+	fprintf(stderr, "Not using SSL_MODE_RELEASE_BUFFERS\n");
+#endif /* !SSL_MODE_RELEASE_BUFFERS */
 #if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
     (OPENSSL_VERSION_NUMBER == 0x1000105fL)
 	fprintf(stderr, "Using direct access workaround when loading certs\n");

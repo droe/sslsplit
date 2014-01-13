@@ -690,10 +690,10 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 		ctx->enomem = 1;
 		return NULL;
 	}
-#ifdef USE_FOOTPRINT_HACKS
+#ifdef SSL_MODE_RELEASE_BUFFERS
 	/* lower memory footprint for idle connections */
 	SSL_set_mode(ssl, SSL_get_mode(ssl) | SSL_MODE_RELEASE_BUFFERS);
-#endif /* USE_FOOTPRINT_HACKS */
+#endif /* SSL_MODE_RELEASE_BUFFERS */
 	return ssl;
 }
 
@@ -833,10 +833,10 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	}
 #endif /* !OPENSSL_NO_TLSEXT */
 
-#if USE_FOOTPRINT_HACKS
+#ifdef SSL_MODE_RELEASE_BUFFERS
 	/* lower memory footprint for idle connections */
 	SSL_set_mode(ssl, SSL_get_mode(ssl) | SSL_MODE_RELEASE_BUFFERS);
-#endif /* USE_FOOTPRINT_HACKS */
+#endif /* SSL_MODE_RELEASE_BUFFERS */
 
 	/* session resuming based on remote endpoint address and port */
 	sess = cachemgr_dsess_get((struct sockaddr *)&ctx->addr,

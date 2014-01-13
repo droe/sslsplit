@@ -1,8 +1,5 @@
 ### OpenSSL tweaking
 
-# Define to use dubious hacks to decrease OpenSSL memory consumption.
-#FEATURES+=	-DUSE_FOOTPRINT_HACKS
-
 # Define to disable server-mode SSL session caching for SSLv2 clients.
 # This is needed if SSL session resumption fails with a bufferevent error:
 # "illegal padding in SSL routines SSL2_READ_INTERNAL".
