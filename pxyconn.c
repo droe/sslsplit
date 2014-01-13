@@ -386,7 +386,10 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 
 /*
  * Called by OpenSSL when a new src SSL session is created.
- * Return 0 means remove session from internal session cache.
+ * OpenSSL increments the refcount before calling the callback and will
+ * decrement it again if we return 0.  Returning 1 will make OpenSSL skip
+ * the refcount decrementing.  In other words, return 0 if we did not
+ * keep a pointer to the object (which we never do here).
  */
 #ifdef DISABLE_SSLV2_SESSION_CACHE
 #define MAYBE_UNUSED 
@@ -418,6 +421,8 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 
 /*
  * Called by OpenSSL when a src SSL session should be removed.
+ * OpenSSL calls SSL_SESSION_free() after calling the callback;
+ * we do not need to free the reference here.
  */
 static void
 pxy_ossl_sessremove_cb(UNUSED SSL_CTX *sslctx, SSL_SESSION *sess)
@@ -772,7 +777,8 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			ctx->enomem = 1;
 			return SSL_TLSEXT_ERR_NOACK;
 		}
-		SSL_set_SSL_CTX(ssl, newsslctx); /* decr's old ctx refcount */
+		SSL_set_SSL_CTX(ssl, newsslctx); /* decr's old incr new refc */
+		SSL_CTX_free(newsslctx);
 		X509_free(newcrt);
 	} else if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Certificate cache: KEEP (SNI match or "

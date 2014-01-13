@@ -1012,7 +1012,7 @@ ssl_key_genrsa(const int keysize)
 	if (!rsa)
 		return NULL;
 	pkey = EVP_PKEY_new();
-	EVP_PKEY_assign_RSA(pkey, rsa);
+	EVP_PKEY_assign_RSA(pkey, rsa); /* does not increment refcount */
 	return pkey;
 }
 
@@ -1037,7 +1037,7 @@ ssl_x509_subject_cn(X509 *crt, size_t *sz)
 	X509_NAME *ptr;
 	char *cn;
 
-	ptr = X509_get_subject_name(crt);
+	ptr = X509_get_subject_name(crt); /* does not inc refcounts */
 	if (!ptr)
 		return NULL;
 	*sz = X509_NAME_get_text_by_NID(ptr, NID_commonName, NULL, 0) + 1;
@@ -1483,7 +1483,7 @@ ssl_session_to_str(SSL_SESSION *sess)
 	if (!bio)
 		return NULL;
 	SSL_SESSION_print(bio, sess);
-	sz = BIO_get_mem_data(bio, &p);
+	sz = BIO_get_mem_data(bio, &p); /* sets p to internal buffer */
 	if (!(ret = malloc(sz + 1))) {
 		BIO_free(bio);
 		return NULL;

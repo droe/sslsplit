@@ -4,9 +4,10 @@
 -   Unit tests (make test) no longer require Internet connectivity.
 -   Add experimental support for pf on Mac OS X 10.7+ (issue #15).
 -   Also build ipfw NAT engine if pf is detected to support pf divert-to.
--   Fix file descriptor leak in passthrough mode (-P) after SSL errors.
 -   Fix memory corruption after the certificate in the cache had to be updated
     during connection setup (issue #16).
+-   Fix file descriptor leak in passthrough mode (-P) after SSL errors.
+-   Fix OpenSSL data structures memory leak on certificate forgery.
 -   Fix segmentation fault on connections without SNI hostname, caused by
     compilers optimizing away a NULL pointer check (issue #14).
 
