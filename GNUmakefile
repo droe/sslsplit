@@ -259,14 +259,19 @@ endif
 PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
 TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
 
-CFLAGS+=	$(PKG_CFLAGS) -pthread \
+CFLAGS+=	$(PKG_CFLAGS) \
 		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
 CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
 		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
 		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
 		-D"FEATURES=\"$(FEATURES)\""
-LDFLAGS+=	$(PKG_LDFLAGS) -pthread
+LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
+
+ifneq ($(shell uname),Darwin)
+CFLAGS+=	-pthread
+LDFLAGS+=	-pthread
+endif
 
 export VERSION
 export OPENSSL
