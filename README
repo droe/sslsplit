@@ -30,6 +30,7 @@ the various NAT engines.
 
 SSLsplit depends on the OpenSSL and libevent 2.x libraries.
 The build depends on GNU make and a POSIX.2 environment in `PATH`.
+The optional unit tests depend on the check library.
 
 SSLsplit currently supports the following operating systems and NAT mechanisms:
 -   FreeBSD: pf rdr and divert-to, ipfw fwd, ipfilter rdr
@@ -63,7 +64,7 @@ https://github.com/droe/sslsplit
 ## License
 
 SSLsplit is provided under the simplified BSD license.
-SSLsplit contains components licensed under the MIT license.
+SSLsplit contains components licensed under the MIT and APSL licenses.
 See the respective source file headers for details.
 
 
