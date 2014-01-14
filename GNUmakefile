@@ -258,6 +258,7 @@ endif
 
 PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
 TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
+FEATURES:=	$(sort $(FEATURES))
 
 CFLAGS+=	$(PKG_CFLAGS) \
 		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
