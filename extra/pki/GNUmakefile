@@ -103,12 +103,11 @@ targets: rsa.crt
 
 # localhost network connectivity is required
 session.pem:
-	openssl s_server -accept 44443 -cert server.pem -quiet -no_ssl2 \
-		>/dev/null 2>&1 & \
+	openssl s_server -accept 46143 -cert server.pem -quiet -no_ssl2 & \
 		pid=$$! ; \
 		sleep 1 ; \
-		echo Q | $(OPENSSL) s_client -connect localhost:44443 \
-			-quiet -no_ign_eof -sess_out $@ >/dev/null 2>&1 ; \
+		echo q | $(OPENSSL) s_client -connect localhost:46143 \
+			-quiet -no_ign_eof -sess_out $@ ; \
 		kill $$pid
 	test -r $@
 
