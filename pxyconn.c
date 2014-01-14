@@ -1075,7 +1075,8 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				return NULL;
 			}
 		} else if (!strncasecmp(line, "Public-Key-Pins: ", 17) ||
-		    !strncasecmp(line, "Public-Key-Pins-Report-Only: ", 29)) {
+		    !strncasecmp(line, "Public-Key-Pins-Report-Only: ", 29) ||
+		    !strncasecmp(line, "Alternate-Protocol: ", 20)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_resp_header = 1;

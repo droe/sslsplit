@@ -1,6 +1,7 @@
 
 ### SSLsplit master
 
+-   Filter out Alternate-Protocol response header to suppress SPDY/QUIC.
 -   Add experimental support for pf on Mac OS X 10.7+ (issue #15).
 -   Also build ipfw NAT engine if pf is detected to support pf divert-to.
 -   Unit tests (make test) no longer require Internet connectivity.
