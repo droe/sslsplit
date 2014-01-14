@@ -364,10 +364,10 @@ END_TEST
 
 START_TEST(ssl_tls_clienthello_parse_sni_05)
 {
-	ssize_t sz;
-	char *sni;
-
 	for (size_t i = 0; i < sizeof(clienthello04) - 1; i++) {
+		ssize_t sz;
+		char *sni;
+
 		sz = (ssize_t)i;
 		sni = ssl_tls_clienthello_parse_sni(clienthello04, &sz);
 		fail_unless(sni == NULL, "sni not null but should be");
@@ -391,10 +391,10 @@ END_TEST
 
 START_TEST(ssl_tls_clienthello_parse_sni_07)
 {
-	ssize_t sz;
-	char *sni;
-
 	for (size_t i = 0; i < sizeof(clienthello05) - 1; i++) {
+		ssize_t sz;
+		char *sni;
+
 		sz = (ssize_t)i;
 		sni = ssl_tls_clienthello_parse_sni(clienthello05, &sz);
 		fail_unless(sni == NULL, "sni not null but should be");

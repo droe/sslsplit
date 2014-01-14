@@ -251,11 +251,6 @@ log_content_close_singlefile(void)
 void
 log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr)
 {
-	char filename[1024];
-	char timebuf[24];
-	time_t epoch;
-	struct tm *utc;
-
 	if (ctx->open)
 		return;
 
@@ -264,6 +259,11 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr)
 		asprintf(&ctx->header_in, "%s -> %s", srcaddr, dstaddr);
 		asprintf(&ctx->header_out, "%s -> %s", dstaddr, srcaddr);
 	} else {
+		char filename[1024];
+		char timebuf[24];
+		time_t epoch;
+		struct tm *utc;
+
 		time(&epoch);
 		utc = gmtime(&epoch);
 		strftime(timebuf, sizeof(timebuf), "%Y%m%dT%H%M%SZ", utc);

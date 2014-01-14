@@ -143,7 +143,7 @@ logbuf_size(logbuf_t *lb)
 ssize_t
 logbuf_write_free(logbuf_t *lb, writefunc_t writefunc)
 {
-	ssize_t rv1, rv2;
+	ssize_t rv1, rv2 = 0;
 
 	rv1 = writefunc(lb->fd, lb->buf, lb->sz);
 	free(lb->buf);

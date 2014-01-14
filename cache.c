@@ -108,7 +108,6 @@ cache_val_t
 cache_get(cache_t *cache, cache_key_t key)
 {
 	cache_val_t rval = NULL;
-	cache_val_t val;
 	khiter_t it;
 
 	if (!key)
@@ -117,6 +116,7 @@ cache_get(cache_t *cache, cache_key_t key)
 	pthread_mutex_lock(&cache->mutex);
 	it = cache->get_cb(key);
 	if (it != cache->end_cb()) {
+		cache_val_t val;
 		val = cache->get_val_cb(it);
 		if (!(rval = cache->unpackverify_val_cb(val, 1))) {
 			cache->free_val_cb(val);

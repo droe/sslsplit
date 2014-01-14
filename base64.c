@@ -153,7 +153,6 @@ base64_enc(const unsigned char *in, size_t insz, size_t *outsz)
 		'w', 'x', 'y', 'z', '0', '1', '2', '3',
 		'4', '5', '6', '7', '8', '9', '+', '/' };
 	size_t i, o;
-	int tmp;
 	char *out;
 
 	if (insz == 0) {
@@ -168,6 +167,7 @@ base64_enc(const unsigned char *in, size_t insz, size_t *outsz)
 	}
 
 	for (i = 0, o = 0; i < insz; i += 3, o += 4) {
+		int tmp;
 			tmp  = in[i    ] << 16;
 		if (i + 1 < insz)
 			tmp += in[i + 1] <<  8;

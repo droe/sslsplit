@@ -564,12 +564,12 @@ static cert_t *
 pxy_srccert_create(pxy_conn_ctx_t *ctx)
 {
 	cert_t *cert = NULL;
-	char *wildcarded;
 
 	if (ctx->opts->tgcrtdir) {
 		if (ctx->sni) {
 			cert = cachemgr_tgcrt_get(ctx->sni);
 			if (!cert) {
+				char *wildcarded;
 				wildcarded = ssl_wildcardify(ctx->sni);
 				if (!wildcarded) {
 					ctx->enomem = 1;
@@ -588,6 +588,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 					cert = cachemgr_tgcrt_get(*p);
 				}
 				if (!cert) {
+					char *wildcarded;
 					wildcarded = ssl_wildcardify(*p);
 					if (!wildcarded) {
 						ctx->enomem = 1;
@@ -717,7 +718,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 {
 	pxy_conn_ctx_t *ctx = arg;
 	const char *sn;
-	X509 *sslcrt, *newcrt;
+	X509 *sslcrt;
 
 	if (!(sn = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)))
 		return SSL_TLSEXT_ERR_NOACK;
@@ -744,6 +745,9 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 	 * and replace it both in the current SSL ctx and in the cert cache */
 	if (!ctx->immutable_cert &&
 	    !ssl_x509_names_match((sslcrt = SSL_get_certificate(ssl)), sn)) {
+		X509 *newcrt;
+		SSL_CTX *newsslctx;
+
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("Certificate cache: UPDATE "
 			               "(SNI mismatch)\n");
@@ -769,7 +773,6 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 				ctx->enomem = 1;
 			}
 		}
-		SSL_CTX *newsslctx;
 		newsslctx = pxy_srcsslctx_create(ctx, newcrt, ctx->opts->chain,
 		                                 ctx->opts->key);
 		if (!newsslctx) {
@@ -947,11 +950,11 @@ pxy_bufferevent_setup(pxy_conn_ctx_t *ctx, evutil_socket_t fd, SSL *ssl)
 static char *
 pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 {
-	char *space1, *space2, *newhdr;
-
 	/* parse information for connect log */
 	if (!ctx->http_method) {
 		/* first line */
+		char *space1, *space2;
+
 		space1 = strchr(line, ' ');
 		space2 = space1 ? strchr(space1 + 1, ' ') : NULL;
 		if (!space1) {
@@ -983,6 +986,8 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		}
 	} else {
 		/* not first line */
+		char *newhdr;
+
 		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
 			ctx->http_host = strdup(util_skipws(line + 6));
 			if (!ctx->http_host) {
@@ -1031,18 +1036,19 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 static char *
 pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 {
-	char *space1, *space2;
-	size_t len_code, len_text;
-
 	/* parse information for connect log */
 	if (!ctx->http_status_code) {
 		/* first line */
+		char *space1, *space2;
+
 		space1 = strchr(line, ' ');
 		space2 = space1 ? strchr(space1 + 1, ' ') : NULL;
 		if (!space1 || !!strncmp(line, "HTTP", 4)) {
 			/* not HTTP or HTTP/0.9 */
 			ctx->seen_resp_header = 1;
 		} else {
+			size_t len_code, len_text;
+
 			if (space2) {
 				len_code = space2 - space1 - 1;
 				len_text = strlen(space2 + 1);
@@ -1251,9 +1257,10 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	if (ctx->spec->http && !ctx->seen_req_header && (bev == ctx->src.bev)
 	    && !ctx->passthrough) {
 		logbuf_t *lb = NULL, *tail = NULL;
-		char *line, *replace;
+		char *line;
 		while ((line = evbuffer_readln(inbuf, NULL,
 		                               EVBUFFER_EOL_CRLF))) {
+			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
 				tmp = logbuf_new_printf(-1, NULL,
@@ -1293,9 +1300,10 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	if (ctx->spec->http && !ctx->seen_resp_header && (bev == ctx->dst.bev)
 	    && !ctx->passthrough) {
 		logbuf_t *lb = NULL, *tail = NULL;
-		char *line, *replace;
+		char *line;
 		while ((line = evbuffer_readln(inbuf, NULL,
 		                               EVBUFFER_EOL_CRLF))) {
+			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
 				tmp = logbuf_new_printf(-1, NULL,
