@@ -37,21 +37,33 @@ DEBUG_CFLAGS?=	-g
 # Define to add thread debugging; dump thread state when choosing a thread.
 #FEATURES+=	-DDEBUG_THREAD
 
+# When debugging OpenSSL related issues, make sure you use a debug build of
+# OpenSSL and consider enabling its debugging options -DREF_PRINT -DREF_CHECK
+# for debugging reference counting of OpenSSL objects and/or
+# -DPURIFY for using valgrind and similar tools.
+
 
 ### Mac OS X missing pf headers hacks
 
+# For a list of kernel versions versus release versions, see
+# https://en.wikipedia.org/wiki/Darwin_%28operating_system%29
 ifeq ($(shell uname),Darwin)
 ifeq ($(basename $(basename $(shell uname -r))),11)
+# Mac OS X Lion
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/10.7
-endif
-ifeq ($(basename $(basename $(shell uname -r))),12)
+else ifeq ($(basename $(basename $(shell uname -r))),12)
+# Mac OS X Mountain Lion
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/10.8
-endif
-ifeq ($(basename $(basename $(shell uname -r))),13)
+else ifeq ($(basename $(basename $(shell uname -r))),13)
+# Mac OS X Mavericks
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/10.9
+#else ifeq ($(basename $(basename $(shell uname -r))),14)
+# Mac OS X Syrah
+#FEATURES+=	-DHAVE_PF
+#PKG_CPPFLAGS+=	-I./xnu/10.10
 endif
 endif
 
@@ -99,7 +111,7 @@ SED?=		sed
 ### Variables only used for developer targets
 
 KHASH_URL?=	https://github.com/attractivechaos/klib/raw/master/khash.h
-XNU_URL?=	https://raw2.github.com/opensource-apple/xnu/
+XNU_URL?=	https://github.com/opensource-apple/xnu/raw/
 GPGSIGNKEY?=	0xB5D3397E
 
 CPPCHECK?=	cppcheck
