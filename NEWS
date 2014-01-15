@@ -13,6 +13,7 @@
 -   Fix OpenSSL data structures memory leak on certificate forgery.
 -   Fix segmentation fault on connections without SNI hostname, caused by
     compilers optimizing away a NULL pointer check (issue #14).
+-   Fix thread manager startup failure under some circumstances (issue #17).
 -   Fix segmentation faults if thread manager fails to start (issue #10).
 
 
