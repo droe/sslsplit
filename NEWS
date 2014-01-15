@@ -1,5 +1,5 @@
 
-### SSLsplit master
+### SSLsplit 0.4.8 2014-01-15
 
 -   Filter out Alternate-Protocol response header to suppress SPDY/QUIC.
 -   Add experimental support for pf on Mac OS X 10.7+ (issue #15).
