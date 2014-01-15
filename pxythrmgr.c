@@ -122,19 +122,27 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 
 	pthread_mutex_init(&ctx->mutex, NULL);
 
-	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(void*))))
+	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(void*)))) {
+		log_dbg_printf("Failed to allocate memory\n");
 		goto leave;
+	}
 
 	for (idx = 0; idx < ctx->num_thr; idx++) {
-		if (!(ctx->thr[idx] = malloc(sizeof(pxy_thr_ctx_t))))
+		if (!(ctx->thr[idx] = malloc(sizeof(pxy_thr_ctx_t)))) {
+			log_dbg_printf("Failed to allocate memory\n");
 			goto leave;
+		}
 		ctx->thr[idx]->evbase = event_base_new();
-		if (!ctx->thr[idx]->evbase)
+		if (!ctx->thr[idx]->evbase) {
+			log_dbg_printf("Failed to create evbase %d\n", idx);
 			goto leave;
+		}
 		ctx->thr[idx]->dnsbase = evdns_base_new(
 		                         ctx->thr[idx]->evbase, 1);
-		if (!ctx->thr[idx]->dnsbase)
+		if (!ctx->thr[idx]->dnsbase) {
+			log_dbg_printf("Failed to create dnsbase %d\n", idx);
 			goto leave;
+		}
 		ctx->thr[idx]->load = 0;
 		ctx->thr[idx]->running = 0;
 	}
