@@ -280,6 +280,8 @@ proxy_new(opts_t *opts)
 {
 	proxy_listener_ctx_t *head;
 	proxy_ctx_t *ctx;
+	struct evdns_base *dnsbase;
+	int rc;
 
 	/* adds locking, only required if accessed from separate threads */
 	evthread_use_pthreads();
@@ -302,6 +304,28 @@ proxy_new(opts_t *opts)
 	if (!ctx->evbase) {
 		log_err_printf("Error getting event base\n");
 		goto leave1;
+	}
+
+	/* create a dnsbase here purely for being able to test parsing
+	 * resolv.conf while we can still alert the user about it. */
+	dnsbase = evdns_base_new(ctx->evbase, 0);
+	if (!dnsbase) {
+		log_err_printf("Error creating dns event base\n");
+		goto leave1b;
+	}
+	rc = evdns_base_resolv_conf_parse(dnsbase, DNS_OPTIONS_ALL,
+	                                  "/etc/resolv.conf");
+	evdns_base_free(dnsbase, 0);
+	if (rc != 0) {
+		log_err_printf("evdns cannot parse resolv.conf: %s (%d)\n",
+		               rc == 1 ? "failed to open file" :
+		               rc == 2 ? "failed to stat file" :
+		               rc == 3 ? "file too large" :
+		               rc == 4 ? "out of memory" :
+		               rc == 5 ? "short read from file" :
+		               rc == 6 ? "no nameservers listed in file" :
+		               "unknown error", rc);
+		goto leave1b;
 	}
 
 	if (OPTS_DEBUG(opts)) {
