@@ -32,8 +32,6 @@
 
 #include <check.h>
 
-// evdns_base_resolv_conf_parse(base, DNS_OPTIONS_ALL, "/etc/resolv.conf");
-
 START_TEST(pxythrmgr_libevent_01)
 {
 	struct event_base *evbase;
@@ -90,6 +88,25 @@ START_TEST(pxythrmgr_libevent_04)
 }
 END_TEST
 
+START_TEST(pxythrmgr_libevent_05)
+{
+	struct event_base *evbase1;
+	struct event_base *evbase2;
+	struct evdns_base *dnsbase;
+
+	/* issue #17:  */
+	evbase1 = event_base_new();
+	fail_unless(!!evbase1, "no event base 1");
+	evbase2 = event_base_new();
+	fail_unless(!!evbase1, "no event base 2");
+	dnsbase = evdns_base_new(evbase2, 1);
+	fail_unless(!!dnsbase, "no evdns base");
+	evdns_base_free(dnsbase, 0);
+	event_base_free(evbase2);
+	event_base_free(evbase1);
+}
+END_TEST
+
 Suite *
 pxythrmgr_suite(void)
 {
@@ -103,6 +120,7 @@ pxythrmgr_suite(void)
 	tcase_add_test(tc, pxythrmgr_libevent_02);
 	tcase_add_test(tc, pxythrmgr_libevent_03);
 	tcase_add_test(tc, pxythrmgr_libevent_04);
+	tcase_add_test(tc, pxythrmgr_libevent_05);
 	suite_add_tcase(s, tc);
 
 	return s;
