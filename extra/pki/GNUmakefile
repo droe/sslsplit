@@ -77,7 +77,7 @@ server.crt: server.key $(CONFIG)
 	cat $^ >$@
 
 targets: targets/daniel.roe.ch.pem targets/wildcard.roe.ch.pem
-	$(RM) -f rsa.srl
+	$(RM) rsa.srl
 
 targets/daniel.roe.ch.pem: rsa.crt
 	$(MKDIR) -p targets
@@ -91,7 +91,8 @@ targets/daniel.roe.ch.pem: rsa.crt
 		-out targets/daniel.roe.ch.crt
 	cat targets/daniel.roe.ch.crt targets/daniel.roe.ch.key rsa.crt \
 		>targets/daniel.roe.ch.pem
-	$(RM) targets/daniel.roe.ch.{key,csr,crt}
+	$(RM) targets/daniel.roe.ch.key targets/daniel.roe.ch.csr \
+		targets/daniel.roe.ch.crt
 
 targets/wildcard.roe.ch.pem: rsa.crt
 	$(MKDIR) -p targets
@@ -105,7 +106,8 @@ targets/wildcard.roe.ch.pem: rsa.crt
 		-out targets/wildcard.roe.ch.crt
 	cat targets/wildcard.roe.ch.crt targets/wildcard.roe.ch.key rsa.crt \
 		>targets/wildcard.roe.ch.pem
-	$(RM) targets/wildcard.roe.ch.{key,csr,crt}
+	$(RM) targets/wildcard.roe.ch.key targets/wildcard.roe.ch.csr \
+		targets/wildcard.roe.ch.crt
 
 # localhost network connectivity is required
 session.pem:
