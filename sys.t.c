@@ -39,6 +39,7 @@
 
 #include <check.h>
 
+#define TARGETDIR "extra/pki/targets"
 static char basedir[] = "/tmp/" BNAME ".test.XXXXXX";
 static char *file, *lfile, *dir, *ldir, *notexist;
 
@@ -109,6 +110,23 @@ START_TEST(sys_isdir_05)
 }
 END_TEST
 
+void
+sys_dir_eachfile_cb(UNUSED const char *fn, void *arg)
+{
+	*((int*)arg) += 1;
+	/* fprintf(stderr, "%s\n", fn); */
+}
+
+START_TEST(sys_dir_eachfile_01)
+{
+	int flag = 0;
+
+	sys_dir_eachfile(TARGETDIR, sys_dir_eachfile_cb, &flag);
+
+	fail_unless(flag == 2, "Iterated wrong number of files");
+}
+END_TEST
+
 START_TEST(sys_get_cpu_cores_01)
 {
 	fail_unless(sys_get_cpu_cores() >= 1, "Number of CPU cores < 1");
@@ -150,6 +168,10 @@ sys_suite(void)
 	tcase_add_test(tc, sys_isdir_03);
 	tcase_add_test(tc, sys_isdir_04);
 	tcase_add_test(tc, sys_isdir_05);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sys_dir_eachfile");
+	tcase_add_test(tc, sys_dir_eachfile_01);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("sys_get_cpu_cores");
