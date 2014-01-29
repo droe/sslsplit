@@ -76,7 +76,10 @@ server.crt: server.key $(CONFIG)
 %.pem: %.crt %.key
 	cat $^ >$@
 
-targets: rsa.crt
+targets: targets/daniel.roe.ch.pem targets/wildcard.roe.ch.pem
+	$(RM) -f rsa.srl
+
+targets/daniel.roe.ch.pem: rsa.crt
 	$(MKDIR) -p targets
 	$(OPENSSL) genrsa -out targets/daniel.roe.ch.key 1024
 	$(OPENSSL) req -new -sha1 -subj '/C=CH/CN=daniel.roe.ch/' \
@@ -89,6 +92,9 @@ targets: rsa.crt
 	cat targets/daniel.roe.ch.crt targets/daniel.roe.ch.key rsa.crt \
 		>targets/daniel.roe.ch.pem
 	$(RM) targets/daniel.roe.ch.{key,csr,crt}
+
+targets/wildcard.roe.ch.pem: rsa.crt
+	$(MKDIR) -p targets
 	$(OPENSSL) genrsa -out targets/wildcard.roe.ch.key 1024
 	$(OPENSSL) req -new -sha1 -subj '/C=CH/CN=*.roe.ch/' \
 		-key targets/wildcard.roe.ch.key \
@@ -99,7 +105,7 @@ targets: rsa.crt
 		-out targets/wildcard.roe.ch.crt
 	cat targets/wildcard.roe.ch.crt targets/wildcard.roe.ch.key rsa.crt \
 		>targets/wildcard.roe.ch.pem
-	$(RM) targets/wildcard.roe.ch.{key,csr,crt} rsa.srl
+	$(RM) targets/wildcard.roe.ch.{key,csr,crt}
 
 # localhost network connectivity is required
 session.pem:
