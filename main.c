@@ -600,6 +600,10 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: failed to initialize proxy.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
+	/* Load certs before dropping privs but after cachemgr_preinit() */
+	if (opts->tgcrtdir) {
+		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, opts);
+	}
 
 	/* Drop privs, chroot, detach from TTY */
 	if (sys_privdrop(opts->dropuser, opts->jaildir) == -1) {
@@ -639,10 +643,6 @@ main(int argc, char *argv[])
 	if (nat_init() == -1) {
 		log_err_printf("Failed to init NAT state table lookup.\n");
 		goto out_nat_failed;
-	}
-
-	if (opts->tgcrtdir) {
-		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, opts);
 	}
 
 	rv = EXIT_SUCCESS;

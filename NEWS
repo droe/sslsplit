@@ -1,6 +1,7 @@
 
 ### SSLsplit master
 
+-   Load -t certificates before dropping privileges (issues #19 and #20).
 -   Fix segmentation fault when using -t without a CA.
 
 
