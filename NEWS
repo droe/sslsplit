@@ -1,7 +1,7 @@
 
 ### SSLsplit master
 
--   tbd
+-   Fix segmentation fault when using -t without a CA.
 
 
 ### SSLsplit 0.4.8 2014-01-15
