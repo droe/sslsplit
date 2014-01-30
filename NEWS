@@ -1,6 +1,8 @@
 
 ### SSLsplit master
 
+-   SSLsplit no longer chroot()s to /var/empty by default if run by root,
+    in order to prevent breaking -S and sni proxyspecs (issue #21).
 -   Load -t certificates before dropping privileges (issues #19 and #20).
 -   Fix segmentation fault when using -t without a CA.
 

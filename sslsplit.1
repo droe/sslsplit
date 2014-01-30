@@ -142,8 +142,12 @@ Display help on usage and exit.
 .TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
-If \fB-j\fP is not given, SSLsplit will automatically change root directory to
-\fI/var/empty\fP if run as root and \fB-S\fP is not used.
+Note that this has implications for both \fB-S\fP and for \fBsni\fP
+\fIproxyspecs\fP.  The directory given with \fB-S\fP will be relative to
+\fIjaildir\fP since the log files cannot be opened before calling chroot(2).
+Depending on your system, you will need to copy files such as
+\fB/etc/resolv.conf\fP to \fIjaildir\fP in order for name resolution to work.
+Using \fBsni\fP proxyspecs depend on name resolution.
 .TP
 .B \-k \fIpemfile\fP
 Use CA private key from \fIpemfile\fP to sign certificates forged on-the-fly.
@@ -286,6 +290,8 @@ Because this requires DNS lookups, it is preferrable to use NAT engine
 lookups (see above), except when that is not possible, such as when there is
 no supported NAT engine or when running \fBsslsplit\fP on a different system
 than the NAT rules redirecting the actual connections.
+Note that when using \fB-j\fP with \fBsni\fP, you may need to prepare
+\fIjaildir\fP to make name resolution work from within the chroot directory.
 .LP
 .SH "NAT ENGINES"
 SSLsplit currently supports the following NAT engines:

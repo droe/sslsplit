@@ -129,7 +129,7 @@ main_usage(void)
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
-"  -j jaildir  chroot() to jaildir (default if run as root: /var/empty)\n"
+"  -j jaildir  chroot() to jaildir (impacts -S and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
 "  -L logfile  content log: full data to file or named pipe (excludes -S)\n"
@@ -516,9 +516,6 @@ main(int argc, char *argv[])
 			fprintf(stderr, "%s: out of memory.\n", argv0);
 			exit(EXIT_FAILURE);
 		}
-	}
-	if (!opts->jaildir && (geteuid() == 0) && !opts->contentlogdir) {
-		opts->jaildir = strdup("/var/empty");
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
 	    !opts->contentlogdir) {
