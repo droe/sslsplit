@@ -31,6 +31,7 @@
 #include "sys.h"
 #include "log.h"
 
+#include <string.h>
 #include <pthread.h>
 
 /*

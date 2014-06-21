@@ -35,6 +35,7 @@
 #include "log.h"
 #include "attrib.h"
 
+#include <string.h>
 #include <pthread.h>
 
 #include <netinet/in.h>
