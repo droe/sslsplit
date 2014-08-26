@@ -145,9 +145,11 @@ Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
 Note that this has implications for both \fB-S\fP and for \fBsni\fP
 \fIproxyspecs\fP.  The directory given with \fB-S\fP will be relative to
 \fIjaildir\fP since the log files cannot be opened before calling chroot(2).
-Depending on your system, you will need to copy files such as
+Depending on your operating system, you will need to copy files such as
 \fB/etc/resolv.conf\fP to \fIjaildir\fP in order for name resolution to work.
-Using \fBsni\fP proxyspecs depend on name resolution.
+Using \fBsni\fP proxyspecs depends on name resolution.
+Some operating systems require special device nodes such as \fB/dev/null\fP
+to be present within the jail.  Check your system's documentation for details.
 .TP
 .B \-k \fIpemfile\fP
 Use CA private key from \fIpemfile\fP to sign certificates forged on-the-fly.
