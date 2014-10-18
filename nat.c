@@ -69,6 +69,10 @@
 #include <linux/netfilter_ipv6.h>
 #endif /* HAVE_NETFILTER */
 
+#ifdef HAVE_DARWIN_LIBPROC
+#include <libproc.h>
+#endif
+
 /*
  * Access NAT state tables in a NAT engine independant way.
  * Adding support for additional NAT engines should require only

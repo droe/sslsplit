@@ -48,6 +48,7 @@ DEBUG_CFLAGS?=	-g
 # For a list of kernel versions versus release versions, see
 # https://en.wikipedia.org/wiki/Darwin_%28operating_system%29
 ifeq ($(shell uname),Darwin)
+FEATURES+=	-DHAVE_DARWIN_LIBPROC
 ifeq ($(basename $(basename $(shell uname -r))),11)
 # Mac OS X Lion
 FEATURES+=	-DHAVE_PF
