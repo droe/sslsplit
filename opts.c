@@ -186,7 +186,11 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 				if (af == -1) {
 					exit(EXIT_FAILURE);
 				}
-				spec->natengine = strdup(natengine);
+				if (natengine) {
+					spec->natengine = strdup(natengine);
+				} else {
+					spec->natengine = NULL;
+				}
 				state++;
 				break;
 			case 3:
