@@ -35,7 +35,7 @@
 #include <sys/socket.h>
 #include <stdint.h>
 
-int sys_privdrop(const char *, const char *) WUNRES;
+int sys_privdrop(const char *, const char *, const char *) WUNRES;
 
 int sys_pidf_open(const char *) NONNULL(1) WUNRES;
 int sys_pidf_write(int) WUNRES;
