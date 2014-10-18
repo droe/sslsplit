@@ -96,6 +96,7 @@ endif
 ### Variables you might need to override
 
 PREFIX?=	/usr/local
+MANDIR?=	share/man
 
 OPENSSL?=	openssl
 PKGCONFIG?=	pkg-config
@@ -325,14 +326,14 @@ clean:
 	$(RM) -rf *.dSYM
 
 install: $(TARGET)
-	test -d $(PREFIX)/bin || $(MKDIR) -p $(PREFIX)/bin
-	test -d $(PREFIX)/share/man/man1 || \
-		$(MKDIR) -p $(PREFIX)/share/man/man1
-	$(INSTALL) -o 0 -g 0 -m 0755 $(TARGET) $(PREFIX)/bin/
-	$(INSTALL) -o 0 -g 0 -m 0644 $(TARGET).1 $(PREFIX)/share/man/man1/
+	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
+	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
+		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
+	$(INSTALL) -o 0 -g 0 -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -o 0 -g 0 -m 0644 $(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
 
 deinstall:
-	$(RM) -f $(PREFIX)/bin/$(TARGET) $(PREFIX)/share/man/man1/$(TARGET).1
+	$(RM) -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/$(TARGET).1
 
 ifdef GITDIR
 lint:
