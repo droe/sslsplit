@@ -121,18 +121,20 @@ nat_pf_fini(void)
 
 #ifdef HAVE_DARWIN_LIBPROC
 static int
-nat_pf_lookup_proc(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                      evutil_socket_t s,
-                      struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
+nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *dst_addrlen)
 {
 	pid_t *pids = NULL;
 	struct proc_fdinfo *fds = NULL;
+	int ret = -1;
+
+	/* default result if no pid matches */
+	*result = -1;
 
 	/* iterate over all pids to find a matching socket */
 	int pid_count = proc_listallpids(NULL, 0);
 	pids = malloc(sizeof(pid_t) * pid_count);
 	if (!pids) {
-		goto error;
+		goto done;
 	}
 
 	pid_count = proc_listallpids(pids, sizeof(pid_t) * pid_count);
@@ -149,7 +151,7 @@ nat_pf_lookup_proc(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 
 		fds = malloc(PROC_PIDLISTFD_SIZE * fd_count);
 		if (!fds) {
-			goto error;
+			goto done;
 		}
 		fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, fds, sizeof(fds[0]) * fd_count);
 
@@ -193,27 +195,32 @@ nat_pf_lookup_proc(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 				}
 			}
 
-			// TODO
-			char name[MAXPATHLEN];
-			proc_pidpath(pid, name, sizeof(name));
-			log_err_printf("Matched socket to process %s\n", name);
-
-			free(pids);
-			free(fds);
-			return 0;
+			/* valid match */
+			*result = pid;
+			ret = 0;
+			goto done;
 		}
 	}
 
-error:
+done:
 	free(pids);
 	free(fds);
-	return -1;
+	return ret;
 }
-#endif
+
+#else /* HAVE_DARWIN_LIBPROC */
+
+static int
+nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *dst_addrlen) {
+	*result = -1;
+	return 0;
+}
+
+#endif /* !HAVE_DARWIN_LIBPROC */
 
 static int
 nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                 evutil_socket_t s,
+                 pid_t *pid, evutil_socket_t s,
                  struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
 #ifdef __APPLE__
@@ -287,9 +294,9 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 		*dst_addrlen = sizeof(struct sockaddr_in6);
 	}
 
-	// TODO
-	if (nat_pf_lookup_proc(dst_addr, dst_addrlen, s, src_addr, src_addrlen) == -1) {
-		log_err_printf("lookup failed\n");
+	/* find the local process; there may be none. */
+	if (nat_pf_lookup_proc(pid, dst_addr, dst_addrlen) == -1) {
+		return -1;
 	}
 
 	return 0;
@@ -344,13 +351,16 @@ nat_ipfilter_fini(void)
 
 static int
 nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                       evutil_socket_t s,
+                       pid_t *pid, evutil_socket_t s,
                        struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
 	struct sockaddr_storage our_addr;
 	socklen_t our_addrlen;
 	struct natlookup nl;
 	struct ipfobj ipfo;
+
+	/* pid lookup is unsupported. */
+	*pid = -1;
 
 	our_addrlen = sizeof(struct sockaddr_storage);
 	if (getsockname(s, (struct sockaddr *)&our_addr, &our_addrlen) == -1) {
@@ -423,11 +433,14 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
  */
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                        evutil_socket_t s,
+                        pid_t *pid, evutil_socket_t s,
                         struct sockaddr *src_addr,
                         UNUSED socklen_t src_addrlen)
 {
 	int rv;
+
+	/* pid lookup is unsupported. */
+	*pid = -1;
 
 	if (src_addr->sa_family != AF_INET) {
 		log_err_printf("The netfilter NAT engine only "
@@ -477,10 +490,13 @@ nat_iptransparent_socket_cb(evutil_socket_t s)
  */
 static int
 nat_getsockname_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                          evutil_socket_t s,
+                          pid_t *pid, evutil_socket_t s,
                           UNUSED struct sockaddr *src_addr,
                           UNUSED socklen_t src_addrlen)
 {
+	/* pid lookup is unsupported. */
+	*pid = -1;
+
 	if (getsockname(s, dst_addr, dst_addrlen) == -1) {
 		log_err_printf("Error from getsockname(): %s\n",
 		               strerror(errno));
