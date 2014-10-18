@@ -63,6 +63,7 @@ typedef struct opts {
 	char *ciphers;
 	char *tgcrtdir;
 	char *dropuser;
+	char *dropgroup;
 	char *jaildir;
 	char *pidfile;
 	char *connectlog;

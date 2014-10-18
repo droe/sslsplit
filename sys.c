@@ -58,15 +58,26 @@
  * ancillary groups.  This is only safe if the effective user ID is 0.
  * If username is unset and the effective uid != uid, drop privs to uid.
  * This is to support setuid bit configurations.
+ * If groupname is set, it will be used instead of the user's default primary
+ * group.
  * If jaildir is set, also chroot to jaildir after reading system files
  * but before dropping privileges.
  * Returns 0 on success, -1 on failure.
  */
 int
-sys_privdrop(const char *username, const char *jaildir)
+sys_privdrop(const char *username, const char *groupname, const char *jaildir)
 {
 	struct passwd *pw = NULL;
+	struct group *gr = NULL;
 	int ret = -1;
+
+	if (groupname) {
+		if (!(gr = getgrnam(groupname))) {
+			log_err_printf("Failed to getgrnam group '%s': %s\n",
+			               groupname, strerror(errno));
+			goto error;
+		}
+	}
 
 	if (username) {
 		if (!(pw = getpwnam(username))) {
@@ -74,6 +85,11 @@ sys_privdrop(const char *username, const char *jaildir)
 			               username, strerror(errno));
 			goto error;
 		}
+
+		if (gr != NULL) {
+			pw->pw_gid = gr->gr_gid;
+		}
+
 		if (initgroups(username, pw->pw_gid) == -1) {
 			log_err_printf("Failed to initgroups user '%s': %s\n",
 			               username, strerror(errno));
