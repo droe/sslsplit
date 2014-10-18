@@ -111,8 +111,10 @@ typedef struct pxy_conn_ctx {
 	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 
-	/* local process id, or -1 */
-	pid_t local_pid;
+	/* local process ids, or -1 */
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
@@ -135,6 +137,11 @@ typedef struct pxy_conn_ctx {
 	/* log strings from SSL context */
 	char *ssl_names;
 	char *ssl_orignames;
+
+	/* log strings from process info */
+	char *exec_path;
+	char *user;
+	char *group;
 
 	/* content log context */
 	log_content_ctx_t logctx;
@@ -176,7 +183,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->spec = spec;
 	ctx->opts = opts;
 	ctx->fd = fd;
-	ctx->local_pid = -1;
+	ctx->pid = -1;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
 #ifdef DEBUG_PROXY
@@ -232,6 +239,15 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->ssl_orignames) {
 		free(ctx->ssl_orignames);
+	}
+	if (ctx->exec_path) {
+		free(ctx->exec_path);
+	}
+	if (ctx->user) {
+		free(ctx->user);
+	}
+	if (ctx->group) {
+		free(ctx->group);
 	}
 	if (ctx->origcrt) {
 		X509_free(ctx->origcrt);
@@ -1849,7 +1865,7 @@ pxy_conn_setup(evutil_socket_t fd,
 		/* NAT engine lookup */
 		ctx->addrlen = sizeof(struct sockaddr_storage);
 		if (spec->natlookup((struct sockaddr *)&ctx->addr,
-		                    &ctx->addrlen, &ctx->local_pid, fd,
+		                    &ctx->addrlen, &ctx->pid, fd,
 		                    peeraddr, peeraddrlen) == -1) {
 			log_err_printf("Connection not found in NAT "
 			               "state table, aborting connection\n");
@@ -1879,13 +1895,15 @@ pxy_conn_setup(evutil_socket_t fd,
 		if (!ctx->src_str)
 			goto memout;
 
-		if (ctx->local_pid != -1) {
-			char *name = NULL;
-			uid_t uid;
-			gid_t gid;
+		if (ctx->pid != -1) {
+			if (sys_proc_info(ctx->pid, &ctx->exec_path, &ctx->uid, &ctx->gid) == 0) {
+				ctx->user = sys_user_str(ctx->uid);
+				ctx->group = sys_group_str(ctx->gid);
+				if (!ctx->user || !ctx->group) {
+					goto memout;
+				}
 
-			if (sys_proc_info(ctx->local_pid, &name, &uid, &gid) == 0) {
-				log_err_printf("Matched socket to process %s (uid=%lld, gid=%lld)\n", name, (long long) uid, (long long) gid);
+				log_err_printf("Matched socket to process %s (user=%s, group=%s)\n", ctx->exec_path, ctx->user, ctx->group);
 			}
 		}
 	}

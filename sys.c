@@ -231,6 +231,62 @@ sys_proc_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 }
 
 /*
+ * Converts a local uid into a printable string representation.
+ * Returns an allocated buffer which must be freed by caller, or NULL on error.
+ */
+char *
+sys_user_str(uid_t uid)
+{
+	int bufsize;
+        if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1) {
+		log_err_printf("failed to get password bufsize: %s\n",
+		               strerror(errno));
+		return NULL;
+	}
+
+	char buffer[bufsize];
+	struct passwd pwd, *result = NULL;
+	if (getpwuid_r(uid, &pwd, buffer, bufsize, &result) != 0 || !result) {
+		/* no entry found; return the integer representation */
+		char *name;
+		if (asprintf(&name, "%llu", (long long) uid) == -1) {
+			return NULL;
+		}
+		return name;
+	}
+
+	return strdup(pwd.pw_name);
+}
+
+/*
+ * Converts a local gid into a printable string representation.
+ * Returns an allocated buffer which must be freed by caller, or NULL on error.
+ */
+char *
+sys_group_str(gid_t gid)
+{
+	int bufsize;
+        if ((bufsize = sysconf(_SC_GETGR_R_SIZE_MAX)) == -1) {
+		log_err_printf("failed to get group bufsize: %s\n",
+		               strerror(errno));
+		return NULL;
+	}
+
+	char buffer[bufsize];
+	struct group grp, *result = NULL;
+	if (getgrgid_r(gid, &grp, buffer, bufsize, &result) != 0 || !result) {
+		/* no entry found; return the integer representation */
+		char *name;
+		if (asprintf(&name, "%llu", (long long) gid) == -1) {
+			return NULL;
+		}
+		return name;
+	}
+
+	return strdup(grp.gr_name);
+}
+
+/*
  * Parse an ascii host/IP and port tuple into a sockaddr_storage.
  * On success, returns address family and fills in addr, addrlen.
  * Returns -1 on error.
