@@ -1505,7 +1505,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			log_content_open(&ctx->logctx, ctx->src_str,
-			                 ctx->dst_str);
+			                 ctx->dst_str, ctx->exec_path,
+			                 ctx->user, ctx->group);
 		}
 
 		/* log connection */
@@ -1895,15 +1896,13 @@ pxy_conn_setup(evutil_socket_t fd,
 		if (!ctx->src_str)
 			goto memout;
 
-		if (ctx->pid != -1) {
-			if (sys_proc_info(ctx->pid, &ctx->exec_path, &ctx->uid, &ctx->gid) == 0) {
-				ctx->user = sys_user_str(ctx->uid);
-				ctx->group = sys_group_str(ctx->gid);
-				if (!ctx->user || !ctx->group) {
-					goto memout;
-				}
-
-				log_err_printf("Matched socket to process %s (user=%s, group=%s)\n", ctx->exec_path, ctx->user, ctx->group);
+		/* fetch process info */
+		if (ctx->pid != -1 && sys_proc_info(ctx->pid, &ctx->exec_path, &ctx->uid, &ctx->gid) == 0) {
+			/* fetch user/group names */
+			ctx->user = sys_user_str(ctx->uid);
+			ctx->group = sys_group_str(ctx->gid);
+			if (!ctx->user || !ctx->group) {
+				goto memout;
 			}
 		}
 	}

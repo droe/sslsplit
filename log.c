@@ -249,8 +249,11 @@ log_content_close_singlefile(void)
 }
 
 void
-log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr)
+log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
+		 char *exec_path, char *user, char *group)
 {
+	log_err_printf("log %s (%s:%s)\n", exec_path, user, group);
+
 	if (ctx->open)
 		return;
 
@@ -258,11 +261,14 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr)
 		ctx->fd = content_fd;
 		asprintf(&ctx->header_in, "%s -> %s", srcaddr, dstaddr);
 		asprintf(&ctx->header_out, "%s -> %s", dstaddr, srcaddr);
+		// TODO - Add something to context based on exec_path / user / group
 	} else {
 		char filename[1024];
 		char timebuf[24];
 		time_t epoch;
 		struct tm *utc;
+
+		// TODO - Open a path based on exec_path / user / group
 
 		time(&epoch);
 		utc = gmtime(&epoch);
