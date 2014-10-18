@@ -40,6 +40,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <syslog.h>
+#include <assert.h>
+#include <sys/stat.h>
 
 /*
  * Centralized logging code multiplexing thread access to the logger based
@@ -219,6 +221,7 @@ log_connect_close(void)
 logger_t *content_log = NULL;
 static int content_fd = -1; /* if set, we are in single file mode */
 static const char *content_basedir = NULL;
+static const char *content_logspec = NULL;
 
 static int
 log_content_open_singlefile(const char *logfile)
@@ -239,6 +242,13 @@ log_content_open_logdir(const char *basedir)
 	return 0;
 }
 
+static int
+log_content_open_logspec(const char *logspec)
+{
+	content_logspec = logspec;
+	return 0;
+}
+
 static void
 log_content_close_singlefile(void)
 {
@@ -248,8 +258,124 @@ log_content_close_singlefile(void)
 	}
 }
 
+/*
+ * Generate a log path based on the given log spec.
+ * Returns an allocated buffer which must be freed by caller, or NULL on error.
+ */
+static char *
+log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
+			    char *exec_path, char *user, char *group)
+{
+	/* set up buffer to hold our generated file path */
+	size_t path_buflen = 1024;
+	char *path_buf = malloc(path_buflen);
+	if (path_buf == NULL) {
+		log_err_printf("failed to allocate path buffer\n");
+		return NULL;
+	}
+
+	/* iterate over format specifiers */
+	size_t path_len = 0;
+	for (const char *p = logspec; *p != '\0'; p++) {
+		const char *elem = NULL;
+		size_t elem_len = 0;
+
+		const char iso8601[] =  "%Y%m%dT%H%M%SZ";
+		char timebuf[24]; // sized for ISO 8601 format
+
+		/* parse the format string and generate the next path element */
+		switch (*p) {
+			case '%':
+				p++;
+				/* handle format specifiers. */
+				switch (*p) {
+					case '\0':
+						/* unexpected eof; backtrack and discard invalid format spec */
+						p--;
+						elem_len = 0;
+						break;
+					case '%':
+						elem = p;
+						elem_len = 1;
+						break;
+					case 'd':
+						elem = dstaddr;
+						elem_len = strlen(dstaddr);
+						break;
+					case 's':
+						elem = srcaddr;
+						elem_len = strlen(srcaddr);
+						break;
+					case 'x':
+						if (exec_path) {
+							char *match = exec_path;
+							while ((match = strchr(match, '/')) != NULL) {
+								match++;
+								elem = match;
+							}
+							elem_len = strlen(elem);
+						} else {
+							elem_len = 0;
+						}
+						break;
+					case 'X':
+						elem = exec_path;
+						elem_len = exec_path ? strlen(exec_path) : 0;
+						break;
+					case 'u':
+						elem = user;
+						elem_len = user ? strlen(user) : 0;
+						break;
+					case 'g':
+						elem = group;
+						elem_len = group ? strlen(group) : 0;
+						break;
+					case 'T': {
+						time_t epoch;
+						struct tm *utc;
+
+						time(&epoch);
+						utc = gmtime(&epoch);
+						strftime(timebuf, sizeof(timebuf), iso8601, utc);
+
+						elem = timebuf;
+						elem_len = sizeof(timebuf);
+						break;
+					}
+				}
+				break;
+			default:
+				elem = p;
+				elem_len = 1;
+				break;
+		}
+
+		/* growing the buffer to fit elem_len + terminating \0 */
+		if (path_buflen - path_len < elem_len + 1) {
+			/* grow in 1024 chunks. note that the use of `1024' provides our gauranteed space for a trailing '\0' */
+			path_buflen += elem_len + 1024;
+			char *newbuf = realloc(path_buf, path_buflen);
+			if (newbuf == NULL) {
+				log_err_printf("failed to reallocate path buffer");
+				free(path_buf);
+				return NULL;
+			}
+			path_buf = newbuf;
+		}
+
+		strncat(path_buf, elem, elem_len);
+		path_len += elem_len;
+	}
+
+	/* apply terminating NUL */
+	assert(path_buflen > path_len);
+	path_buf[path_len] = '\0';
+	return path_buf;
+}
+
 void
-log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr)
+log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
+		 char *exec_path, char *user, char *group)
 {
 	if (ctx->open)
 		return;
@@ -258,6 +384,58 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr)
 		ctx->fd = content_fd;
 		asprintf(&ctx->header_in, "%s -> %s", srcaddr, dstaddr);
 		asprintf(&ctx->header_out, "%s -> %s", dstaddr, srcaddr);
+	} else if (content_logspec) {
+		char *filename;
+
+		filename = log_content_format_pathspec(content_logspec,
+						       srcaddr, dstaddr,
+						       exec_path, user,
+						       group);
+
+		/* statefully create parent directories by iteratively rewriting
+	         * the path at each directory seperator */
+		char parent[strlen(filename)+1];
+		char *p;
+
+		memcpy(parent, filename, sizeof(parent));
+
+		/* skip leading '/' characters */
+		p = parent;
+		while (*p == '/') p++;
+
+		while ((p = strchr(p, '/')) != NULL) {
+			/* overwrite '/' to terminate the string at the next parent directory */
+			*p = '\0';
+
+			struct stat sbuf;
+			if (stat(parent, &sbuf) != 0) {
+				if (mkdir(parent, 0755) != 0) {
+					log_err_printf("Could not create directory '%s': %s\n",
+					               parent, strerror(errno));
+					ctx->fd = -1;
+					return;
+				}
+			} else if (!S_ISDIR(sbuf.st_mode)) {
+				log_err_printf("Failed to open '%s': %s is not a directory\n",
+	                                       filename, parent);
+				ctx->fd = -1;
+				return;
+			}
+
+			/* replace the overwritten slash */
+			*p = '/';
+			p++;
+
+			/* skip leading '/' characters */
+			while (*p == '/') p++;
+		}
+
+                ctx->fd = open(filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
+                if (ctx->fd == -1) {
+                        log_err_printf("Failed to open '%s': %s\n",
+                                       filename, strerror(errno));
+                }
+
 	} else {
 		char filename[1024];
 		char timebuf[24];
@@ -383,12 +561,15 @@ int
 log_preinit(opts_t *opts)
 {
 	if (opts->contentlog) {
-		if (!opts->contentlogdir) {
-			if (log_content_open_singlefile(opts->contentlog)
-			    == -1)
+		if (opts->contentlogdir) {
+			if (log_content_open_logdir(opts->contentlog) == -1)
+				goto out;
+		} else if (opts->contentlogspec) {
+			if (log_content_open_logspec(opts->contentlog) == -1)
 				goto out;
 		} else {
-			if (log_content_open_logdir(opts->contentlog) == -1)
+			if (log_content_open_singlefile(opts->contentlog)
+			    == -1)
 				goto out;
 		}
 		if (!(content_log = logger_new(log_content_writecb))) {

@@ -50,6 +50,10 @@
 #include <sys/sysctl.h>
 #endif /* !_SC_NPROCESSORS_ONLN */
 
+#if HAVE_DARWIN_LIBPROC
+#include <libproc.h>
+#endif
+
 #include <event2/util.h>
 
 /*
@@ -191,6 +195,95 @@ sys_pidf_close(int fd, const char *fn)
 {
 	unlink(fn);
 	close(fd);
+}
+
+/*
+ * Fetch process info for the given pid.
+ * On success, returns 0 and fills in path, uid, and gid.
+ * Caller must free returned path string.
+ * Returns -1 on failure, or if unsupported on this platform.
+ */
+int
+sys_proc_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+#if HAVE_DARWIN_LIBPROC
+	/* fetch process structure */
+	struct proc_bsdinfo bsd_info;
+	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info, sizeof(bsd_info)) == -1) {
+		return -1;
+	}
+
+	*uid = bsd_info.pbi_uid;
+	*gid = bsd_info.pbi_gid;
+
+	/* fetch process path */
+	*path = malloc(PROC_PIDPATHINFO_MAXSIZE);
+	int path_len = proc_pidpath(pid, *path, PROC_PIDPATHINFO_MAXSIZE);
+	if (path_len == -1) {
+		free(*path);
+		return -1;
+	}
+
+	return 0;
+#else
+	/* unsupported */
+	return -1;
+#endif
+}
+
+/*
+ * Converts a local uid into a printable string representation.
+ * Returns an allocated buffer which must be freed by caller, or NULL on error.
+ */
+char *
+sys_user_str(uid_t uid)
+{
+	int bufsize;
+        if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1) {
+		log_err_printf("failed to get password bufsize: %s\n",
+		               strerror(errno));
+		return NULL;
+	}
+
+	char buffer[bufsize];
+	struct passwd pwd, *result = NULL;
+	if (getpwuid_r(uid, &pwd, buffer, bufsize, &result) != 0 || !result) {
+		/* no entry found; return the integer representation */
+		char *name;
+		if (asprintf(&name, "%llu", (long long) uid) == -1) {
+			return NULL;
+		}
+		return name;
+	}
+
+	return strdup(pwd.pw_name);
+}
+
+/*
+ * Converts a local gid into a printable string representation.
+ * Returns an allocated buffer which must be freed by caller, or NULL on error.
+ */
+char *
+sys_group_str(gid_t gid)
+{
+	int bufsize;
+        if ((bufsize = sysconf(_SC_GETGR_R_SIZE_MAX)) == -1) {
+		log_err_printf("failed to get group bufsize: %s\n",
+		               strerror(errno));
+		return NULL;
+	}
+
+	char buffer[bufsize];
+	struct group grp, *result = NULL;
+	if (getgrgid_r(gid, &grp, buffer, bufsize, &result) != 0 || !result) {
+		/* no entry found; return the integer representation */
+		char *name;
+		if (asprintf(&name, "%llu", (long long) gid) == -1) {
+			return NULL;
+		}
+		return name;
+	}
+
+	return strdup(grp.gr_name);
 }
 
 /*
