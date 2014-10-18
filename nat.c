@@ -194,8 +194,8 @@ nat_pf_lookup_proc(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 			}
 
 			// TODO
-			char name[128];
-			proc_name(pid, name, sizeof(name));
+			char name[MAXPATHLEN];
+			proc_pidpath(pid, name, sizeof(name));
 			log_err_printf("Matched socket to process %s\n", name);
 
 			free(pids);
