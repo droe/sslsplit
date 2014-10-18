@@ -50,6 +50,10 @@
 #include <sys/sysctl.h>
 #endif /* !_SC_NPROCESSORS_ONLN */
 
+#if HAVE_DARWIN_LIBPROC
+#include <libproc.h>
+#endif
+
 #include <event2/util.h>
 
 /*
@@ -191,6 +195,39 @@ sys_pidf_close(int fd, const char *fn)
 {
 	unlink(fn);
 	close(fd);
+}
+
+/*
+ * Fetch process info for the given pid.
+ * On success, returns 0 and fills in path, uid, and gid.
+ * Caller must free returned path string.
+ * Returns -1 on failure, or if unsupported on this platform.
+ */
+int
+sys_proc_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+#if HAVE_DARWIN_LIBPROC
+	/* fetch process structure */
+	struct proc_bsdinfo bsd_info;
+	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info, sizeof(bsd_info)) == -1) {
+		return -1;
+	}
+
+	*uid = bsd_info.pbi_uid;
+	*gid = bsd_info.pbi_gid;
+
+	/* fetch process path */
+	*path = malloc(PROC_PIDPATHINFO_MAXSIZE);
+	int path_len = proc_pidpath(pid, *path, PROC_PIDPATHINFO_MAXSIZE);
+	if (path_len == -1) {
+		free(*path);
+		return -1;
+	}
+
+	return 0;
+#else
+	/* unsupported */
+	return -1;
+#endif
 }
 
 /*

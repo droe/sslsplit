@@ -1880,11 +1880,13 @@ pxy_conn_setup(evutil_socket_t fd,
 			goto memout;
 
 		if (ctx->local_pid != -1) {
-			// TODO
-			#include <libproc.h>
-			char name[MAXPATHLEN];
-			proc_pidpath(ctx->local_pid, name, sizeof(name));
-			log_err_printf("Matched socket to process %s\n", name);
+			char *name = NULL;
+			uid_t uid;
+			gid_t gid;
+
+			if (sys_proc_info(ctx->local_pid, &name, &uid, &gid) == 0) {
+				log_err_printf("Matched socket to process %s (uid=%lld, gid=%lld)\n", name, (long long) uid, (long long) gid);
+			}
 		}
 	}
 
