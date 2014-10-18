@@ -222,7 +222,11 @@ main(int argc, char *argv[])
 
 	argv0 = argv[0];
 	opts = opts_new();
-	natengine = strdup(nat_getdefaultname());
+	if (nat_getdefaultname()) {
+		natengine = strdup(nat_getdefaultname());
+	} else {
+		natengine = NULL;
+	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
 	                    "k:c:C:K:t:OPs:e:Eu:j:p:l:L:S:dDVh")) != -1) {
