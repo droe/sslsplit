@@ -274,6 +274,9 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 		return NULL;
 	}
 
+	/* initialize the buffer as an empty C string */
+	path_buf[0] = '\0';
+
 	/* iterate over format specifiers */
 	size_t path_len = 0;
 	for (const char *p = logspec; *p != '\0'; p++) {
