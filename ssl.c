@@ -1384,7 +1384,7 @@ ssl_x509_aias(X509 *crt, const int type)
 				j++;
 		}
 	}
-	res[j] = '\0';
+	res[j] = NULL;
 	sk_ACCESS_DESCRIPTION_pop_free(aias, ACCESS_DESCRIPTION_free);
 	return res;
 }
