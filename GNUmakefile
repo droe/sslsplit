@@ -60,10 +60,10 @@ else ifeq ($(basename $(basename $(shell uname -r))),13)
 # Mac OS X Mavericks
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/10.9
-#else ifeq ($(basename $(basename $(shell uname -r))),14)
-# Mac OS X Syrah
-#FEATURES+=	-DHAVE_PF
-#PKG_CPPFLAGS+=	-I./xnu/10.10
+else ifeq ($(basename $(basename $(shell uname -r))),14)
+# Mac OS X Yosemite
+FEATURES+=	-DHAVE_PF
+PKG_CPPFLAGS+=	-I./xnu/10.9
 endif
 endif
 
