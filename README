@@ -76,3 +76,10 @@ Marlinspike, but shares no source code with them.
 SSLsplit includes khash.h by Attractive Chaos.
 
 
+## Contributors
+
+The following individuals have contributed to the SSLsplit codebase, in
+chronological order of first contribution:
+
+-   Steve Wills (@swills)
+
