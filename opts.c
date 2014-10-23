@@ -88,6 +88,9 @@ opts_free(opts_t *opts)
 	if (opts->dropuser) {
 		free(opts->dropuser);
 	}
+	if (opts->dropgroup) {
+		free(opts->dropgroup);
+	}
 	if (opts->jaildir) {
 		free(opts->jaildir);
 	}

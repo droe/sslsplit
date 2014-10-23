@@ -129,6 +129,7 @@ main_usage(void)
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
+"  -m group    when dropping user privileges via -u, set the target group (default: primary group of the user)\n"
 "  -j jaildir  chroot() to jaildir (impacts -S and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
@@ -233,7 +234,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
-	                    "k:c:C:K:t:OPs:e:Eu:j:p:l:L:S:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:e:Eu:m:j:p:l:L:S:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -415,6 +416,11 @@ main(int argc, char *argv[])
 				if (opts->dropuser)
 					free(opts->dropuser);
 				opts->dropuser = strdup(optarg);
+				break;
+			case 'm':
+				if (opts->dropgroup)
+					free(opts->dropgroup);
+				opts->dropgroup = strdup(optarg);
 				break;
 			case 'p':
 				if (opts->pidfile)
@@ -621,7 +627,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Drop privs, chroot, detach from TTY */
-	if (sys_privdrop(opts->dropuser, opts->jaildir) == -1) {
+	if (sys_privdrop(opts->dropuser, opts->dropgroup, opts->jaildir) == -1) {
 		fprintf(stderr, "%s: failed to drop privileges: %s\n",
 		                argv0, strerror(errno));
 		exit(EXIT_FAILURE);
