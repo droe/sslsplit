@@ -129,7 +129,7 @@ main_usage(void)
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
-"  -m group    when dropping user privileges via -u, set the target group (default: primary group of the user)\n"
+"  -m group    when using -u, override group (default: primary group of user)\n"
 "  -j jaildir  chroot() to jaildir (impacts -S and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
@@ -495,7 +495,7 @@ main(int argc, char *argv[])
 	argv += optind;
 	opts->spec = proxyspec_parse(&argc, &argv, natengine);
 
-	/* usage checks */
+	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
 		                argv0);
@@ -578,6 +578,12 @@ main(int argc, char *argv[])
 		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("Generated RSA key for leaf certs.\n");
 		}
+	}
+
+	/* usage checks after defaults */
+	if (opts->dropgroup && !opts->dropuser) {
+		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
+		exit(EXIT_FAILURE);
 	}
 
 	/* debugging */
