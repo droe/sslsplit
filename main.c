@@ -209,6 +209,18 @@ main_loadtgcrt(const char *filename, void *arg)
 }
 
 /*
+ * Handle out of memory conditions in early stages of main().
+ * Print error message and exit with failure status code.
+ * Does not return.
+ */
+void NORET
+oom_die(const char *argv0)
+{
+	fprintf(stderr, "%s: out of memory\n", argv0);
+	exit(EXIT_FAILURE);
+}
+
+/*
  * Main entry point.
  */
 int
@@ -225,10 +237,8 @@ main(int argc, char *argv[])
 	opts = opts_new();
 	if (nat_getdefaultname()) {
 		natengine = strdup(nat_getdefaultname());
-		if (!natengine) {
-			fprintf(stderr, "%s: out of memory\n", argv0);
-			exit(EXIT_FAILURE);
-		}
+		if (!natengine)
+			oom_die(argv0);
 	} else {
 		natengine = NULL;
 	}
@@ -341,11 +351,8 @@ main(int argc, char *argv[])
 				if (opts->tgcrtdir)
 					free(opts->tgcrtdir);
 				opts->tgcrtdir = strdup(optarg);
-				if (!opts->tgcrtdir) {
-					fprintf(stderr, "%s: out of memory\n",
-					        argv0);
-					exit(EXIT_FAILURE);
-				}
+				if (!opts->tgcrtdir)
+					oom_die(argv0);
 				break;
 			case 'O':
 				opts->deny_ocsp = 1;
@@ -386,11 +393,8 @@ main(int argc, char *argv[])
 				}
 				EC_KEY_free(ec);
 				opts->ecdhcurve = strdup(optarg);
-				if (!opts->ecdhcurve) {
-					fprintf(stderr, "%s: out of memory\n",
-					        argv0);
-					exit(EXIT_FAILURE);
-				}
+				if (!opts->ecdhcurve)
+					oom_die(argv0);
 				break;
 			}
 #endif /* !OPENSSL_NO_ECDH */
@@ -403,10 +407,14 @@ main(int argc, char *argv[])
 				if (opts->ciphers)
 					free(opts->ciphers);
 				opts->ciphers = strdup(optarg);
+				if (!opts->ciphers)
+					oom_die(argv0);
 				break;
 			case 'e':
 				free(natengine);
 				natengine = strdup(optarg);
+				if (!natengine)
+					oom_die(argv0);
 				break;
 			case 'E':
 				nat_list_engines();
@@ -416,37 +424,51 @@ main(int argc, char *argv[])
 				if (opts->dropuser)
 					free(opts->dropuser);
 				opts->dropuser = strdup(optarg);
+				if (!opts->dropuser)
+					oom_die(argv0);
 				break;
 			case 'm':
 				if (opts->dropgroup)
 					free(opts->dropgroup);
 				opts->dropgroup = strdup(optarg);
+				if (!opts->dropgroup)
+					oom_die(argv0);
 				break;
 			case 'p':
 				if (opts->pidfile)
 					free(opts->pidfile);
 				opts->pidfile = strdup(optarg);
+				if (!opts->pidfile)
+					oom_die(argv0);
 				break;
 			case 'j':
 				if (opts->jaildir)
 					free(opts->jaildir);
 				opts->jaildir = strdup(optarg);
+				if (!opts->jaildir)
+					oom_die(argv0);
 				break;
 			case 'l':
 				if (opts->connectlog)
 					free(opts->connectlog);
 				opts->connectlog = strdup(optarg);
+				if (!opts->connectlog)
+					oom_die(argv0);
 				break;
 			case 'L':
 				if (opts->contentlog)
 					free(opts->contentlog);
 				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
 				opts->contentlogdir = 0;
 				break;
 			case 'S':
 				if (opts->contentlog)
 					free(opts->contentlog);
 				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
 				opts->contentlogdir = 1;
 				break;
 			case 'd':
@@ -536,14 +558,14 @@ main(int argc, char *argv[])
 	/* dynamic defaults */
 	if (!opts->ciphers) {
 		opts->ciphers = strdup("ALL:-aNULL");
-		if (!opts->ciphers) {
-			fprintf(stderr, "%s: out of memory.\n", argv0);
-			exit(EXIT_FAILURE);
-		}
+		if (!opts->ciphers)
+			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
 	    !opts->contentlogdir) {
 		opts->dropuser = strdup("nobody");
+		if (!opts->dropuser)
+			oom_die(argv0);
 	}
 	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
 		opts->key = ssl_key_genrsa(1024);
