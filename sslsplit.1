@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKOPZdDgGseujplLS\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKOPZdDgGseumjplLS\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKOPZdDgGseujplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKOPZdDgGseumjplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGseujplLS\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZdDgGseumjplLS\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -239,6 +239,10 @@ primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
 privileges to the stored UID if EUID != UID (setuid bit scenario), or to
 \fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0)
 and \fB-S\fP is not used.
+.TP
+.B \-m
+When dropping privileges using \fB-u\fP, override the target primary group
+to be set to \fIgroup\fP.
 .TP
 .B \-V
 Display version and compiled features information and exit.

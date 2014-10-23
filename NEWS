@@ -1,6 +1,8 @@
 
 ### SSLsplit master
 
+-   Add primary group override (-m) when dropping privileges to an
+    unprivileged user (pull req #35 by @landonf).
 -   Support pf on Mac OS X 10.10 Yosemite and fix segmentation fault if
     no NAT engine is available (pull req #32 by @landonf).
 -   Support DESTDIR and MANDIR in the build (pull req #34 by @swills).
