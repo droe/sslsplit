@@ -188,6 +188,12 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 				}
 				if (natengine) {
 					spec->natengine = strdup(natengine);
+					if (!spec->natengine) {
+						fprintf(stderr,
+						        "Out of memory"
+						        "\n");
+						exit(EXIT_FAILURE);
+					}
 				} else {
 					spec->natengine = NULL;
 				}
@@ -220,6 +226,12 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 					/* natengine */
 					free(spec->natengine);
 					spec->natengine = strdup(**argv);
+					if (!spec->natengine) {
+						fprintf(stderr,
+						        "Out of memory"
+						        "\n");
+						exit(EXIT_FAILURE);
+					}
 					state = 0;
 				} else {
 					/* explicit target address */

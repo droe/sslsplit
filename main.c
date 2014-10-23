@@ -224,6 +224,10 @@ main(int argc, char *argv[])
 	opts = opts_new();
 	if (nat_getdefaultname()) {
 		natengine = strdup(nat_getdefaultname());
+		if (!natengine) {
+			fprintf(stderr, "%s: out of memory\n", argv0);
+			exit(EXIT_FAILURE);
+		}
 	} else {
 		natengine = NULL;
 	}
@@ -336,6 +340,11 @@ main(int argc, char *argv[])
 				if (opts->tgcrtdir)
 					free(opts->tgcrtdir);
 				opts->tgcrtdir = strdup(optarg);
+				if (!opts->tgcrtdir) {
+					fprintf(stderr, "%s: out of memory\n",
+					        argv0);
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'O':
 				opts->deny_ocsp = 1;
@@ -376,6 +385,11 @@ main(int argc, char *argv[])
 				}
 				EC_KEY_free(ec);
 				opts->ecdhcurve = strdup(optarg);
+				if (!opts->ecdhcurve) {
+					fprintf(stderr, "%s: out of memory\n",
+					        argv0);
+					exit(EXIT_FAILURE);
+				}
 				break;
 			}
 #endif /* !OPENSSL_NO_ECDH */
