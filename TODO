@@ -1,3 +1,5 @@
+Legacy list of to do items; see github issues for a more up to date list.
+
 -   Control SSL_OP_SINGLE_ECDH_USE and other de-optimizations by a
     "prefer speed to security" command line option
 -   Optionally add ephemeral RSA key to SSL_CTX to allow export cipher suites
@@ -11,5 +13,4 @@
 -   Extendable approach to broken certificate verification implementations
 -   Client fingerprinting: only intercept clients with headers matching regex
 -   Configurable and/or scriptable modification of requests and/or responses
--   STARTTLS for various protocols
 -   Sample scripts for single file/fifo content log postprocessing
