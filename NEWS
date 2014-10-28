@@ -1,6 +1,7 @@
 
 ### SSLsplit master
 
+-   Build without SSLv2 support by default (issue #26).
 -   Add primary group override (-m) when dropping privileges to an
     unprivileged user (pull req #35 by @landonf).
 -   Support pf on Mac OS X 10.10 Yosemite and fix segmentation fault if

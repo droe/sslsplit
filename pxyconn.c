@@ -495,7 +495,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
-#if DISABLE_SSLV2_SERVER
+#ifdef DISABLE_SSLV2_SERVER
 	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
 #endif /* DISABLE_SSLV2_SERVER */
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
@@ -827,6 +827,9 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
+#ifdef DISABLE_SSLV2_CLIENT
+	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
+#endif /* DISABLE_SSLV2_CLIENT */
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 
