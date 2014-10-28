@@ -7,10 +7,11 @@
 -   Support pf on Mac OS X 10.10 Yosemite and fix segmentation fault if
     no NAT engine is available (pull req #32 by @landonf).
 -   Support DESTDIR and MANDIR in the build (pull req #34 by @swills).
--   SSLsplit no longer chroot()s to /var/empty by default if run by root,
-    in order to prevent breaking -S and sni proxyspecs (issue #21).
+-   No longer chroot() to /var/empty by default if run by root, in order to
+    prevent breaking -S and sni proxyspecs (issue #21).
 -   Load -t certificates before dropping privileges (issues #19 and #20).
 -   Fix segmentation fault when using -t without a CA.
+-   Minor bugfixes and improvements.
 
 
 ### SSLsplit 0.4.8 2014-01-15

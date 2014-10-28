@@ -991,27 +991,27 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		/* not first line */
 		char *newhdr;
 
-		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
-			ctx->http_host = strdup(util_skipws(line + 6));
+		if (!ctx->http_host && !strncasecmp(line, "Host:", 5)) {
+			ctx->http_host = strdup(util_skipws(line + 5));
 			if (!ctx->http_host) {
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Content-Type: ", 14)) {
-			ctx->http_content_type = strdup(util_skipws(line + 14));
+		} else if (!strncasecmp(line, "Content-Type:", 13)) {
+			ctx->http_content_type = strdup(util_skipws(line + 13));
 			if (!ctx->http_content_type) {
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Connection: ", 12)) {
+		} else if (!strncasecmp(line, "Connection:", 11)) {
 			ctx->sent_http_conn_close = 1;
 			if (!(newhdr = strdup("Connection: close"))) {
 				ctx->enomem = 1;
 				return NULL;
 			}
 			return newhdr;
-		} else if (!strncasecmp(line, "Accept-Encoding: ", 17) ||
-		           !strncasecmp(line, "Keep-Alive: ", 12)) {
+		} else if (!strncasecmp(line, "Accept-Encoding:", 16) ||
+		           !strncasecmp(line, "Keep-Alive:", 11)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_req_header = 1;
@@ -1076,16 +1076,16 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 	} else {
 		/* not first line */
 		if (!ctx->http_content_length &&
-		    !strncasecmp(line, "Content-Length: ", 16)) {
+		    !strncasecmp(line, "Content-Length:", 15)) {
 			ctx->http_content_length =
-				strdup(util_skipws(line + 16));
+				strdup(util_skipws(line + 15));
 			if (!ctx->http_content_length) {
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Public-Key-Pins: ", 17) ||
-		    !strncasecmp(line, "Public-Key-Pins-Report-Only: ", 29) ||
-		    !strncasecmp(line, "Alternate-Protocol: ", 20)) {
+		} else if (!strncasecmp(line, "Public-Key-Pins:", 16) ||
+		    !strncasecmp(line, "Public-Key-Pins-Report-Only:", 28) ||
+		    !strncasecmp(line, "Alternate-Protocol:", 19)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_resp_header = 1;
