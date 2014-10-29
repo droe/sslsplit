@@ -111,6 +111,11 @@ typedef struct pxy_conn_ctx {
 	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 
+	/* local process ids, or -1 */
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
+
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
 
@@ -132,6 +137,11 @@ typedef struct pxy_conn_ctx {
 	/* log strings from SSL context */
 	char *ssl_names;
 	char *ssl_orignames;
+
+	/* log strings from process info */
+	char *exec_path;
+	char *user;
+	char *group;
 
 	/* content log context */
 	log_content_ctx_t logctx;
@@ -173,6 +183,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->spec = spec;
 	ctx->opts = opts;
 	ctx->fd = fd;
+	ctx->pid = -1;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
 #ifdef DEBUG_PROXY
@@ -228,6 +239,15 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->ssl_orignames) {
 		free(ctx->ssl_orignames);
+	}
+	if (ctx->exec_path) {
+		free(ctx->exec_path);
+	}
+	if (ctx->user) {
+		free(ctx->user);
+	}
+	if (ctx->group) {
+		free(ctx->group);
 	}
 	if (ctx->origcrt) {
 		X509_free(ctx->origcrt);
@@ -1488,7 +1508,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			log_content_open(&ctx->logctx, ctx->src_str,
-			                 ctx->dst_str);
+			                 ctx->dst_str, ctx->exec_path,
+			                 ctx->user, ctx->group);
 		}
 
 		/* log connection */
@@ -1848,7 +1869,7 @@ pxy_conn_setup(evutil_socket_t fd,
 		/* NAT engine lookup */
 		ctx->addrlen = sizeof(struct sockaddr_storage);
 		if (spec->natlookup((struct sockaddr *)&ctx->addr,
-		                    &ctx->addrlen, fd,
+		                    &ctx->addrlen, &ctx->pid, fd,
 		                    peeraddr, peeraddrlen) == -1) {
 			log_err_printf("Connection not found in NAT "
 			               "state table, aborting connection\n");
@@ -1877,6 +1898,16 @@ pxy_conn_setup(evutil_socket_t fd,
 		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
 		if (!ctx->src_str)
 			goto memout;
+
+		/* fetch process info */
+		if (ctx->pid != -1 && sys_proc_info(ctx->pid, &ctx->exec_path, &ctx->uid, &ctx->gid) == 0) {
+			/* fetch user/group names */
+			ctx->user = sys_user_str(ctx->uid);
+			ctx->group = sys_group_str(ctx->gid);
+			if (!ctx->user || !ctx->group) {
+				goto memout;
+			}
+		}
 	}
 
 	/* for SSL, defer dst connection setup to initial_readcb */
