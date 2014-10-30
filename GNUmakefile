@@ -45,27 +45,18 @@ DEBUG_CFLAGS?=	-g
 # -DPURIFY for using valgrind and similar tools.
 
 
-### Mac OS X missing pf headers hacks
+### Mac OS X header selection
 
-# For a list of kernel versions versus release versions, see
-# https://en.wikipedia.org/wiki/Darwin_%28operating_system%29
 ifeq ($(shell uname),Darwin)
-ifeq ($(basename $(basename $(shell uname -r))),11)
-# Mac OS X Lion
+XNU_VERSION?=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
+OSX_VERSION?=	$(shell sw_vers -productVersion)
+ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
+XNU_VERSION=	$(shell awk '/$(OSX_VERSION)$/ {print $2}' xnu/GNUmakefile)
+endif
+ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.7
-else ifeq ($(basename $(basename $(shell uname -r))),12)
-# Mac OS X Mountain Lion
-FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.8
-else ifeq ($(basename $(basename $(shell uname -r))),13)
-# Mac OS X Mavericks
-FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.9
-else ifeq ($(basename $(basename $(shell uname -r))),14)
-# Mac OS X Yosemite
-FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.9
+PKG_CPPFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
+BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION)
 endif
 endif
 
@@ -114,7 +105,6 @@ SED?=		sed
 ### Variables only used for developer targets
 
 KHASH_URL?=	https://github.com/attractivechaos/klib/raw/master/khash.h
-XNU_URL?=	https://github.com/opensource-apple/xnu/raw/
 GPGSIGNKEY?=	0xB5D3397E
 
 CPPCHECK?=	cppcheck
@@ -146,13 +136,16 @@ VFILE:=		$(wildcard VERSION)
 GITDIR:=	$(wildcard .git)
 ifdef VFILE
 VERSION:=	$(shell $(CAT) VERSION)
+BUILD_INFO+=	V:FILE
 else
 ifndef GITDIR
 VERSION:=	$(shell $(BASENAME) $(PWD)|\
 			$(GREP) $(TARGET)-|\
 			$(SED) 's/.*$(TARGET)-\(.*\)/\1/g')
+BUILD_INFO+=	V:DIR
 else
 VERSION:=	$(shell $(GIT) describe --tags --dirty --always)
+BUILD_INFO+=	V:GIT
 endif
 CFLAGS+=	$(DEBUG_CFLAGS)
 endif
@@ -268,7 +261,7 @@ CFLAGS+=	$(PKG_CFLAGS) \
 CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
 		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
 		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
-		-D"FEATURES=\"$(FEATURES)\""
+		-D"FEATURES=\"$(FEATURES)\"" -D"BUILD_INFO=\"$(BUILD_INFO)\""
 LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
 
@@ -280,6 +273,8 @@ endif
 export VERSION
 export OPENSSL
 export MKDIR
+export WGET
+export WGET_FLAGS
 
 all: version config $(TARGET)
 
@@ -298,6 +293,10 @@ ifdef CHECK_FOUND
 	@echo "CHECK_BASE:     $(strip $(CHECK_FOUND))"
 endif
 	@echo "Build options:  $(FEATURES)"
+ifeq ($(shell uname),Darwin)
+	@echo "OSX_VERSION:    $(OSX_VERSION)"
+	@echo "XNU_VERSION:    $(XNU_VERSION)"
+endif
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -360,33 +359,8 @@ manclean:
 
 fetchdeps:
 	$(WGET) $(WGET_FLAGS) -O- $(KHASH_URL) >khash.h
-	$(MKDIR) -p xnu/10.7/libkern xnu/10.7/net
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/APPLE_LICENSE \
-		>xnu/10.7/APPLE_LICENSE
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/libkern/libkern/tree.h \
-		>xnu/10.7/libkern/tree.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/bsd/net/radix.h \
-		>xnu/10.7/net/radix.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/bsd/net/pfvar.h \
-		>xnu/10.7/net/pfvar.h
-	$(MKDIR) -p xnu/10.8/libkern xnu/10.8/net
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/APPLE_LICENSE \
-		>xnu/10.8/APPLE_LICENSE
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/libkern/libkern/tree.h \
-		>xnu/10.8/libkern/tree.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/bsd/net/radix.h \
-		>xnu/10.8/net/radix.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/bsd/net/pfvar.h \
-		>xnu/10.8/net/pfvar.h
-	$(MKDIR) -p xnu/10.9/libkern xnu/10.9/net
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/APPLE_LICENSE \
-		>xnu/10.9/APPLE_LICENSE
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/libkern/libkern/tree.h \
-		>xnu/10.9/libkern/tree.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/bsd/net/radix.h \
-		>xnu/10.9/net/radix.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/bsd/net/pfvar.h \
-		>xnu/10.9/net/pfvar.h
+	#$(RM) -rf xnu/xnu-*
+	$(MAKE) -C xnu fetch
 
 dist: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
 

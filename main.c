@@ -70,6 +70,9 @@ main_version(void)
 	fprintf(stderr, "Copyright (c) 2009-2014, "
 	                "Daniel Roethlisberger <daniel@roe.ch>\n");
 	fprintf(stderr, "http://www.roe.ch/SSLsplit\n");
+	if (build_info[0]) {
+		fprintf(stderr, "Build info: %s\n", build_info);
+	}
 	if (features[0]) {
 		fprintf(stderr, "Features: %s\n", features);
 	}

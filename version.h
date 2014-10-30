@@ -31,6 +31,7 @@
 
 extern const char *version;
 extern const char *build_date;
+extern const char *build_info;
 extern const char *features;
 
 #endif /* !VERSION_H */
