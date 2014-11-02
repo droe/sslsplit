@@ -274,6 +274,23 @@ SNI DNS lookup):
 [\fInat-engine\fP|\fIfwdaddr port\fP]
 .ad
 .TP
+\fBhttps\fP
+SSL/TLS interception with HTTP protocol decoding, including the removal of
+HPKP, HSTS and Alternate Protocol response headers.
+.TP
+\fBssl\fP
+SSL/TLS interception without any lower level protocol decoding; decrypted
+connection content is treated as opaque stream of bytes and not modified.
+.TP
+\fBhttp\fP
+Plain TCP connection without SSL/TLS, with HTTP protocol decoding, including
+the removal of HPKP, HSTS and Alternate Protocol response headers.
+.TP
+\fBtcp\fP
+Plain TCP connection without SSL/TLS and without any lower level protocol
+decoding; decrypted connection content is treated as opaque stream of bytes
+and not modified.
+.TP
 .I listenaddr port
 IPv4 or IPv6 address and port or service name to listen on.  This is the
 address and port where the NAT engine should redirect connections to.
@@ -522,18 +539,19 @@ authorityKeyIdentifier  = keyid:always,issuer:always
         -subj '/O=SSLsplit Root CA/CN=SSLsplit Root CA/' \\
         -set_serial 0 -days 3650\fP
 .fi
-.SH SCALABILITY
-SSLsplit is scalable to a relatively high number of listeners and connections
-due to a multithreaded, event based architecture based on libevent, taking
-advantage of platform specific select() replacements such as kqueue.  The main
-thread handles the listeners and signalling, while a number of worker threads
-equal to twice the number of CPU cores is used for handling the actual
+.SH PERFORMANCE AND SCALABILITY
+SSLsplit is able to handle a relatively high number of listeners and
+connections due to a multithreaded, event based architecture based on libevent,
+taking advantage of platform specific select() replacements such as kqueue.
+The main thread handles the listeners and signalling, while a number of worker
+threads equal to twice the number of CPU cores is used for handling the actual
 connections in separate event bases, including the CPU-intensive SSL/TLS
 handling.
 .LP
-Care has been taken to choose scalable data structures for caching certificates
-and SSL sessions.  Logging is implemented in separate disk writer threads to
-ensure that socket event handling threads don't have to block on disk I/O.
+Care has been taken to choose well-performing data structures for caching
+certificates and SSL sessions.  Logging is implemented in separate disk writer
+threads to ensure that socket event handling threads don't have to block on
+disk I/O.
 DNS lookups are performed asynchroniously.
 SSLsplit uses SSL session caching on both ends to minimize the amount of full
 SSL handshakes, but even then, the limiting factor in handling SSL connections
