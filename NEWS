@@ -1,6 +1,7 @@
 
 ### SSLsplit master
 
+-   Filter out HSTS response header to allow users to accept untrusted certs.
 -   Build without SSLv2 support by default (issue #26).
 -   Add primary group override (-m) when dropping privileges to an
     unprivileged user (pull req #35 by @landonf).

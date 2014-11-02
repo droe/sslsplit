@@ -1083,8 +1083,17 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Public-Key-Pins:", 16) ||
+		} else if (
+		    /* HPKP: Public Key Pinning Extension for HTTP
+		     * (draft-ietf-websec-key-pinning)
+		     * remove to prevent public key pinning */
+		    !strncasecmp(line, "Public-Key-Pins:", 16) ||
 		    !strncasecmp(line, "Public-Key-Pins-Report-Only:", 28) ||
+		    /* HSTS: HTTP Strict Transport Security (RFC 6797)
+		     * remove to allow users to accept bad certs */
+		    !strncasecmp(line, "Strict-Transport-Security:", 26) ||
+		    /* Alternate Protocol
+		     * remove to prevent switching to QUIC, SPDY et al */
 		    !strncasecmp(line, "Alternate-Protocol:", 19)) {
 			return NULL;
 		} else if (line[0] == '\0') {
