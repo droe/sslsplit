@@ -1033,18 +1033,23 @@ ssl_x509_subject(X509 *crt)
  * Returns NULL on errors.
  */
 char *
-ssl_x509_subject_cn(X509 *crt, size_t *sz)
+ssl_x509_subject_cn(X509 *crt, size_t *psz)
 {
 	X509_NAME *ptr;
 	char *cn;
+	size_t sz;
 
 	ptr = X509_get_subject_name(crt); /* does not inc refcounts */
 	if (!ptr)
 		return NULL;
-	*sz = X509_NAME_get_text_by_NID(ptr, NID_commonName, NULL, 0) + 1;
-	if ((*sz == 0) || !(cn = malloc(*sz)))
+	sz = X509_NAME_get_text_by_NID(ptr, NID_commonName, NULL, 0) + 1;
+	if ((sz == 0) || !(cn = malloc(sz)))
 		return NULL;
-	X509_NAME_get_text_by_NID(ptr, NID_commonName, cn, *sz);
+	if (X509_NAME_get_text_by_NID(ptr, NID_commonName, cn, sz) == -1) {
+		free(cn);
+		return NULL;
+	}
+	*psz = sz;
 	return cn;
 }
 
