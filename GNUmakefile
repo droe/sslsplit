@@ -51,7 +51,6 @@ endif
 ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
-CPPCHECKFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
 BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION)
 endif
 endif
