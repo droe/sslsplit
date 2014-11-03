@@ -391,11 +391,11 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
  * the refcount decrementing.  In other words, return 0 if we did not
  * keep a pointer to the object (which we never do here).
  */
-#ifdef DISABLE_SSLV2_SESSION_CACHE
+#if defined(WANT_SSLV2_CLIENT) || defined(WANT_SSLV2_SERVER)
 #define MAYBE_UNUSED 
-#else /* !DISABLE_SSLV2_SESSION_CACHE */
+#else /* !(WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER) */
 #define MAYBE_UNUSED UNUSED
-#endif /* !DISABLE_SSLV2_SESSION_CACHE */
+#endif /* !(WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER) */
 static int
 pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 #undef MAYBE_UNUSED
@@ -406,7 +406,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		log_dbg_print_free(ssl_session_to_str(sess));
 	}
 #endif /* DEBUG_SESSION_CACHE */
-#ifdef DISABLE_SSLV2_SESSION_CACHE
+#if defined(WANT_SSLV2_CLIENT) || defined(WANT_SSLV2_SERVER)
 	/* Session resumption seems to fail for SSLv2 with protocol
 	 * parsing errors, so we disable caching for SSLv2. */
 	if (SSL_version(ssl) == SSL2_VERSION) {
@@ -414,7 +414,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		               "client.\n");
 		return 0;
 	}
-#endif /* DISABLE_SSLV2_SESSION_CACHE */
+#endif /* WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER */
 	cachemgr_ssess_set(sess);
 	return 0;
 }
@@ -495,9 +495,9 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
-#ifdef DISABLE_SSLV2_SERVER
+#ifndef WANT_SSLV2_SERVER
 	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#endif /* DISABLE_SSLV2_SERVER */
+#endif /* !WANT_SSLV2_SERVER */
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_sess_set_new_cb(sslctx, pxy_ossl_sessnew_cb);
 	SSL_CTX_sess_set_remove_cb(sslctx, pxy_ossl_sessremove_cb);
@@ -827,9 +827,9 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
-#ifdef DISABLE_SSLV2_CLIENT
+#ifndef WANT_SSLV2_CLIENT
 	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#endif /* DISABLE_SSLV2_CLIENT */
+#endif /* !WANT_SSLV2_CLIENT */
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 

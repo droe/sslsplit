@@ -1,14 +1,9 @@
 ### OpenSSL tweaking
 
-# Define to disable SSLv2 in the server (src) or client (dst) code.
-FEATURES+=	-DDISABLE_SSLV2_SERVER
-FEATURES+=	-DDISABLE_SSLV2_CLIENT
-
-# Define to disable server-mode SSL session caching for SSLv2 clients.
-# This is needed if SSL session resumption fails with a bufferevent error:
-# "illegal padding in SSL routines SSL2_READ_INTERNAL".
-# There is no point in enabling this if SSLv2 is disabled.
-#FEATURES+=	-DDISABLE_SSLV2_SESSION_CACHE
+# Define to enable SSLv2 in the server (src) or client (dst) code.
+# Default since 0.4.9 is to disable SSLv2 entirely.
+#FEATURES+=	-DWANT_SSLV2_SERVER
+#FEATURES+=	-DWANT_SSLV2_CLIENT
 
 # Define to make SSLsplit set a session id context in server mode.
 #FEATURES+=	-DUSE_SSL_SESSION_ID_CONTEXT
