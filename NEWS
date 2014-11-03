@@ -1,5 +1,5 @@
 
-### SSLsplit master
+### SSLsplit 0.4.9 2014-11-03
 
 -   Filter out HSTS response header to allow users to accept untrusted certs.
 -   Build without SSLv2 support by default (issue #26).
