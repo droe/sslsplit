@@ -404,6 +404,8 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 	log_dbg_printf("===> OpenSSL new session callback:\n");
 	if (sess) {
 		log_dbg_print_free(ssl_session_to_str(sess));
+	} else {
+		log_dbg_print("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
 #if defined(WANT_SSLV2_CLIENT) || defined(WANT_SSLV2_SERVER)
@@ -415,7 +417,9 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		return 0;
 	}
 #endif /* WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER */
-	cachemgr_ssess_set(sess);
+	if (sess) {
+		cachemgr_ssess_set(sess);
+	}
 	return 0;
 }
 
@@ -431,10 +435,13 @@ pxy_ossl_sessremove_cb(UNUSED SSL_CTX *sslctx, SSL_SESSION *sess)
 	log_dbg_printf("===> OpenSSL remove session callback:\n");
 	if (sess) {
 		log_dbg_print_free(ssl_session_to_str(sess));
+	} else {
+		log_dbg_print("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
-
-	cachemgr_ssess_del(sess);
+	if (sess) {
+		cachemgr_ssess_del(sess);
+	}
 }
 
 /*
