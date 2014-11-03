@@ -51,6 +51,7 @@ endif
 ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
+CPPCHECKFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
 BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION)
 endif
 endif
@@ -247,16 +248,18 @@ TPKG_LDFLAGS+=	$(shell $(PKGCONFIG) --libs-only-L --libs-only-other $(TPKGS))
 TPKG_LIBS+=	$(shell $(PKGCONFIG) --libs-only-l $(TPKGS))
 endif
 
-PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
-TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
-FEATURES:=	$(sort $(FEATURES))
-
-CFLAGS+=	$(PKG_CFLAGS) \
-		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
-CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
+CPPDEFS+=	-D_GNU_SOURCE \
 		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
 		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
 		-D"FEATURES=\"$(FEATURES)\"" -D"BUILD_INFO=\"$(BUILD_INFO)\""
+CPPCHECKFLAGS+=	$(CPPDEFS)
+FEATURES:=	$(sort $(FEATURES))
+
+CFLAGS+=	$(PKG_CFLAGS) \
+		-std=c99 -Wall -Wextra -pedantic \
+		-D_FORTIFY_SOURCE=2 -fstack-protector-all
+CPPFLAGS+=	$(subst -I,-isystem,$(PKG_CPPFLAGS)) $(CPPDEFS) $(FEATURES)
+TCPPFLAGS+=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
 LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
 
@@ -303,7 +306,7 @@ ifdef CHECK_MISSING
 	$(error unit test dependency 'check' not found; \
 	install it or point CHECK_BASE to base path)
 endif
-	$(CC) -c $(CPPFLAGS) $(TPKG_CPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
+	$(CC) -c $(CPPFLAGS) $(TCPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
 		-x c $<
 
 %.o: %.c $(HDRS) GNUmakefile
@@ -333,7 +336,7 @@ deinstall:
 
 ifdef GITDIR
 lint:
-	$(CPPCHECK) --force --enable=all --error-exitcode=1 .
+	$(CPPCHECK) $(CPPCHECKFLAGS) --force --enable=all --error-exitcode=1 .
 
 mantest:
 	$(RM) -f man1

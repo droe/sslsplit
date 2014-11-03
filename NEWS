@@ -1,4 +1,9 @@
 
+### SSLsplit master
+
+-   Minor bugfixes and improvements.
+
+
 ### SSLsplit 0.4.9 2014-11-03
 
 -   Filter out HSTS response header to allow users to accept untrusted certs.
