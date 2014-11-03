@@ -1042,7 +1042,7 @@ ssl_x509_subject_cn(X509 *crt, size_t *sz)
 	if (!ptr)
 		return NULL;
 	*sz = X509_NAME_get_text_by_NID(ptr, NID_commonName, NULL, 0) + 1;
-	if ((sz == 0) || !(cn = malloc(*sz)))
+	if ((*sz == 0) || !(cn = malloc(*sz)))
 		return NULL;
 	X509_NAME_get_text_by_NID(ptr, NID_commonName, cn, *sz);
 	return cn;
