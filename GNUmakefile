@@ -106,7 +106,6 @@ CPPCHECK?=	cppcheck
 GPG?=		gpg
 GIT?=		git
 WGET?=		wget
-WGET_FLAGS?=	--no-check-certificate
 
 BZIP2?=		bzip2
 COL?=		col
@@ -271,7 +270,6 @@ export VERSION
 export OPENSSL
 export MKDIR
 export WGET
-export WGET_FLAGS
 
 all: version config $(TARGET)
 
@@ -355,7 +353,7 @@ manclean:
 	$(RM) -f $(TARGET)-*.1.txt
 
 fetchdeps:
-	$(WGET) $(WGET_FLAGS) -O- $(KHASH_URL) >khash.h
+	$(WGET) -O- $(KHASH_URL) >khash.h
 	#$(RM) -rf xnu/xnu-*
 	$(MAKE) -C xnu fetch
 

@@ -2,7 +2,6 @@
 VERSION?=	unknown
 MKDIR?=		mkdir
 WGET?=		wget
-WGET_FLAGS?=	--no-check-certificate
 
 # xnu
 XNURL?=		https://opensource.apple.com/source/xnu/
@@ -48,6 +47,6 @@ xnu-%:
 	$(MKDIR) -p $@ $(foreach dir,$(XNU_IDIRS),$@/$(dir))
 	for f in $(XNU_FILES); do \
 		ff=`echo "$$f"|sed 's/^[^/]*\///'`; \
-		$(WGET) $(WGET_FLAGS) -O- $(XNURL)$@/$$f?txt >$@/$$ff; \
+		$(WGET) -O- $(XNURL)$@/$$f?txt >$@/$$ff; \
 		done
 
