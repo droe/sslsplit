@@ -253,11 +253,16 @@ CPPDEFS+=	-D_GNU_SOURCE \
 CPPCHECKFLAGS+=	$(CPPDEFS)
 FEATURES:=	$(sort $(FEATURES))
 
+ifneq (ccc-analyzer,$(notdir $(CC)))
+PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
+TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
+endif
+
 CFLAGS+=	$(PKG_CFLAGS) \
 		-std=c99 -Wall -Wextra -pedantic \
 		-D_FORTIFY_SOURCE=2 -fstack-protector-all
-CPPFLAGS+=	$(subst -I,-isystem,$(PKG_CPPFLAGS)) $(CPPDEFS) $(FEATURES)
-TCPPFLAGS+=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
+CPPFLAGS+=	$(PKG_CPPFLAGS) $(CPPDEFS) $(FEATURES)
+TCPPFLAGS+=	$(TPKG_CPPFLAGS)
 LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
 
