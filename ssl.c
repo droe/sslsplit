@@ -1307,7 +1307,7 @@ ssl_x509_names_to_str(X509 *crt)
 {
 	char **names;
 	size_t sz;
-	char *buf, *next;
+	char *buf = NULL, *next;
 
 	names = ssl_x509_names(crt);
 	if (!names)
@@ -1317,9 +1317,12 @@ ssl_x509_names_to_str(X509 *crt)
 	for (char **p = names; *p; p++) {
 		sz += strlen(*p) + 1;
 	}
+	if (!sz) {
+		goto out1;
+	}
 
 	if (!(buf = malloc(sz)))
-		goto out;
+		goto out2;
 	next = buf;
 	for (char **p = names; *p; p++) {
 		char *src = *p;
@@ -1329,9 +1332,10 @@ ssl_x509_names_to_str(X509 *crt)
 		*next++ = '/';
 	}
 	*--next = '\0';
-out:
+out2:
 	for (char **p = names; *p; p++)
 		free(*p);
+out1:
 	free(names);
 	return buf;
 }
