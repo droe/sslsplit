@@ -123,7 +123,7 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 
 	pthread_mutex_init(&ctx->mutex, NULL);
 
-	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(void*)))) {
+	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(pxy_thr_ctx_t*)))) {
 		log_dbg_printf("Failed to allocate memory\n");
 		goto leave;
 	}
