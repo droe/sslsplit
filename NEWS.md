@@ -1,6 +1,10 @@
 
 ### SSLsplit master
 
+-   Add option -r to force a specific SSL/TLS protocol version (issue #30).
+-   Add option -R to disable specific SSL/TLS protocol versions (issue #30).
+-   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
+    WITH_SSLV2 build knob.
 -   Minor bugfixes and improvements.
 
 

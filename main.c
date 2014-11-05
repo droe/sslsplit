@@ -128,6 +128,8 @@ main_usage(void)
 #else /* !SSL_OP_NO_COMPRESSION */
 #define OPT_Z 
 #endif /* !SSL_OP_NO_COMPRESSION */
+"  -r proto    only support one of " SSL_PROTO_SUPPORT_S "(default: all)\n"
+"  -R proto    disable one of " SSL_PROTO_SUPPORT_S "(default: none)\n"
 "  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL:-aNULL)\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
@@ -247,7 +249,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
-	                    "k:c:C:K:t:OPs:e:Eu:m:j:p:l:L:S:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -412,6 +414,12 @@ main(int argc, char *argv[])
 				opts->ciphers = strdup(optarg);
 				if (!opts->ciphers)
 					oom_die(argv0);
+				break;
+			case 'r':
+				opts_proto_force(opts, optarg, argv0);
+				break;
+			case 'R':
+				opts_proto_disable(opts, optarg, argv0);
 				break;
 			case 'e':
 				free(natengine);
@@ -592,6 +600,10 @@ main(int argc, char *argv[])
 	/* debugging */
 	if (OPTS_DEBUG(opts)) {
 		main_version();
+		log_dbg_printf("proto: \n");
+
+XXX
+
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 			char *lbuf, *cbuf = NULL;

@@ -57,6 +57,21 @@ typedef struct opts {
 	unsigned int debug : 1;
 	unsigned int detach : 1;
 	unsigned int sslcomp : 1;
+#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+	unsigned int no_ssl2 : 1;
+#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
+#ifdef SSL_OP_NO_SSLv3
+	unsigned int no_ssl3 : 1;
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	unsigned int no_tls10 : 1;
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	unsigned int no_tls11 : 1;
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	unsigned int no_tls12 : 1;
+#endif /* SSL_OP_NO_TLSv1_2 */
 	unsigned int passthrough : 1;
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlogdir : 1;
@@ -68,6 +83,7 @@ typedef struct opts {
 	char *pidfile;
 	char *connectlog;
 	char *contentlog;
+	const SSL_METHOD *(*sslmethod)(void);
 	X509 *cacrt;
 	EVP_PKEY *cakey;
 	EVP_PKEY *key;
@@ -84,6 +100,8 @@ typedef struct opts {
 opts_t *opts_new(void) MALLOC;
 void opts_free(opts_t *) NONNULL(1);
 int opts_has_ssl_spec(opts_t *) NONNULL(1) WUNRES;
+void opts_proto_force(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_proto_disable(opts_t *, const char *, const char *) NONNULL(1,2,3);
 #define OPTS_DEBUG(opts) unlikely((opts)->debug)
 
 proxyspec_t * proxyspec_parse(int *, char **[], const char *) MALLOC;

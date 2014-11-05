@@ -391,11 +391,11 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
  * the refcount decrementing.  In other words, return 0 if we did not
  * keep a pointer to the object (which we never do here).
  */
-#if defined(WANT_SSLV2_CLIENT) || defined(WANT_SSLV2_SERVER)
+#ifdef WITH_SSLV2
 #define MAYBE_UNUSED 
-#else /* !(WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER) */
+#else /* !WITH_SSLV2 */
 #define MAYBE_UNUSED UNUSED
-#endif /* !(WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER) */
+#endif /* !WITH_SSLV2 */
 static int
 pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 #undef MAYBE_UNUSED
@@ -408,7 +408,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		log_dbg_print("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
-#if defined(WANT_SSLV2_CLIENT) || defined(WANT_SSLV2_SERVER)
+#ifdef WITH_SSLV2
 	/* Session resumption seems to fail for SSLv2 with protocol
 	 * parsing errors, so we disable caching for SSLv2. */
 	if (SSL_version(ssl) == SSL2_VERSION) {
@@ -416,7 +416,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		               "client.\n");
 		return 0;
 	}
-#endif /* WANT_SSLV2_CLIENT || WANT_SSLV2_SERVER */
+#endif /* WITH_SSLV2 */
 	if (sess) {
 		cachemgr_ssess_set(sess);
 	}
@@ -477,7 +477,7 @@ static SSL_CTX *
 pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
                      EVP_PKEY *key)
 {
-	SSL_CTX *sslctx = SSL_CTX_new(SSLv23_method());
+	SSL_CTX *sslctx = SSL_CTX_new(ctx->opts->sslmethod());
 	if (!sslctx)
 		return NULL;
 	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
@@ -502,9 +502,37 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
-#ifndef WANT_SSLV2_SERVER
-	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#endif /* !WANT_SSLV2_SERVER */
+
+#ifdef SSL_OP_NO_SSLv2
+#ifdef WITH_SSLV2
+	if (ctx->opts->no_ssl2) {
+#endif /* WITH_SSLV2 */
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
+#ifdef WITH_SSLV2
+	}
+#endif /* WITH_SSLV2 */
+#endif /* !SSL_OP_NO_SSLv2 */
+#ifdef SSL_OP_NO_SSLv3
+	if (ctx->opts->no_ssl3) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
+	}
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	if (ctx->opts->no_tls10) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
+	}
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (ctx->opts->no_tls11) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_1);
+	}
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (ctx->opts->no_tls12) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
+	}
+#endif /* SSL_OP_NO_TLSv1_2 */
+
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_sess_set_new_cb(sslctx, pxy_ossl_sessnew_cb);
 	SSL_CTX_sess_set_remove_cb(sslctx, pxy_ossl_sessremove_cb);
@@ -810,7 +838,7 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	SSL *ssl;
 	SSL_SESSION *sess;
 
-	sslctx = SSL_CTX_new(SSLv23_method());
+	sslctx = SSL_CTX_new(ctx->opts->sslmethod());
 	if (!sslctx) {
 		ctx->enomem = 1;
 		return NULL;
@@ -834,9 +862,37 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
-#ifndef WANT_SSLV2_CLIENT
-	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#endif /* !WANT_SSLV2_CLIENT */
+
+#ifdef SSL_OP_NO_SSLv2
+#ifdef WITH_SSLV2
+	if (ctx->opts->no_ssl2) {
+#endif /* WITH_SSLV2 */
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
+#ifdef WITH_SSLV2
+	}
+#endif /* WITH_SSLV2 */
+#endif /* !SSL_OP_NO_SSLv2 */
+#ifdef SSL_OP_NO_SSLv3
+	if (ctx->opts->no_ssl3) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
+	}
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	if (ctx->opts->no_tls10) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
+	}
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (ctx->opts->no_tls11) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_1);
+	}
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (ctx->opts->no_tls12) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
+	}
+#endif /* SSL_OP_NO_TLSv1_2 */
+
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 

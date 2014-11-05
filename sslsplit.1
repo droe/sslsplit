@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKOPZdDgGseumjplLS\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKOPZdDgGsrReumjplLS\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKOPZdDgGseumjplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKOPZdDgGsrReumjplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGseumjplLS\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZdDgGsrReumjplLS\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -61,9 +61,11 @@ IPv4 and IPv6.  For SSL and HTTPS connections, SSLsplit generates and signs
 forged X509v3 certificates on-the-fly, based on the original server certificate
 subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
 Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
-ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
-private key is available, instead of generating forged ones.  SSLsplit supports
-NULL-prefix CN certificates and can deny OCSP requests in a generic way.
+ECDHE cipher suites.  Depending on the version of OpenSSL, SSLsplit supports
+SSL 3.0, TLS 1.0, TLS 1.1 and TLS 1.2, and optionally SSL 2.0 as well.
+SSLsplit can also use existing certificates of which the private key is
+available, instead of generating forged ones.  SSLsplit supports NULL-prefix
+CN certificates and can deny OCSP requests in a generic way.
 For HTTP and HTTPS connections, SSLsplit removes response headers
 for HPKP in order to prevent public key pinning,
 for HSTS to allow the user to accept untrusted certificates,
@@ -214,6 +216,32 @@ can be added.  Note that for connections to be successful, the SSLsplit cipher
 suites must include at least one cipher suite supported by both the client and
 the server of each connection.
 See ciphers(1) for details on how to construct OpenSSL cipher lists.
+.TP
+.B \-r \fIproto\fP
+Force SSL/TLS protocol version on both client and server side to \fIproto\fP
+by selecting the respective OpenSSL method constructor instead of the default
+SSLv23_method() which supports all protocol versions.
+This is useful when analyzing traffic to a server that only supports a specific
+version of SSL/TLS and does not implement proper protocol negotiation.
+Depending on build options and the version of OpenSSL that is used, the
+following values for \fIproto\fP are accepted: \fBssl2\fP, \fBssl3\fP,
+\fBtls10\fP, \fBtls11\fP and \fBtls12\fP.
+Note that SSL 2.0 support is not built in by default because some servers
+don't handle SSL 2.0 Client Hello messages gracefully.
+.TP
+.B \-R \fIproto\fP
+Disable the SSL/TLS protocol version \fIproto\fP on both client and server
+side by disabling the respective protocols in OpenSSL.  To disable multiple
+protocol versions, \fB-R\fP can be given multiple times.  If \fI-r\fP is also
+given, there will be no effect in disabling other protocol versions.
+Disabling protocol versions is useful when analyzing traffic to a server that
+does not handle some protocol versions well, or to test behaviour with
+different protocol versions.
+Depending on build options and the version of OpenSSL that is used, the
+following values for \fIproto\fP are accepted: \fBssl2\fP, \fBssl3\fP,
+\fBtls10\fP, \fBtls11\fP and \fBtls12\fP.
+Note that SSL 2.0 support is not built in by default because some servers
+don't handle SSL 2.0 Client Hello messages gracefully.
 .TP
 .B \-S \fIlogdir\fP
 Log connection content to separate log files under \fIlogdir\fP.  For each

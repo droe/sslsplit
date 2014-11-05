@@ -17,11 +17,13 @@ IPv4 and IPv6.  For SSL and HTTPS connections, SSLsplit generates and signs
 forged X509v3 certificates on-the-fly, based on the original server certificate
 subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
 Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
-ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
-private key is available, instead of generating forged ones.  SSLsplit supports
-NULL-prefix CN certificates and can deny OCSP requests in a generic way.  For
-HTTP and HTTPS connections, SSLsplit removes response headers for HPKP in order
-to prevent public key pinning, for HSTS to allow the user to accept untrusted
+ECDHE cipher suites.  Depending on the version of OpenSSL, SSLsplit supports
+SSL 3.0, TLS 1.0, TLS 1.1 and TLS 1.2, and optionally SSL 2.0 as well.
+SSLsplit can also use existing certificates of which the private key is
+available, instead of generating forged ones.  SSLsplit supports NULL-prefix CN
+certificates and can deny OCSP requests in a generic way.  For HTTP and HTTPS
+connections, SSLsplit removes response headers for HPKP in order to prevent
+public key pinning, for HSTS to allow the user to accept untrusted
 certificates, and Alternate Protocols to prevent switching to QUIC/SPDY.
 
 See the manual page sslsplit(1) for details on using SSLsplit and setting up

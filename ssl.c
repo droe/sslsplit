@@ -125,6 +125,9 @@ ssl_openssl_version(void)
 	fprintf(stderr, "Using direct access workaround when loading certs\n");
 #endif /* OpenSSL 1.0.0k or 1.0.1e */
 
+	fprintf(stderr, "SSL/TLS protocol availability: %s\n",
+	                SSL_PROTO_SUPPORT_S);
+
 	fprintf(stderr, "SSL/TLS algorithm availability:");
 #ifndef OPENSSL_NO_RSA
 	fprintf(stderr, " RSA");
