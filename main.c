@@ -600,43 +600,7 @@ main(int argc, char *argv[])
 	/* debugging */
 	if (OPTS_DEBUG(opts)) {
 		main_version();
-		log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
-		               (opts->sslmethod == SSLv2_method) ? "nossl2" :
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
-		               (opts->sslmethod == SSLv3_method) ? "ssl3" :
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
-		               (opts->sslmethod == TLSv1_method) ? "tls10" :
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
-		               (opts->sslmethod == TLSv1_1_method) ? "tls11" :
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
-		               (opts->sslmethod == TLSv1_2_method) ? "tls12" :
-#endif /* SSL_OP_NO_TLSv1_2 */
-		               "negotiate",
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
-		               opts->no_ssl2 ? " -ssl2" :
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-		               "",
-#ifdef SSL_OP_NO_SSLv3
-		               opts->no_ssl3 ? " -ssl3" :
-#endif /* SSL_OP_NO_SSLv3 */
-		               "",
-#ifdef SSL_OP_NO_TLSv1
-		               opts->no_tls10 ? " -tls10" :
-#endif /* SSL_OP_NO_TLSv1 */
-		               "",
-#ifdef SSL_OP_NO_TLSv1_1
-		               opts->no_tls11 ? " -tls11" :
-#endif /* SSL_OP_NO_TLSv1_1 */
-		               "",
-#ifdef SSL_OP_NO_TLSv1_2
-		               opts->no_tls12 ? " -tls12" :
-#endif /* SSL_OP_NO_TLSv1_2 */
-		               "");
+		opts_proto_dbg_dump(opts);
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 			char *lbuf, *cbuf = NULL;

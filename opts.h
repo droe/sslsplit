@@ -102,6 +102,7 @@ void opts_free(opts_t *) NONNULL(1);
 int opts_has_ssl_spec(opts_t *) NONNULL(1) WUNRES;
 void opts_proto_force(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_proto_disable(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_proto_dbg_dump(opts_t *) NONNULL(1);
 #define OPTS_DEBUG(opts) unlikely((opts)->debug)
 
 proxyspec_t * proxyspec_parse(int *, char **[], const char *) MALLOC;
