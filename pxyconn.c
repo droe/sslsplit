@@ -1563,7 +1563,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			                 ctx->dst_str);
 		}
 
-		/* log connection */
+		/* log connection if we don't analyze any headers */
 		if (!ctx->spec->http || ctx->passthrough) {
 			if (WANT_CONNECT_LOG(ctx)) {
 				pxy_log_connect_nonhttp(ctx);
