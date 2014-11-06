@@ -133,7 +133,7 @@ cachefkcrt_unpackverify_val_cb(cache_val_t val, int copy)
 		ssl_x509_refcount_inc(val);
 		return val;
 	}
-	return ((cache_val_t)!NULL);
+	return ((void*)-1);
 }
 
 static void
