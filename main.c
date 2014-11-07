@@ -502,6 +502,8 @@ main(int argc, char *argv[])
 				if (opts->contentlog)
 					free(opts->contentlog);
 				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
 				opts->contentlogspec = 1;
 				opts->contentlogdir = 0;
 				break;
