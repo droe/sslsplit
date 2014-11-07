@@ -1977,8 +1977,6 @@ pxy_conn_setup(evutil_socket_t fd,
 				if (!ctx->user || !ctx->group) {
 					goto memout;
 				}
-
-				log_err_printf("Matched socket to process %s (user=%s, group=%s)\n", ctx->exec_path, ctx->user, ctx->group);
 			}
 		}
 	}
