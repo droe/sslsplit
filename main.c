@@ -152,7 +152,7 @@ main_usage(void)
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
 "              %%%% - literal '%%'\n"
 "       e.g.\n"
-"              \"/var/log/sslsplit/%%X/%%u-%%A:%%P-%%a:%%p-%%T\"\n"
+"              \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T\"\n"
 "       Unknown directives are ignored, and intermediate directories will be created automatically\n"
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
