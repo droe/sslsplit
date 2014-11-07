@@ -111,6 +111,9 @@ typedef struct pxy_conn_ctx {
 	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 
+	/* local process id, or -1 */
+	pid_t local_pid;
+
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
 
@@ -173,6 +176,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->spec = spec;
 	ctx->opts = opts;
 	ctx->fd = fd;
+	ctx->local_pid = -1;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
 #ifdef DEBUG_PROXY
@@ -1920,7 +1924,7 @@ pxy_conn_setup(evutil_socket_t fd,
 		/* NAT engine lookup */
 		ctx->addrlen = sizeof(struct sockaddr_storage);
 		if (spec->natlookup((struct sockaddr *)&ctx->addr,
-		                    &ctx->addrlen, fd,
+		                    &ctx->addrlen, &ctx->local_pid, fd,
 		                    peeraddr, peeraddrlen) == -1) {
 			log_err_printf("Connection not found in NAT "
 			               "state table, aborting connection\n");
@@ -1949,6 +1953,14 @@ pxy_conn_setup(evutil_socket_t fd,
 		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
 		if (!ctx->src_str)
 			goto memout;
+
+		if (ctx->local_pid != -1) {
+			// TODO
+			#include <libproc.h>
+			char name[MAXPATHLEN];
+			proc_pidpath(ctx->local_pid, name, sizeof(name));
+			log_err_printf("Matched socket to process %s\n", name);
+		}
 	}
 
 	/* for SSL, defer dst connection setup to initial_readcb */
