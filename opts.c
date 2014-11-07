@@ -29,6 +29,7 @@
 #include "opts.h"
 
 #include "sys.h"
+#include "log.h"
 
 #include <string.h>
 #include <sys/types.h>
@@ -49,6 +50,7 @@ opts_new(void)
 
 	opts->sslcomp = 1;
 	opts->chain = sk_X509_new_null();
+	opts->sslmethod = SSLv23_method;
 
 	return opts;
 }
@@ -125,6 +127,135 @@ opts_has_ssl_spec(opts_t *opts)
 }
 
 /*
+ * Parse SSL proto string in optarg and look up the corresponding SSL method.
+ * Calls exit() on failure.
+ */
+void
+opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
+{
+	if (opts->sslmethod != SSLv23_method) {
+		fprintf(stderr, "%s: cannot use -r multiple times\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+
+#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+	if (!strcmp(optarg, "ssl2")) {
+		opts->sslmethod = SSLv2_method;
+	} else
+#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
+#ifdef SSL_OP_NO_SSLv3
+	if (!strcmp(optarg, "ssl3")) {
+		opts->sslmethod = SSLv3_method;
+	} else
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
+		opts->sslmethod = TLSv1_method;
+	} else
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (!strcmp(optarg, "tls11")) {
+		opts->sslmethod = TLSv1_1_method;
+	} else
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (!strcmp(optarg, "tls12")) {
+		opts->sslmethod = TLSv1_2_method;
+	} else
+#endif /* SSL_OP_NO_TLSv1_2 */
+	{
+		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
+		                argv0, optarg);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/*
+ * Parse SSL proto string in optarg and set the corresponding no_foo bit.
+ * Calls exit() on failure.
+ */
+void
+opts_proto_disable(opts_t *opts, const char *optarg, const char *argv0)
+{
+#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+	if (!strcmp(optarg, "ssl2")) {
+		opts->no_ssl2 = 1;
+	} else
+#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
+#ifdef SSL_OP_NO_SSLv3
+	if (!strcmp(optarg, "ssl3")) {
+		opts->no_ssl3 = 1;
+	} else
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
+		opts->no_tls10 = 1;
+	} else
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (!strcmp(optarg, "tls11")) {
+		opts->no_tls11 = 1;
+	} else
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (!strcmp(optarg, "tls12")) {
+		opts->no_tls12 = 1;
+	} else
+#endif /* SSL_OP_NO_TLSv1_2 */
+	{
+		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
+		                argv0, optarg);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/*
+ * Dump the SSL/TLS protocol related configuration to the debug log.
+ */
+void
+opts_proto_dbg_dump(opts_t *opts)
+{
+	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
+#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+	               (opts->sslmethod == SSLv2_method) ? "nossl2" :
+#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
+#ifdef SSL_OP_NO_SSLv3
+	               (opts->sslmethod == SSLv3_method) ? "ssl3" :
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	               (opts->sslmethod == TLSv1_method) ? "tls10" :
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	               (opts->sslmethod == TLSv1_1_method) ? "tls11" :
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	               (opts->sslmethod == TLSv1_2_method) ? "tls12" :
+#endif /* SSL_OP_NO_TLSv1_2 */
+	               "negotiate",
+#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+	               opts->no_ssl2 ? " -ssl2" :
+#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
+	               "",
+#ifdef SSL_OP_NO_SSLv3
+	               opts->no_ssl3 ? " -ssl3" :
+#endif /* SSL_OP_NO_SSLv3 */
+	               "",
+#ifdef SSL_OP_NO_TLSv1
+	               opts->no_tls10 ? " -tls10" :
+#endif /* SSL_OP_NO_TLSv1 */
+	               "",
+#ifdef SSL_OP_NO_TLSv1_1
+	               opts->no_tls11 ? " -tls11" :
+#endif /* SSL_OP_NO_TLSv1_1 */
+	               "",
+#ifdef SSL_OP_NO_TLSv1_2
+	               opts->no_tls12 ? " -tls12" :
+#endif /* SSL_OP_NO_TLSv1_2 */
+	               "");
+}
+
+
+/*
  * Parse proxyspecs using a simple state machine.
  * Returns NULL if parsing failed.
  */
@@ -191,6 +322,12 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 				}
 				if (natengine) {
 					spec->natengine = strdup(natengine);
+					if (!spec->natengine) {
+						fprintf(stderr,
+						        "Out of memory"
+						        "\n");
+						exit(EXIT_FAILURE);
+					}
 				} else {
 					spec->natengine = NULL;
 				}
@@ -223,6 +360,12 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 					/* natengine */
 					free(spec->natengine);
 					spec->natengine = strdup(**argv);
+					if (!spec->natengine) {
+						fprintf(stderr,
+						        "Out of memory"
+						        "\n");
+						exit(EXIT_FAILURE);
+					}
 					state = 0;
 				} else {
 					/* explicit target address */

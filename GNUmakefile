@@ -1,12 +1,11 @@
 ### OpenSSL tweaking
 
-# Define to disable server-mode SSL session caching for SSLv2 clients.
-# This is needed if SSL session resumption fails with a bufferevent error:
-# "illegal padding in SSL routines SSL2_READ_INTERNAL".
-FEATURES+=	-DDISABLE_SSLV2_SESSION_CACHE
-
-# Define to disable server-mode SSLv2 completely, but still use SSL23 method.
-#FEATURES+=	-DDISABLE_SSLV2_SERVER
+# Define to enable support for SSLv2.
+# Default since 0.4.9 is to disable SSLv2 entirely, since there are servers
+# that are not compatible with SSLv2 Client Hello messages.  If you build in
+# SSLv2 support, you can disable it at runtime using -R ssl2 to get the same
+# result as not building in SSLv2 support at all.
+#FEATURES+=	-DWITH_SSLV2
 
 # Define to make SSLsplit set a session id context in server mode.
 #FEATURES+=	-DUSE_SSL_SESSION_ID_CONTEXT
@@ -43,28 +42,19 @@ DEBUG_CFLAGS?=	-g
 # -DPURIFY for using valgrind and similar tools.
 
 
-### Mac OS X missing pf headers hacks
+### Mac OS X header selection
 
-# For a list of kernel versions versus release versions, see
-# https://en.wikipedia.org/wiki/Darwin_%28operating_system%29
 ifeq ($(shell uname),Darwin)
 FEATURES+=	-DHAVE_DARWIN_LIBPROC
-ifeq ($(basename $(basename $(shell uname -r))),11)
-# Mac OS X Lion
+XNU_VERSION?=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
+OSX_VERSION?=	$(shell sw_vers -productVersion)
+ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
+XNU_VERSION=	$(shell awk '/$(OSX_VERSION)$/ {print $2}' xnu/GNUmakefile)
+endif
+ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.7
-else ifeq ($(basename $(basename $(shell uname -r))),12)
-# Mac OS X Mountain Lion
-FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.8
-else ifeq ($(basename $(basename $(shell uname -r))),13)
-# Mac OS X Mavericks
-FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.9
-else ifeq ($(basename $(basename $(shell uname -r))),14)
-# Mac OS X Yosemite
-FEATURES+=	-DHAVE_PF
-PKG_CPPFLAGS+=	-I./xnu/10.9
+PKG_CPPFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
+BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION)
 endif
 endif
 
@@ -97,6 +87,7 @@ endif
 ### Variables you might need to override
 
 PREFIX?=	/usr/local
+MANDIR?=	share/man
 
 OPENSSL?=	openssl
 PKGCONFIG?=	pkg-config
@@ -112,14 +103,12 @@ SED?=		sed
 ### Variables only used for developer targets
 
 KHASH_URL?=	https://github.com/attractivechaos/klib/raw/master/khash.h
-XNU_URL?=	https://github.com/opensource-apple/xnu/raw/
 GPGSIGNKEY?=	0xB5D3397E
 
 CPPCHECK?=	cppcheck
 GPG?=		gpg
 GIT?=		git
 WGET?=		wget
-WGET_FLAGS?=	--no-check-certificate
 
 BZIP2?=		bzip2
 COL?=		col
@@ -144,13 +133,16 @@ VFILE:=		$(wildcard VERSION)
 GITDIR:=	$(wildcard .git)
 ifdef VFILE
 VERSION:=	$(shell $(CAT) VERSION)
+BUILD_INFO+=	V:FILE
 else
 ifndef GITDIR
 VERSION:=	$(shell $(BASENAME) $(PWD)|\
 			$(GREP) $(TARGET)-|\
 			$(SED) 's/.*$(TARGET)-\(.*\)/\1/g')
+BUILD_INFO+=	V:DIR
 else
 VERSION:=	$(shell $(GIT) describe --tags --dirty --always)
+BUILD_INFO+=	V:GIT
 endif
 CFLAGS+=	$(DEBUG_CFLAGS)
 endif
@@ -257,16 +249,23 @@ TPKG_LDFLAGS+=	$(shell $(PKGCONFIG) --libs-only-L --libs-only-other $(TPKGS))
 TPKG_LIBS+=	$(shell $(PKGCONFIG) --libs-only-l $(TPKGS))
 endif
 
-PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
-TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
-FEATURES:=	$(sort $(FEATURES))
-
-CFLAGS+=	$(PKG_CFLAGS) \
-		-std=c99 -Wall -Wextra -pedantic -D_FORTIFY_SOURCE=2
-CPPFLAGS+=	-D_GNU_SOURCE $(PKG_CPPFLAGS) $(FEATURES) \
+CPPDEFS+=	-D_GNU_SOURCE \
 		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
 		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
-		-D"FEATURES=\"$(FEATURES)\""
+		-D"FEATURES=\"$(FEATURES)\"" -D"BUILD_INFO=\"$(BUILD_INFO)\""
+CPPCHECKFLAGS+=	$(CPPDEFS)
+FEATURES:=	$(sort $(FEATURES))
+
+ifneq (ccc-analyzer,$(notdir $(CC)))
+PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
+TPKG_CPPFLAGS:=	$(subst -I,-isystem,$(TPKG_CPPFLAGS))
+endif
+
+CFLAGS+=	$(PKG_CFLAGS) \
+		-std=c99 -Wall -Wextra -pedantic \
+		-D_FORTIFY_SOURCE=2 -fstack-protector-all
+CPPFLAGS+=	$(PKG_CPPFLAGS) $(CPPDEFS) $(FEATURES)
+TCPPFLAGS+=	$(TPKG_CPPFLAGS)
 LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
 
@@ -278,6 +277,7 @@ endif
 export VERSION
 export OPENSSL
 export MKDIR
+export WGET
 
 all: version config $(TARGET)
 
@@ -296,6 +296,10 @@ ifdef CHECK_FOUND
 	@echo "CHECK_BASE:     $(strip $(CHECK_FOUND))"
 endif
 	@echo "Build options:  $(FEATURES)"
+ifeq ($(shell uname),Darwin)
+	@echo "OSX_VERSION:    $(OSX_VERSION)"
+	@echo "XNU_VERSION:    $(XNU_VERSION)"
+endif
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -307,7 +311,7 @@ ifdef CHECK_MISSING
 	$(error unit test dependency 'check' not found; \
 	install it or point CHECK_BASE to base path)
 endif
-	$(CC) -c $(CPPFLAGS) $(TPKG_CPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
+	$(CC) -c $(CPPFLAGS) $(TCPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
 		-x c $<
 
 %.o: %.c $(HDRS) GNUmakefile
@@ -326,18 +330,18 @@ clean:
 	$(RM) -rf *.dSYM
 
 install: $(TARGET)
-	test -d $(PREFIX)/bin || $(MKDIR) -p $(PREFIX)/bin
-	test -d $(PREFIX)/share/man/man1 || \
-		$(MKDIR) -p $(PREFIX)/share/man/man1
-	$(INSTALL) -o 0 -g 0 -m 0755 $(TARGET) $(PREFIX)/bin/
-	$(INSTALL) -o 0 -g 0 -m 0644 $(TARGET).1 $(PREFIX)/share/man/man1/
+	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
+	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
+		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
+	$(INSTALL) -o 0 -g 0 -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -o 0 -g 0 -m 0644 $(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
 
 deinstall:
-	$(RM) -f $(PREFIX)/bin/$(TARGET) $(PREFIX)/share/man/man1/$(TARGET).1
+	$(RM) -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/$(TARGET).1
 
 ifdef GITDIR
 lint:
-	$(CPPCHECK) --force --enable=all --error-exitcode=1 .
+	$(CPPCHECK) $(CPPCHECKFLAGS) --force --enable=all --error-exitcode=1 .
 
 mantest:
 	$(RM) -f man1
@@ -357,34 +361,9 @@ manclean:
 	$(RM) -f $(TARGET)-*.1.txt
 
 fetchdeps:
-	$(WGET) $(WGET_FLAGS) -O- $(KHASH_URL) >khash.h
-	$(MKDIR) -p xnu/10.7/libkern xnu/10.7/net
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/APPLE_LICENSE \
-		>xnu/10.7/APPLE_LICENSE
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/libkern/libkern/tree.h \
-		>xnu/10.7/libkern/tree.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/bsd/net/radix.h \
-		>xnu/10.7/net/radix.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.7/bsd/net/pfvar.h \
-		>xnu/10.7/net/pfvar.h
-	$(MKDIR) -p xnu/10.8/libkern xnu/10.8/net
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/APPLE_LICENSE \
-		>xnu/10.8/APPLE_LICENSE
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/libkern/libkern/tree.h \
-		>xnu/10.8/libkern/tree.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/bsd/net/radix.h \
-		>xnu/10.8/net/radix.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.8/bsd/net/pfvar.h \
-		>xnu/10.8/net/pfvar.h
-	$(MKDIR) -p xnu/10.9/libkern xnu/10.9/net
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/APPLE_LICENSE \
-		>xnu/10.9/APPLE_LICENSE
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/libkern/libkern/tree.h \
-		>xnu/10.9/libkern/tree.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/bsd/net/radix.h \
-		>xnu/10.9/net/radix.h
-	$(WGET) $(WGET_FLAGS) -O- $(XNU_URL)10.9/bsd/net/pfvar.h \
-		>xnu/10.9/net/pfvar.h
+	$(WGET) -O- $(KHASH_URL) >khash.h
+	#$(RM) -rf xnu/xnu-*
+	$(MAKE) -C xnu fetch
 
 dist: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
 

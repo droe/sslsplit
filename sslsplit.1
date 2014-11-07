@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKOPZdDgGseujplLS\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKOPZdDgGsrReumjplLS\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKOPZdDgGseujplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKOPZdDgGsrReumjplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGseujplLS\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZdDgGsrReumjplLS\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -61,10 +61,15 @@ IPv4 and IPv6.  For SSL and HTTPS connections, SSLsplit generates and signs
 forged X509v3 certificates on-the-fly, based on the original server certificate
 subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
 Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
-ECDHE cipher suites.  SSLsplit can also use existing certificates of which the
-private key is available, instead of generating forged ones.  SSLsplit supports
-NULL-prefix CN certificates and can deny OCSP requests in a generic way.
-SSLsplit removes HPKP response headers in order to prevent public key pinning.
+ECDHE cipher suites.  Depending on the version of OpenSSL, SSLsplit supports
+SSL 3.0, TLS 1.0, TLS 1.1 and TLS 1.2, and optionally SSL 2.0 as well.
+SSLsplit can also use existing certificates of which the private key is
+available, instead of generating forged ones.  SSLsplit supports NULL-prefix
+CN certificates and can deny OCSP requests in a generic way.
+For HTTP and HTTPS connections, SSLsplit removes response headers
+for HPKP in order to prevent public key pinning,
+for HSTS to allow the user to accept untrusted certificates,
+and Alternate Protocols to prevent switching to QUIC/SPDY.
 .LP
 SSLsplit supports a number of NAT engines, static forwarding and SNI DNS
 lookups to determine the original destination of redirected connections
@@ -212,6 +217,32 @@ suites must include at least one cipher suite supported by both the client and
 the server of each connection.
 See ciphers(1) for details on how to construct OpenSSL cipher lists.
 .TP
+.B \-r \fIproto\fP
+Force SSL/TLS protocol version on both client and server side to \fIproto\fP
+by selecting the respective OpenSSL method constructor instead of the default
+SSLv23_method() which supports all protocol versions.
+This is useful when analyzing traffic to a server that only supports a specific
+version of SSL/TLS and does not implement proper protocol negotiation.
+Depending on build options and the version of OpenSSL that is used, the
+following values for \fIproto\fP are accepted: \fBssl2\fP, \fBssl3\fP,
+\fBtls10\fP, \fBtls11\fP and \fBtls12\fP.
+Note that SSL 2.0 support is not built in by default because some servers
+don't handle SSL 2.0 Client Hello messages gracefully.
+.TP
+.B \-R \fIproto\fP
+Disable the SSL/TLS protocol version \fIproto\fP on both client and server
+side by disabling the respective protocols in OpenSSL.  To disable multiple
+protocol versions, \fB-R\fP can be given multiple times.  If \fI-r\fP is also
+given, there will be no effect in disabling other protocol versions.
+Disabling protocol versions is useful when analyzing traffic to a server that
+does not handle some protocol versions well, or to test behaviour with
+different protocol versions.
+Depending on build options and the version of OpenSSL that is used, the
+following values for \fIproto\fP are accepted: \fBssl2\fP, \fBssl3\fP,
+\fBtls10\fP, \fBtls11\fP and \fBtls12\fP.
+Note that SSL 2.0 support is not built in by default because some servers
+don't handle SSL 2.0 Client Hello messages gracefully.
+.TP
 .B \-S \fIlogdir\fP
 Log connection content to separate log files under \fIlogdir\fP.  For each
 connection, a log file will be written, which will contain both directions of
@@ -240,6 +271,10 @@ privileges to the stored UID if EUID != UID (setuid bit scenario), or to
 \fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0)
 and \fB-S\fP is not used.
 .TP
+.B \-m
+When dropping privileges using \fB-u\fP, override the target primary group
+to be set to \fIgroup\fP.
+.TP
 .B \-V
 Display version and compiled features information and exit.
 .TP
@@ -266,6 +301,23 @@ SNI DNS lookup):
 \fBtcp\fP   \fIlistenaddr port\fP
 [\fInat-engine\fP|\fIfwdaddr port\fP]
 .ad
+.TP
+\fBhttps\fP
+SSL/TLS interception with HTTP protocol decoding, including the removal of
+HPKP, HSTS and Alternate Protocol response headers.
+.TP
+\fBssl\fP
+SSL/TLS interception without any lower level protocol decoding; decrypted
+connection content is treated as opaque stream of bytes and not modified.
+.TP
+\fBhttp\fP
+Plain TCP connection without SSL/TLS, with HTTP protocol decoding, including
+the removal of HPKP, HSTS and Alternate Protocol response headers.
+.TP
+\fBtcp\fP
+Plain TCP connection without SSL/TLS and without any lower level protocol
+decoding; decrypted connection content is treated as opaque stream of bytes
+and not modified.
 .TP
 .I listenaddr port
 IPv4 or IPv6 address and port or service name to listen on.  This is the
@@ -515,18 +567,19 @@ authorityKeyIdentifier  = keyid:always,issuer:always
         -subj '/O=SSLsplit Root CA/CN=SSLsplit Root CA/' \\
         -set_serial 0 -days 3650\fP
 .fi
-.SH SCALABILITY
-SSLsplit is scalable to a relatively high number of listeners and connections
-due to a multithreaded, event based architecture based on libevent, taking
-advantage of platform specific select() replacements such as kqueue.  The main
-thread handles the listeners and signalling, while a number of worker threads
-equal to twice the number of CPU cores is used for handling the actual
+.SH PERFORMANCE AND SCALABILITY
+SSLsplit is able to handle a relatively high number of listeners and
+connections due to a multithreaded, event based architecture based on libevent,
+taking advantage of platform specific select() replacements such as kqueue.
+The main thread handles the listeners and signalling, while a number of worker
+threads equal to twice the number of CPU cores is used for handling the actual
 connections in separate event bases, including the CPU-intensive SSL/TLS
 handling.
 .LP
-Care has been taken to choose scalable data structures for caching certificates
-and SSL sessions.  Logging is implemented in separate disk writer threads to
-ensure that socket event handling threads don't have to block on disk I/O.
+Care has been taken to choose well-performing data structures for caching
+certificates and SSL sessions.  Logging is implemented in separate disk writer
+threads to ensure that socket event handling threads don't have to block on
+disk I/O.
 DNS lookups are performed asynchroniously.
 SSLsplit uses SSL session caching on both ends to minimize the amount of full
 SSL handshakes, but even then, the limiting factor in handling SSL connections

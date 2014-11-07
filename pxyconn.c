@@ -411,11 +411,11 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
  * the refcount decrementing.  In other words, return 0 if we did not
  * keep a pointer to the object (which we never do here).
  */
-#ifdef DISABLE_SSLV2_SESSION_CACHE
+#ifdef WITH_SSLV2
 #define MAYBE_UNUSED 
-#else /* !DISABLE_SSLV2_SESSION_CACHE */
+#else /* !WITH_SSLV2 */
 #define MAYBE_UNUSED UNUSED
-#endif /* !DISABLE_SSLV2_SESSION_CACHE */
+#endif /* !WITH_SSLV2 */
 static int
 pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 #undef MAYBE_UNUSED
@@ -424,9 +424,11 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 	log_dbg_printf("===> OpenSSL new session callback:\n");
 	if (sess) {
 		log_dbg_print_free(ssl_session_to_str(sess));
+	} else {
+		log_dbg_print("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
-#ifdef DISABLE_SSLV2_SESSION_CACHE
+#ifdef WITH_SSLV2
 	/* Session resumption seems to fail for SSLv2 with protocol
 	 * parsing errors, so we disable caching for SSLv2. */
 	if (SSL_version(ssl) == SSL2_VERSION) {
@@ -434,8 +436,10 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		               "client.\n");
 		return 0;
 	}
-#endif /* DISABLE_SSLV2_SESSION_CACHE */
-	cachemgr_ssess_set(sess);
+#endif /* WITH_SSLV2 */
+	if (sess) {
+		cachemgr_ssess_set(sess);
+	}
 	return 0;
 }
 
@@ -451,10 +455,13 @@ pxy_ossl_sessremove_cb(UNUSED SSL_CTX *sslctx, SSL_SESSION *sess)
 	log_dbg_printf("===> OpenSSL remove session callback:\n");
 	if (sess) {
 		log_dbg_print_free(ssl_session_to_str(sess));
+	} else {
+		log_dbg_print("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
-
-	cachemgr_ssess_del(sess);
+	if (sess) {
+		cachemgr_ssess_del(sess);
+	}
 }
 
 /*
@@ -490,7 +497,7 @@ static SSL_CTX *
 pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
                      EVP_PKEY *key)
 {
-	SSL_CTX *sslctx = SSL_CTX_new(SSLv23_method());
+	SSL_CTX *sslctx = SSL_CTX_new(ctx->opts->sslmethod());
 	if (!sslctx)
 		return NULL;
 	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
@@ -515,9 +522,37 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
-#if DISABLE_SSLV2_SERVER
-	SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#endif /* DISABLE_SSLV2_SERVER */
+
+#ifdef SSL_OP_NO_SSLv2
+#ifdef WITH_SSLV2
+	if (ctx->opts->no_ssl2) {
+#endif /* WITH_SSLV2 */
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
+#ifdef WITH_SSLV2
+	}
+#endif /* WITH_SSLV2 */
+#endif /* !SSL_OP_NO_SSLv2 */
+#ifdef SSL_OP_NO_SSLv3
+	if (ctx->opts->no_ssl3) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
+	}
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	if (ctx->opts->no_tls10) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
+	}
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (ctx->opts->no_tls11) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_1);
+	}
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (ctx->opts->no_tls12) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
+	}
+#endif /* SSL_OP_NO_TLSv1_2 */
+
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_sess_set_new_cb(sslctx, pxy_ossl_sessnew_cb);
 	SSL_CTX_sess_set_remove_cb(sslctx, pxy_ossl_sessremove_cb);
@@ -823,7 +858,7 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	SSL *ssl;
 	SSL_SESSION *sess;
 
-	sslctx = SSL_CTX_new(SSLv23_method());
+	sslctx = SSL_CTX_new(ctx->opts->sslmethod());
 	if (!sslctx) {
 		ctx->enomem = 1;
 		return NULL;
@@ -847,6 +882,37 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
 	}
 #endif /* SSL_OP_NO_COMPRESSION */
+
+#ifdef SSL_OP_NO_SSLv2
+#ifdef WITH_SSLV2
+	if (ctx->opts->no_ssl2) {
+#endif /* WITH_SSLV2 */
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
+#ifdef WITH_SSLV2
+	}
+#endif /* WITH_SSLV2 */
+#endif /* !SSL_OP_NO_SSLv2 */
+#ifdef SSL_OP_NO_SSLv3
+	if (ctx->opts->no_ssl3) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
+	}
+#endif /* SSL_OP_NO_SSLv3 */
+#ifdef SSL_OP_NO_TLSv1
+	if (ctx->opts->no_tls10) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
+	}
+#endif /* SSL_OP_NO_TLSv1 */
+#ifdef SSL_OP_NO_TLSv1_1
+	if (ctx->opts->no_tls11) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_1);
+	}
+#endif /* SSL_OP_NO_TLSv1_1 */
+#ifdef SSL_OP_NO_TLSv1_2
+	if (ctx->opts->no_tls12) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
+	}
+#endif /* SSL_OP_NO_TLSv1_2 */
+
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 
@@ -1008,27 +1074,27 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		/* not first line */
 		char *newhdr;
 
-		if (!ctx->http_host && !strncasecmp(line, "Host: ", 6)) {
-			ctx->http_host = strdup(util_skipws(line + 6));
+		if (!ctx->http_host && !strncasecmp(line, "Host:", 5)) {
+			ctx->http_host = strdup(util_skipws(line + 5));
 			if (!ctx->http_host) {
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Content-Type: ", 14)) {
-			ctx->http_content_type = strdup(util_skipws(line + 14));
+		} else if (!strncasecmp(line, "Content-Type:", 13)) {
+			ctx->http_content_type = strdup(util_skipws(line + 13));
 			if (!ctx->http_content_type) {
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Connection: ", 12)) {
+		} else if (!strncasecmp(line, "Connection:", 11)) {
 			ctx->sent_http_conn_close = 1;
 			if (!(newhdr = strdup("Connection: close"))) {
 				ctx->enomem = 1;
 				return NULL;
 			}
 			return newhdr;
-		} else if (!strncasecmp(line, "Accept-Encoding: ", 17) ||
-		           !strncasecmp(line, "Keep-Alive: ", 12)) {
+		} else if (!strncasecmp(line, "Accept-Encoding:", 16) ||
+		           !strncasecmp(line, "Keep-Alive:", 11)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_req_header = 1;
@@ -1093,16 +1159,25 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 	} else {
 		/* not first line */
 		if (!ctx->http_content_length &&
-		    !strncasecmp(line, "Content-Length: ", 16)) {
+		    !strncasecmp(line, "Content-Length:", 15)) {
 			ctx->http_content_length =
-				strdup(util_skipws(line + 16));
+				strdup(util_skipws(line + 15));
 			if (!ctx->http_content_length) {
 				ctx->enomem = 1;
 				return NULL;
 			}
-		} else if (!strncasecmp(line, "Public-Key-Pins: ", 17) ||
-		    !strncasecmp(line, "Public-Key-Pins-Report-Only: ", 29) ||
-		    !strncasecmp(line, "Alternate-Protocol: ", 20)) {
+		} else if (
+		    /* HPKP: Public Key Pinning Extension for HTTP
+		     * (draft-ietf-websec-key-pinning)
+		     * remove to prevent public key pinning */
+		    !strncasecmp(line, "Public-Key-Pins:", 16) ||
+		    !strncasecmp(line, "Public-Key-Pins-Report-Only:", 28) ||
+		    /* HSTS: HTTP Strict Transport Security (RFC 6797)
+		     * remove to allow users to accept bad certs */
+		    !strncasecmp(line, "Strict-Transport-Security:", 26) ||
+		    /* Alternate Protocol
+		     * remove to prevent switching to QUIC, SPDY et al */
+		    !strncasecmp(line, "Alternate-Protocol:", 19)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_resp_header = 1;
@@ -1509,7 +1584,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			                 ctx->user, ctx->group);
 		}
 
-		/* log connection */
+		/* log connection if we don't analyze any headers */
 		if (!ctx->spec->http || ctx->passthrough) {
 			if (WANT_CONNECT_LOG(ctx)) {
 				pxy_log_connect_nonhttp(ctx);

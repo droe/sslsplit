@@ -125,6 +125,9 @@ ssl_openssl_version(void)
 	fprintf(stderr, "Using direct access workaround when loading certs\n");
 #endif /* OpenSSL 1.0.0k or 1.0.1e */
 
+	fprintf(stderr, "SSL/TLS protocol availability: %s\n",
+	                SSL_PROTO_SUPPORT_S);
+
 	fprintf(stderr, "SSL/TLS algorithm availability:");
 #ifndef OPENSSL_NO_RSA
 	fprintf(stderr, " RSA");
@@ -1033,18 +1036,23 @@ ssl_x509_subject(X509 *crt)
  * Returns NULL on errors.
  */
 char *
-ssl_x509_subject_cn(X509 *crt, size_t *sz)
+ssl_x509_subject_cn(X509 *crt, size_t *psz)
 {
 	X509_NAME *ptr;
 	char *cn;
+	size_t sz;
 
 	ptr = X509_get_subject_name(crt); /* does not inc refcounts */
 	if (!ptr)
 		return NULL;
-	*sz = X509_NAME_get_text_by_NID(ptr, NID_commonName, NULL, 0) + 1;
-	if ((sz == 0) || !(cn = malloc(*sz)))
+	sz = X509_NAME_get_text_by_NID(ptr, NID_commonName, NULL, 0) + 1;
+	if ((sz == 0) || !(cn = malloc(sz)))
 		return NULL;
-	X509_NAME_get_text_by_NID(ptr, NID_commonName, cn, *sz);
+	if (X509_NAME_get_text_by_NID(ptr, NID_commonName, cn, sz) == -1) {
+		free(cn);
+		return NULL;
+	}
+	*psz = sz;
 	return cn;
 }
 
@@ -1302,7 +1310,7 @@ ssl_x509_names_to_str(X509 *crt)
 {
 	char **names;
 	size_t sz;
-	char *buf, *next;
+	char *buf = NULL, *next;
 
 	names = ssl_x509_names(crt);
 	if (!names)
@@ -1312,9 +1320,12 @@ ssl_x509_names_to_str(X509 *crt)
 	for (char **p = names; *p; p++) {
 		sz += strlen(*p) + 1;
 	}
+	if (!sz) {
+		goto out1;
+	}
 
 	if (!(buf = malloc(sz)))
-		goto out;
+		goto out2;
 	next = buf;
 	for (char **p = names; *p; p++) {
 		char *src = *p;
@@ -1324,9 +1335,10 @@ ssl_x509_names_to_str(X509 *crt)
 		*next++ = '/';
 	}
 	*--next = '\0';
-out:
+out2:
 	for (char **p = names; *p; p++)
 		free(*p);
+out1:
 	free(names);
 	return buf;
 }
@@ -1384,7 +1396,7 @@ ssl_x509_aias(X509 *crt, const int type)
 				j++;
 		}
 	}
-	res[j] = '\0';
+	res[j] = NULL;
 	sk_ACCESS_DESCRIPTION_pop_free(aias, ACCESS_DESCRIPTION_free);
 	return res;
 }

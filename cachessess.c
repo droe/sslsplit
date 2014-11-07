@@ -152,7 +152,7 @@ cachessess_unpackverify_val_cb(cache_val_t val, int copy)
 	if (copy)
 		return sess;
 	SSL_SESSION_free(sess);
-	return ((cache_val_t)!NULL);
+	return ((void*)-1);
 }
 
 static void

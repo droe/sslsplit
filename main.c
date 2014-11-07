@@ -70,6 +70,9 @@ main_version(void)
 	fprintf(stderr, "Copyright (c) 2009-2014, "
 	                "Daniel Roethlisberger <daniel@roe.ch>\n");
 	fprintf(stderr, "http://www.roe.ch/SSLsplit\n");
+	if (build_info[0]) {
+		fprintf(stderr, "Build info: %s\n", build_info);
+	}
 	if (features[0]) {
 		fprintf(stderr, "Features: %s\n", features);
 	}
@@ -125,11 +128,13 @@ main_usage(void)
 #else /* !SSL_OP_NO_COMPRESSION */
 #define OPT_Z 
 #endif /* !SSL_OP_NO_COMPRESSION */
+"  -r proto    only support one of " SSL_PROTO_SUPPORT_S "(default: all)\n"
+"  -R proto    disable one of " SSL_PROTO_SUPPORT_S "(default: none)\n"
 "  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL:-aNULL)\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
-"  -m group    when dropping user privileges via -u, set the target group (default: primary group of the user)\n"
+"  -m group    when using -u, override group (default: primary group of user)\n"
 "  -j jaildir  chroot() to jaildir (impacts -S and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
@@ -223,6 +228,18 @@ main_loadtgcrt(const char *filename, void *arg)
 }
 
 /*
+ * Handle out of memory conditions in early stages of main().
+ * Print error message and exit with failure status code.
+ * Does not return.
+ */
+void NORET
+oom_die(const char *argv0)
+{
+	fprintf(stderr, "%s: out of memory\n", argv0);
+	exit(EXIT_FAILURE);
+}
+
+/*
  * Main entry point.
  */
 int
@@ -239,12 +256,14 @@ main(int argc, char *argv[])
 	opts = opts_new();
 	if (nat_getdefaultname()) {
 		natengine = strdup(nat_getdefaultname());
+		if (!natengine)
+			oom_die(argv0);
 	} else {
 		natengine = NULL;
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
-	                    "k:c:C:K:t:OPs:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -351,6 +370,8 @@ main(int argc, char *argv[])
 				if (opts->tgcrtdir)
 					free(opts->tgcrtdir);
 				opts->tgcrtdir = strdup(optarg);
+				if (!opts->tgcrtdir)
+					oom_die(argv0);
 				break;
 			case 'O':
 				opts->deny_ocsp = 1;
@@ -391,6 +412,8 @@ main(int argc, char *argv[])
 				}
 				EC_KEY_free(ec);
 				opts->ecdhcurve = strdup(optarg);
+				if (!opts->ecdhcurve)
+					oom_die(argv0);
 				break;
 			}
 #endif /* !OPENSSL_NO_ECDH */
@@ -403,10 +426,20 @@ main(int argc, char *argv[])
 				if (opts->ciphers)
 					free(opts->ciphers);
 				opts->ciphers = strdup(optarg);
+				if (!opts->ciphers)
+					oom_die(argv0);
+				break;
+			case 'r':
+				opts_proto_force(opts, optarg, argv0);
+				break;
+			case 'R':
+				opts_proto_disable(opts, optarg, argv0);
 				break;
 			case 'e':
 				free(natengine);
 				natengine = strdup(optarg);
+				if (!natengine)
+					oom_die(argv0);
 				break;
 			case 'E':
 				nat_list_engines();
@@ -416,31 +449,43 @@ main(int argc, char *argv[])
 				if (opts->dropuser)
 					free(opts->dropuser);
 				opts->dropuser = strdup(optarg);
+				if (!opts->dropuser)
+					oom_die(argv0);
 				break;
 			case 'm':
 				if (opts->dropgroup)
 					free(opts->dropgroup);
 				opts->dropgroup = strdup(optarg);
+				if (!opts->dropgroup)
+					oom_die(argv0);
 				break;
 			case 'p':
 				if (opts->pidfile)
 					free(opts->pidfile);
 				opts->pidfile = strdup(optarg);
+				if (!opts->pidfile)
+					oom_die(argv0);
 				break;
 			case 'j':
 				if (opts->jaildir)
 					free(opts->jaildir);
 				opts->jaildir = strdup(optarg);
+				if (!opts->jaildir)
+					oom_die(argv0);
 				break;
 			case 'l':
 				if (opts->connectlog)
 					free(opts->connectlog);
 				opts->connectlog = strdup(optarg);
+				if (!opts->connectlog)
+					oom_die(argv0);
 				break;
 			case 'L':
 				if (opts->contentlog)
 					free(opts->contentlog);
 				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
 				opts->contentlogdir = 0;
 				opts->contentlogspec = 0;
 				break;
@@ -448,6 +493,8 @@ main(int argc, char *argv[])
 				if (opts->contentlog)
 					free(opts->contentlog);
 				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
 				opts->contentlogdir = 1;
 				opts->contentlogspec = 0;
 				break;
@@ -482,7 +529,7 @@ main(int argc, char *argv[])
 	argv += optind;
 	opts->spec = proxyspec_parse(&argc, &argv, natengine);
 
-	/* usage checks */
+	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
 		                argv0);
@@ -545,14 +592,14 @@ main(int argc, char *argv[])
 	/* dynamic defaults */
 	if (!opts->ciphers) {
 		opts->ciphers = strdup("ALL:-aNULL");
-		if (!opts->ciphers) {
-			fprintf(stderr, "%s: out of memory.\n", argv0);
-			exit(EXIT_FAILURE);
-		}
+		if (!opts->ciphers)
+			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
 	    !opts->contentlogdir) {
 		opts->dropuser = strdup("nobody");
+		if (!opts->dropuser)
+			oom_die(argv0);
 	}
 	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
 		opts->key = ssl_key_genrsa(1024);
@@ -567,9 +614,16 @@ main(int argc, char *argv[])
 		}
 	}
 
+	/* usage checks after defaults */
+	if (opts->dropgroup && !opts->dropuser) {
+		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+
 	/* debugging */
 	if (OPTS_DEBUG(opts)) {
 		main_version();
+		opts_proto_dbg_dump(opts);
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 			char *lbuf, *cbuf = NULL;

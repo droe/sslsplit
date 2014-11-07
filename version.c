@@ -34,6 +34,7 @@
 
 const char *version = VERSION;
 const char *build_date = BUILD_DATE;
+const char *build_info = BUILD_INFO;
 const char *features = FEATURES;
 
 /* vim: set noet ft=c: */

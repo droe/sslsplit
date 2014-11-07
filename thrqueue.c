@@ -58,21 +58,33 @@ thrqueue_new(size_t sz)
 	thrqueue_t *queue;
 
 	if (!(queue = malloc(sizeof(thrqueue_t))))
-		return NULL;
-	if (!(queue->data = malloc(sz * sizeof(void*)))) {
-		free(queue);
-		return NULL;
-	}
+		goto out0;
+	if (!(queue->data = malloc(sz * sizeof(void*))))
+		goto out1;
+	if (0 != pthread_mutex_init(&queue->mutex, NULL))
+		goto out2;
+	if (0 != pthread_cond_init(&queue->notempty, NULL))
+		goto out3;
+	if (0 != pthread_cond_init(&queue->notfull, NULL))
+		goto out4;
 	queue->sz = sz;
 	queue->n = 0;
 	queue->in = 0;
 	queue->out = 0;
 	queue->block_enqueue = 1;
 	queue->block_dequeue = 1;
-	pthread_mutex_init(&queue->mutex, NULL);
-	pthread_cond_init(&queue->notempty, NULL);
-	pthread_cond_init(&queue->notfull, NULL);
 	return queue;
+
+out4:
+	pthread_cond_destroy(&queue->notempty);
+out3:
+	pthread_mutex_destroy(&queue->mutex);
+out2:
+	free(queue->data);
+out1:
+	free(queue);
+out0:
+	return NULL;
 }
 
 /*

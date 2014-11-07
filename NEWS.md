@@ -1,10 +1,27 @@
 
 ### SSLsplit master
 
--   SSLsplit no longer chroot()s to /var/empty by default if run by root,
-    in order to prevent breaking -S and sni proxyspecs (issue #21).
+-   Add option -r to force a specific SSL/TLS protocol version (issue #30).
+-   Add option -R to disable specific SSL/TLS protocol versions (issue #30).
+-   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
+    WITH_SSLV2 build knob.
+-   Minor bugfixes and improvements.
+
+
+### SSLsplit 0.4.9 2014-11-03
+
+-   Filter out HSTS response header to allow users to accept untrusted certs.
+-   Build without SSLv2 support by default (issue #26).
+-   Add primary group override (-m) when dropping privileges to an
+    unprivileged user (pull req #35 by @landonf).
+-   Support pf on Mac OS X 10.10 Yosemite and fix segmentation fault if
+    no NAT engine is available (pull req #32 by @landonf).
+-   Support DESTDIR and MANDIR in the build (pull req #34 by @swills).
+-   No longer chroot() to /var/empty by default if run by root, in order to
+    prevent breaking -S and sni proxyspecs (issue #21).
 -   Load -t certificates before dropping privileges (issues #19 and #20).
 -   Fix segmentation fault when using -t without a CA.
+-   Minor bugfixes and improvements.
 
 
 ### SSLsplit 0.4.8 2014-01-15

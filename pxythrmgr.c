@@ -123,16 +123,18 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 
 	pthread_mutex_init(&ctx->mutex, NULL);
 
-	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(void*)))) {
+	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(pxy_thr_ctx_t*)))) {
 		log_dbg_printf("Failed to allocate memory\n");
 		goto leave;
 	}
+	memset(ctx->thr, 0, ctx->num_thr * sizeof(pxy_thr_ctx_t*));
 
 	for (idx = 0; idx < ctx->num_thr; idx++) {
 		if (!(ctx->thr[idx] = malloc(sizeof(pxy_thr_ctx_t)))) {
 			log_dbg_printf("Failed to allocate memory\n");
 			goto leave;
 		}
+		memset(ctx->thr[idx], 0, sizeof(pxy_thr_ctx_t));
 		ctx->thr[idx]->evbase = event_base_new();
 		if (!ctx->thr[idx]->evbase) {
 			log_dbg_printf("Failed to create evbase %d\n", idx);

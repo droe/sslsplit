@@ -460,6 +460,44 @@ START_TEST(ssl_x509_names_to_str_02)
 }
 END_TEST
 
+START_TEST(ssl_x509_subject_01)
+{
+	X509 *c;
+	char *subject;
+
+	c = ssl_x509_load(TESTCERT);
+	fail_unless(!!c, "loading certificate failed");
+	subject = ssl_x509_subject(c);
+	fail_unless(!!subject, "no string");
+	fail_unless(!strcmp(subject, "/C=CH/O=SSLsplit Test Certificate/"
+	                             "CN=daniel.roe.ch"),
+	            "wrong subject string");
+	X509_free(c);
+}
+END_TEST
+
+START_TEST(ssl_x509_subject_cn_01)
+{
+	X509 *c;
+	char *cn;
+	size_t sz;
+	size_t expsz = strlen("daniel.roe.ch") + 1;
+
+	c = ssl_x509_load(TESTCERT);
+	fail_unless(!!c, "loading certificate failed");
+	cn = ssl_x509_subject_cn(c, &sz);
+	fail_unless(!!cn, "no string");
+	fail_unless(sz >= expsz, "subject CN size too small");
+	fail_unless(!strcmp(cn, "daniel.roe.ch"), "wrong subject CN string");
+#if 0
+	for (unsigned int i = expsz; i < sz; i++) {
+		fail_unless(cn[i] == '\0', "extra byte != 0");
+	}
+#endif
+	X509_free(c);
+}
+END_TEST
+
 START_TEST(ssl_x509_ocsps_01)
 {
 	X509 *c;
@@ -573,6 +611,16 @@ ssl_suite(void)
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_x509_names_to_str_01);
 	tcase_add_test(tc, ssl_x509_names_to_str_02);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ssl_x509_subject");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_x509_subject_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ssl_x509_subject_cn");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_x509_subject_cn_01);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_x509_ocsps");
