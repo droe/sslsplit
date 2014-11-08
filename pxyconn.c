@@ -1956,10 +1956,6 @@ pxy_conn_setup(evutil_socket_t fd,
 
 		if (ctx->local_pid != -1) {
 			// TODO
-			#include <libproc.h>
-			char name[MAXPATHLEN];
-			proc_pidpath(ctx->local_pid, name, sizeof(name));
-			log_err_printf("Matched socket to process %s\n", name);
 		}
 	}
 
