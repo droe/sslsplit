@@ -45,6 +45,9 @@ DEBUG_CFLAGS?=	-g
 ### Mac OS X header selection
 
 ifeq ($(shell uname),Darwin)
+ifneq ($(wildcard /usr/include/libproc.h),)
+FEATURES+=	-DHAVE_DARWIN_LIBPROC
+endif
 XNU_VERSION?=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
 OSX_VERSION?=	$(shell sw_vers -productVersion)
 ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
