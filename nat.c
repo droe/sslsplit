@@ -71,7 +71,8 @@
 
 #ifdef HAVE_DARWIN_LIBPROC
 #include <libproc.h>
-#endif
+#endif /* HAVE_DARWIN_LIBPROC */
+
 
 /*
  * Access NAT state tables in a NAT engine independant way.
@@ -134,7 +135,7 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 	int pid_count = proc_listallpids(NULL, 0);
 	pids = malloc(sizeof(pid_t) * pid_count);
 	if (!pids) {
-		goto done;
+		goto out1;
 	}
 
 	pid_count = proc_listallpids(pids, sizeof(pid_t) * pid_count);
@@ -149,9 +150,12 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 			continue;
 		}
 
+		if (fds) {
+			free(fds);
+		}
 		fds = malloc(PROC_PIDLISTFD_SIZE * fd_count);
 		if (!fds) {
-			goto done;
+			goto out2;
 		}
 		fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, fds, sizeof(fds[0]) * fd_count);
 
@@ -198,13 +202,14 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 			/* valid match */
 			*result = pid;
 			ret = 0;
-			goto done;
+			break;
 		}
 	}
 
-done:
-	free(pids);
 	free(fds);
+out2:
+	free(pids);
+out1:
 	return ret;
 }
 
