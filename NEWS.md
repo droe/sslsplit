@@ -5,6 +5,7 @@
 -   Add option -R to disable specific SSL/TLS protocol versions (issue #30).
 -   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
     WITH_SSLV2 build knob.
+-   Fix startup memory leaks in key/cert loader (pull req #56 by @wjjensen).
 -   Minor bugfixes and improvements.
 
 

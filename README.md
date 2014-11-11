@@ -90,5 +90,6 @@ chronological order of first contribution:
 -   Daniel Roethlisberger (@droe), main author
 -   Steve Wills (@swills)
 -   Landon Fuller (@landonf)
+-   Wayne Jensen (@wjjensen)
 
 
