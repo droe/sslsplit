@@ -84,12 +84,15 @@ SSLsplit includes `khash.h` by Attractive Chaos.
 
 ## Contributors
 
-The following individuals have contributed to the SSLsplit codebase, in
-chronological order of first contribution:
+The following individuals have contributed to the SSLsplit codebase by
+submitting patches or pull requests, in chronological order of first
+contribution:
 
 -   Daniel Roethlisberger (@droe), main author
 -   Steve Wills (@swills)
 -   Landon Fuller (@landonf)
 -   Wayne Jensen (@wjjensen)
+
+See NEWS.md and `git log` for details.
 
 
