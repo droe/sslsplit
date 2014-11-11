@@ -878,7 +878,7 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 	if (rv != 1)
 		goto leave2;
 	tmpssl = SSL_new(tmpctx);
-	if (rv != 1 || !tmpssl)
+	if (!tmpssl)
 		goto leave2;
 
 	tmpcrt = SSL_get_certificate(tmpssl);
@@ -955,10 +955,11 @@ ssl_x509_load(const char *filename)
 	if (!tmpctx)
 		goto leave1;
 	rv = SSL_CTX_use_certificate_file(tmpctx, filename, SSL_FILETYPE_PEM);
-	tmpssl = SSL_new(tmpctx);
-	if (rv != 1 || !tmpssl)
+	if (rv != 1)
 		goto leave2;
-
+	tmpssl = SSL_new(tmpctx);
+	if (!tmpssl)
+		goto leave2;
 	crt = SSL_get_certificate(tmpssl);
 	if (crt)
 		ssl_x509_refcount_inc(crt);
@@ -989,8 +990,10 @@ ssl_key_load(const char *filename)
 	if (!tmpctx)
 		goto leave1;
 	rv = SSL_CTX_use_PrivateKey_file(tmpctx, filename, SSL_FILETYPE_PEM);
+	if (rv != 1)
+		goto leave2;
 	tmpssl = SSL_new(tmpctx);
-	if (rv != 1 || !tmpssl)
+	if (!tmpssl)
 		goto leave2;
 	key = SSL_get_privatekey(tmpssl);
 	if (key)
