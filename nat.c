@@ -69,10 +69,6 @@
 #include <linux/netfilter_ipv6.h>
 #endif /* HAVE_NETFILTER */
 
-#ifdef HAVE_DARWIN_LIBPROC
-#include <libproc.h>
-#endif /* HAVE_DARWIN_LIBPROC */
-
 
 /*
  * Access NAT state tables in a NAT engine independant way.
@@ -119,114 +115,6 @@ nat_pf_fini(void)
 {
 	close(nat_pf_fd);
 }
-
-#ifdef HAVE_DARWIN_LIBPROC
-static int
-nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *dst_addrlen)
-{
-	pid_t *pids = NULL;
-	struct proc_fdinfo *fds = NULL;
-	int ret = -1;
-
-	/* default result if no pid matches */
-	*result = -1;
-
-	/* iterate over all pids to find a matching socket */
-	int pid_count = proc_listallpids(NULL, 0);
-	pids = malloc(sizeof(pid_t) * pid_count);
-	if (!pids) {
-		goto errout1;
-	}
-
-	pid_count = proc_listallpids(pids, sizeof(pid_t) * pid_count);
-
-	for (int i = 0; i < pid_count; i++) {
-		pid_t pid = pids[i];
-
-		/* fetch fd info for this pid */
-		int fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, NULL, 0);
-		if (fd_count == -1) {
-			/* failed to fetch pidinfo; process may have exited */
-			continue;
-		}
-
-		if (fds) {
-			free(fds);
-		}
-		fds = malloc(PROC_PIDLISTFD_SIZE * fd_count);
-		if (!fds) {
-			goto errout2;
-		}
-		fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, fds,
-		                        sizeof(fds[0]) * fd_count);
-
-		/* look for a matching socket file descriptor */
-		for (int j = 0; j < fd_count; j++) {
-			struct proc_fdinfo *fd = &fds[j];
-			struct socket_fdinfo sinfo;
-
-			if (fd->proc_fdtype != PROX_FDTYPE_SOCKET) {
-				continue;
-			}
-
-			if (proc_pidfdinfo(pid, fd->proc_fd, PROC_PIDFDSOCKETINFO,
-			                   &sinfo,
-			                   sizeof(struct socket_fdinfo)) == -1) {
-				/* process may have exited or socket may have
-				 * been released. */
-				continue;
-			}
-
-			if (sinfo.psi.soi_kind != SOCKINFO_TCP) {
-				continue;
-			}
-
-			uint16_t sock_fport = sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport;
-			if (sinfo.psi.soi_family == AF_INET &&
-			    dst_addr->sa_family == AF_INET) {
-				struct sockaddr_in *dst_sai = (struct sockaddr_in *)dst_addr;
-				if (dst_sai->sin_addr.s_addr != sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4.s_addr) {
-					continue;
-				}
-
-				if (dst_sai->sin_port != sock_fport) {
-					continue;
-				}
-			} else if (sinfo.psi.soi_family == AF_INET6 &&
-			           dst_addr->sa_family == AF_INET6) {
-				struct sockaddr_in6 *dst_sai = (struct sockaddr_in6 *)dst_addr;
-				if (memcmp(dst_sai->sin6_addr.s6_addr,  sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6.s6_addr, 16) != 0) {
-					continue;
-				}
-
-				if (dst_sai->sin6_port != sock_fport) {
-					continue;
-				}
-			}
-
-			/* valid match */
-			*result = pid;
-			break;
-		}
-	}
-
-	ret = 0;
-	free(fds);
-errout2:
-	free(pids);
-errout1:
-	return ret;
-}
-
-#else /* HAVE_DARWIN_LIBPROC */
-
-static int
-nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *dst_addrlen) {
-	*result = -1;
-	return 0;
-}
-
-#endif /* !HAVE_DARWIN_LIBPROC */
 
 static int
 nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
@@ -304,11 +192,6 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 		*dst_addrlen = sizeof(struct sockaddr_in6);
 	}
 
-	/* find the local process; there may be none. */
-	if (nat_pf_lookup_proc(pid, dst_addr, dst_addrlen) == -1) {
-		return -1;
-	}
-
 	return 0;
 #ifdef __APPLE__
 #undef sport
@@ -361,7 +244,7 @@ nat_ipfilter_fini(void)
 
 static int
 nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                       pid_t *pid, evutil_socket_t s,
+                       evutil_socket_t s,
                        struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
 	struct sockaddr_storage our_addr;

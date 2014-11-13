@@ -38,6 +38,7 @@
 #include "url.h"
 #include "log.h"
 #include "attrib.h"
+#include "proc.h"
 
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -1577,6 +1578,26 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				pxy_conn_terminate_free(ctx);
 				return;
 			}
+
+			/* fetch process info */
+			if (proc_lookup_by_addr(&ctx->pid,
+			                        (struct sockaddr*)&ctx->addr,
+			                        ctx->addrlen) == 0 &&
+			    ctx->pid != -1 &&
+			    sys_proc_info(ctx->pid, &ctx->exec_path,
+					  &ctx->uid, &ctx->gid) == 0) {
+				/* fetch user/group names */
+				ctx->user = sys_user_str(ctx->uid);
+				ctx->group = sys_group_str(ctx->gid);
+				if (!ctx->user || !ctx->group) {
+					ctx->enomem = 1;
+					pxy_conn_terminate_free(ctx);
+					return;
+				}
+				log_dbg_printf("Local process "
+					       "%s %i %s:%s\n", ctx->exec_path,
+					       ctx->pid, ctx->user, ctx->group);
+			}
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			log_content_open(&ctx->logctx, ctx->src_str,
@@ -1940,9 +1961,8 @@ pxy_conn_setup(evutil_socket_t fd,
 	if (spec->natlookup) {
 		/* NAT engine lookup */
 		ctx->addrlen = sizeof(struct sockaddr_storage);
-		if (spec->natlookup((struct sockaddr *)&ctx->addr,
-		                    &ctx->addrlen, &ctx->pid, fd,
-		                    peeraddr, peeraddrlen) == -1) {
+		if (spec->natlookup((struct sockaddr *)&ctx->addr, &ctx->addrlen,
+		                    fd, peeraddr, peeraddrlen) == -1) {
 			log_err_printf("Connection not found in NAT "
 			               "state table, aborting connection\n");
 			evutil_closesocket(fd);
@@ -1970,18 +1990,6 @@ pxy_conn_setup(evutil_socket_t fd,
 		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
 		if (!ctx->src_str)
 			goto memout;
-
-		/* fetch process info */
-		if (ctx->pid != -1 &&
-		    sys_proc_info(ctx->pid, &ctx->exec_path,
-		                  &ctx->uid, &ctx->gid) == 0) {
-			/* fetch user/group names */
-			ctx->user = sys_user_str(ctx->uid);
-			ctx->group = sys_group_str(ctx->gid);
-			if (!ctx->user || !ctx->group) {
-				goto memout;
-			}
-		}
 	}
 
 	/* for SSL, defer dst connection setup to initial_readcb */
