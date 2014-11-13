@@ -157,7 +157,8 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 		if (!fds) {
 			goto out2;
 		}
-		fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, fds, sizeof(fds[0]) * fd_count);
+		fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, fds,
+		                        sizeof(fds[0]) * fd_count);
 
 		/* look for a matching socket file descriptor */
 		for (int j = 0; j < fd_count; j++) {
@@ -168,9 +169,11 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 				continue;
 			}
 
-			if (proc_pidfdinfo(pid, fd->proc_fd, PROC_PIDFDSOCKETINFO, &sinfo,
-					   sizeof(struct socket_fdinfo)) == -1) {
-				/* process may have exited or socket may have been released. */
+			if (proc_pidfdinfo(pid, fd->proc_fd, PROC_PIDFDSOCKETINFO,
+			                   &sinfo,
+			                   sizeof(struct socket_fdinfo)) == -1) {
+				/* process may have exited or socket may have
+				 * been released. */
 				continue;
 			}
 
@@ -179,7 +182,8 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 			}
 
 			uint16_t sock_fport = sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport;
-			if (sinfo.psi.soi_family == AF_INET && dst_addr->sa_family == AF_INET) {
+			if (sinfo.psi.soi_family == AF_INET &&
+			    dst_addr->sa_family == AF_INET) {
 				struct sockaddr_in *dst_sai = (struct sockaddr_in *)dst_addr;
 				if (dst_sai->sin_addr.s_addr != sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4.s_addr) {
 					continue;
@@ -188,7 +192,8 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 				if (dst_sai->sin_port != sock_fport) {
 					continue;
 				}
-			} else if (sinfo.psi.soi_family == AF_INET6 && dst_addr->sa_family == AF_INET6) {
+			} else if (sinfo.psi.soi_family == AF_INET6 &&
+			           dst_addr->sa_family == AF_INET6) {
 				struct sockaddr_in6 *dst_sai = (struct sockaddr_in6 *)dst_addr;
 				if (memcmp(dst_sai->sin6_addr.s6_addr,  sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6.s6_addr, 16) != 0) {
 					continue;
