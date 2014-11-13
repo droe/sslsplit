@@ -217,6 +217,9 @@ sys_proc_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 
 	/* fetch process path */
 	*path = malloc(PROC_PIDPATHINFO_MAXSIZE);
+	if (!*path) {
+		return -1;
+	}
 	int path_len = proc_pidpath(pid, *path, PROC_PIDPATHINFO_MAXSIZE);
 	if (path_len == -1) {
 		free(*path);
@@ -238,7 +241,7 @@ char *
 sys_user_str(uid_t uid)
 {
 	int bufsize;
-        if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1) {
+	if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1) {
 		log_err_printf("failed to get password bufsize: %s\n",
 		               strerror(errno));
 		return NULL;
