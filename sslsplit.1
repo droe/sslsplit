@@ -589,9 +589,6 @@ openssl(1), ciphers(1), speed(1),
 pf(4), ipfw(8), iptables(8), ip6tables(8), ip(8),
 hostapd(8), arpspoof(8), parasite6(8), yersinia(8)
 .SH AUTHORS
-Daniel Roethlisberger <daniel@roe.ch>
-.SH BUGS
-Session resumption does not work for SSLv2-only clients.  As a workaround,
-clients attempting to resume a session will always be given a new one and thus
-require a full handshake on every connection, resulting in degraded performance
-with SSLv2 clients.  However, SSLv2-only clients should be rare these days.
+SSLsplit was written by Daniel Roethlisberger.  The following individuals have
+contributed to the codebase, in chronological order of their first
+contribution:  Steve Wills, Landon Fuller and Wayne Jensen.
