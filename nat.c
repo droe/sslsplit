@@ -135,7 +135,7 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 	int pid_count = proc_listallpids(NULL, 0);
 	pids = malloc(sizeof(pid_t) * pid_count);
 	if (!pids) {
-		goto out1;
+		goto errout1;
 	}
 
 	pid_count = proc_listallpids(pids, sizeof(pid_t) * pid_count);
@@ -155,7 +155,7 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 		}
 		fds = malloc(PROC_PIDLISTFD_SIZE * fd_count);
 		if (!fds) {
-			goto out2;
+			goto errout2;
 		}
 		fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, fds,
 		                        sizeof(fds[0]) * fd_count);
@@ -206,15 +206,15 @@ nat_pf_lookup_proc(pid_t *result, struct sockaddr *dst_addr, UNUSED socklen_t *d
 
 			/* valid match */
 			*result = pid;
-			ret = 0;
 			break;
 		}
 	}
 
+	ret = 0;
 	free(fds);
-out2:
+errout2:
 	free(pids);
-out1:
+errout1:
 	return ret;
 }
 
