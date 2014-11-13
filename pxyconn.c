@@ -1972,7 +1972,9 @@ pxy_conn_setup(evutil_socket_t fd,
 			goto memout;
 
 		/* fetch process info */
-		if (ctx->pid != -1 && sys_proc_info(ctx->pid, &ctx->exec_path, &ctx->uid, &ctx->gid) == 0) {
+		if (ctx->pid != -1 &&
+		    sys_proc_info(ctx->pid, &ctx->exec_path,
+		                  &ctx->uid, &ctx->gid) == 0) {
 			/* fetch user/group names */
 			ctx->user = sys_user_str(ctx->uid);
 			ctx->group = sys_group_str(ctx->gid);
