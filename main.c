@@ -594,7 +594,7 @@ main(int argc, char *argv[])
 			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
-	    !opts->contentlogdir) {
+	    !opts->contentlogdir && !opts->contentlogspec) {
 		opts->dropuser = strdup("nobody");
 		if (!opts->dropuser)
 			oom_die(argv0);
