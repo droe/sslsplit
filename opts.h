@@ -75,6 +75,7 @@ typedef struct opts {
 	unsigned int passthrough : 1;
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlogdir : 1;
+	unsigned int contentlogspec : 1;
 	char *ciphers;
 	char *tgcrtdir;
 	char *dropuser;

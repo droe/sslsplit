@@ -139,7 +139,21 @@ main_usage(void)
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
 "  -L logfile  content log: full data to file or named pipe (excludes -S)\n"
-"  -S logdir   content log: full data to separate files in dir (excludes -L)\n"
+"  -S logdir   content log: full data to separate files in dir (excludes -L/-F)\n"
+"  -F pathspec content log: full data to separate files with the given path spec (excludes -L/-S):\n"
+"     pathspec = <paths and format directives>\n"
+"       The following directives are supported.\n"
+"              %%d - dest address:port\n"
+"              %%s - source address:port\n"
+"              %%x - base name of local process. if unavailable, will be skipped.\n"
+"              %%X - full path to local process; . if unavailable, will be skipped.\n"
+"              %%u - username or uid of local process. if unavailable, will be skipped\n"
+"              %%g - group or gid of local process. if unavailable, will be skipped\n"
+"              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
+"              %%%% - literal '%%'\n"
+"       e.g.\n"
+"              \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T\"\n"
+"       Unknown directives are ignored, and intermediate directories will be created automatically\n"
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
@@ -249,7 +263,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
-	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -473,6 +487,7 @@ main(int argc, char *argv[])
 				if (!opts->contentlog)
 					oom_die(argv0);
 				opts->contentlogdir = 0;
+				opts->contentlogspec = 0;
 				break;
 			case 'S':
 				if (opts->contentlog)
@@ -481,6 +496,16 @@ main(int argc, char *argv[])
 				if (!opts->contentlog)
 					oom_die(argv0);
 				opts->contentlogdir = 1;
+				opts->contentlogspec = 0;
+				break;
+			case 'F':
+				if (opts->contentlog)
+					free(opts->contentlog);
+				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
+				opts->contentlogspec = 1;
+				opts->contentlogdir = 0;
 				break;
 			case 'd':
 				opts->detach = 1;
