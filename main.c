@@ -138,28 +138,24 @@ main_usage(void)
 "  -j jaildir  chroot() to jaildir (impacts -S and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
-"  -L logfile  content log: full data to file or named pipe (excludes -S)\n"
+"  -L logfile  content log: full data to file or named pipe (excludes -S/-F)\n"
 "  -S logdir   content log: full data to separate files in dir (excludes -L/-F)\n"
-"  -F pathspec content log: full data to separate files with the given path spec (excludes -L/-S):\n"
-"     pathspec = <paths and format directives>\n"
-"       The following directives are supported.\n"
+"  -F pathspec content log: full data to sep files with %% subst (excl. -L/-S):\n"
+"              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
 "              %%d - dest address:port\n"
 "              %%s - source address:port\n"
-"              %%x - base name of local process. if unavailable, will be skipped.\n"
-"              %%X - full path to local process; . if unavailable, will be skipped.\n"
-"              %%u - username or uid of local process. if unavailable, will be skipped\n"
-"              %%g - group or gid of local process. if unavailable, will be skipped\n"
-"              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
+"              %%x - base name of local process (skipped if unavailable)\n"
+"              %%X - full path to local process (skipped if unavailable)\n"
+"              %%u - user name or id of local process (skipped if unavailable)\n"
+"              %%g - group name or id of local process (skipped if unavailable)\n"
 "              %%%% - literal '%%'\n"
-"       e.g.\n"
-"              \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T\"\n"
-"       Unknown directives are ignored, and intermediate directories will be created automatically\n"
+"      e.g.    \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T\"\n"
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
 "  -h          print usage information and exit\n"
 "  proxyspec = type listenaddr+port [natengine|targetaddr+port|\"sni\"+port]\n"
-"  e.g.        http 0.0.0.0 8080 www.roe.ch 80  # http/4; static hostname dst\n"
+"      e.g.    http 0.0.0.0 8080 www.roe.ch 80  # http/4; static hostname dst\n"
 "              https ::1 8443 2001:db8::1 443   # https/6; static address dst\n"
 "              https 127.0.0.1 9443 sni 443     # https/4; SNI DNS lookups\n"
 "              tcp 127.0.0.1 10025              # tcp/4; default NAT engine\n"
@@ -504,8 +500,8 @@ main(int argc, char *argv[])
 				opts->contentlog = strdup(optarg);
 				if (!opts->contentlog)
 					oom_die(argv0);
-				opts->contentlogspec = 1;
 				opts->contentlogdir = 0;
+				opts->contentlogspec = 1;
 				break;
 			case 'd':
 				opts->detach = 1;
