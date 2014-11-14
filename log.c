@@ -318,7 +318,7 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 						match++;
 						elem = match;
 					}
-					elem_len = strlen(elem);
+					elem_len = elem ? strlen(elem) : 0;
 				} else {
 					elem_len = 0;
 				}
