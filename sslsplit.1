@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKOPZdDgGsrReumjplLS\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKOPZdDgGsrReumjplLS\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGsrReumjplLS\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -153,6 +153,11 @@ of OpenSSL which supports Elliptic Curve Diffie-Hellman cipher suites.
 .B \-h
 Display help on usage and exit.
 .TP
+.B \-i
+For each connection, find the local process owning the connection.  This makes
+process information such as pid, owner:group and process name for connections
+originating on the same system as SSLsplit available to the logging facilities.
+.TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
 Note that this has implications for \fB-F\fP, \fB-S\fP, and for \fBsni\fP
@@ -186,6 +191,10 @@ Log connection content to \fIlogfile\fP.  The content log will contain a
 parsable log format with transmitted data, prepended with headers identifying
 the connection and the data length of each logged segment.
 .TP
+.B \-m
+When dropping privileges using \fB-u\fP, override the target primary group
+to be set to \fIgroup\fP.
+.TP
 .B \-O
 Deny all Online Certificate Status Protocol (OCSP) requests on all
 \fIproxyspecs\fP and for all OCSP servers with an OCSP response of
@@ -213,18 +222,6 @@ site requests a client certificate.  Passthrough with \fB-P\fP results in
 uninterrupted service for the clients, while dropping is the more secure
 alternative if unmonitored connections must be prevented.
 .TP
-.B \-s \fIciphers\fP
-Use OpenSSL \fIciphers\fP specification for both server and client SSL/TLS
-connections.  If \fB-s\fP is not given, a cipher list of \fBALL:-aNULL\fP is
-used.
-Normally, SSL/TLS implementations choose the most secure cipher suites, not the
-fastest ones.  By specifying an appropriate OpenSSL cipher list, the set of
-cipher suites can be limited to fast algorithms, or \fBeNULL\fP cipher suites
-can be added.  Note that for connections to be successful, the SSLsplit cipher
-suites must include at least one cipher suite supported by both the client and
-the server of each connection.
-See ciphers(1) for details on how to construct OpenSSL cipher lists.
-.TP
 .B \-r \fIproto\fP
 Force SSL/TLS protocol version on both client and server side to \fIproto\fP
 by selecting the respective OpenSSL method constructor instead of the default
@@ -250,6 +247,18 @@ following values for \fIproto\fP are accepted: \fBssl2\fP, \fBssl3\fP,
 \fBtls10\fP, \fBtls11\fP and \fBtls12\fP.
 Note that SSL 2.0 support is not built in by default because some servers
 don't handle SSL 2.0 Client Hello messages gracefully.
+.TP
+.B \-s \fIciphers\fP
+Use OpenSSL \fIciphers\fP specification for both server and client SSL/TLS
+connections.  If \fB-s\fP is not given, a cipher list of \fBALL:-aNULL\fP is
+used.
+Normally, SSL/TLS implementations choose the most secure cipher suites, not the
+fastest ones.  By specifying an appropriate OpenSSL cipher list, the set of
+cipher suites can be limited to fast algorithms, or \fBeNULL\fP cipher suites
+can be added.  Note that for connections to be successful, the SSLsplit cipher
+suites must include at least one cipher suite supported by both the client and
+the server of each connection.
+See ciphers(1) for details on how to construct OpenSSL cipher lists.
 .TP
 .B \-S \fIlogdir\fP
 Log connection content to separate log files under \fIlogdir\fP.  For each
@@ -278,10 +287,6 @@ primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
 privileges to the stored UID if EUID != UID (setuid bit scenario), or to
 \fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0)
 and \fB-S\fP is not used.
-.TP
-.B \-m
-When dropping privileges using \fB-u\fP, override the target primary group
-to be set to \fIgroup\fP.
 .TP
 .B \-V
 Display version and compiled features information and exit.
@@ -360,6 +365,9 @@ Log specifications are composed of zero or more printf-style directives;
 ordinary characters are included directly in the output path.
 SSLsplit current supports the following directives:
 .TP
+.I %T
+The initial connection time as an ISO 8601 UTC timestamp.
+.TP
 .I %d
 The destination address and port.
 .TP
@@ -367,23 +375,28 @@ The destination address and port.
 The source address and port.
 .TP
 .I %x
-The name of the local process. If process information is unavailable,
+The name of the local process.
+Requires \fB-i\fP to be used.
+If process information is unavailable,
 this directive will be omitted from the output path.
 .TP
 .I %X
-The full path of the local process. If process information is unavailable,
+The full path of the local process.
+Requires \fB-i\fP to be used.
+If process information is unavailable,
 this directive will be omitted from the output path.
 .TP
 .I %u
-The username or numeric uid of the local process. If process information is unavailable,
+The username or numeric uid of the local process.
+Requires \fB-i\fP to be used.
+If process information is unavailable,
 this directive will be omitted from the output path.
 .TP
 .I %g
-The group name or numeric gid of the local process. If process information is unavailable,
+The group name or numeric gid of the local process.
+Requires \fB-i\fP to be used.
+If process information is unavailable,
 this directive will be omitted from the output path.
-.TP
-.I %T
-The initial connection time as an ISO 8601 UTC timestamp.
 .TP
 .I %%
 A literal '%' character.
