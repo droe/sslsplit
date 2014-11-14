@@ -94,6 +94,20 @@ typedef struct pxy_conn_desc {
 	unsigned int closed : 1;
 } pxy_conn_desc_t;
 
+#ifdef WITH_LOCAL_PROCINFO
+/* local process data - filled in iff pid != -1 */
+typedef struct pxy_conn_lproc_desc {
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
+
+	/* derived log strings */
+	char *exec_path;
+	char *user;
+	char *group;
+} pxy_conn_lproc_desc_t;
+#endif /* WITH_LOCAL_PROCINFO */
+
 /* actual proxy connection state consisting of two connection descriptors,
  * connection-wide state and the specs and options */
 typedef struct pxy_conn_ctx {
@@ -111,11 +125,6 @@ typedef struct pxy_conn_ctx {
 	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
 	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
-
-	/* local process ids, or -1 */
-	pid_t pid;
-	uid_t uid;
-	gid_t gid;
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
@@ -139,10 +148,10 @@ typedef struct pxy_conn_ctx {
 	char *ssl_names;
 	char *ssl_orignames;
 
-	/* log strings from process info */
-	char *exec_path;
-	char *user;
-	char *group;
+#ifdef WITH_LOCAL_PROCINFO
+	/* local process information */
+	pxy_conn_lproc_desc_t lproc;
+#endif /* WITH_LOCAL_PROCINFO */
 
 	/* content log context */
 	log_content_ctx_t logctx;
@@ -184,9 +193,11 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->spec = spec;
 	ctx->opts = opts;
 	ctx->fd = fd;
-	ctx->pid = -1;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
+#ifdef WITH_LOCAL_PROCINFO
+	ctx->lproc.pid = -1;
+#endif /* WITH_LOCAL_PROCINFO */
 #ifdef DEBUG_PROXY
 	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("%p             pxy_conn_ctx_new\n",
@@ -241,15 +252,17 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	if (ctx->ssl_orignames) {
 		free(ctx->ssl_orignames);
 	}
-	if (ctx->exec_path) {
-		free(ctx->exec_path);
+#ifdef WITH_LOCAL_PROCINFO
+	if (ctx->lproc.exec_path) {
+		free(ctx->lproc.exec_path);
 	}
-	if (ctx->user) {
-		free(ctx->user);
+	if (ctx->lproc.user) {
+		free(ctx->lproc.user);
 	}
-	if (ctx->group) {
-		free(ctx->group);
+	if (ctx->lproc.group) {
+		free(ctx->lproc.group);
 	}
+#endif /* WITH_LOCAL_PROCINFO */
 	if (ctx->origcrt) {
 		X509_free(ctx->origcrt);
 	}
@@ -1578,31 +1591,44 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				pxy_conn_terminate_free(ctx);
 				return;
 			}
-
+#ifdef WITH_LOCAL_PROCINFO
 			/* fetch process info */
-			if (proc_pid_for_addr(&ctx->pid,
+			if (proc_pid_for_addr(&ctx->lproc.pid,
 			                      (struct sockaddr*)&ctx->addr,
 			                      ctx->addrlen) == 0 &&
-			    ctx->pid != -1 &&
-			    proc_get_info(ctx->pid, &ctx->exec_path,
-			                  &ctx->uid, &ctx->gid) == 0) {
+			    ctx->lproc.pid != -1 &&
+			    proc_get_info(ctx->lproc.pid,
+			                  &ctx->lproc.exec_path,
+			                  &ctx->lproc.uid,
+			                  &ctx->lproc.gid) == 0) {
 				/* fetch user/group names */
-				ctx->user = sys_user_str(ctx->uid);
-				ctx->group = sys_group_str(ctx->gid);
-				if (!ctx->user || !ctx->group) {
+				ctx->lproc.user = sys_user_str(ctx->lproc.uid);
+				ctx->lproc.group = sys_group_str(ctx->lproc.gid);
+				if (!ctx->lproc.user || !ctx->lproc.group) {
 					ctx->enomem = 1;
 					pxy_conn_terminate_free(ctx);
 					return;
 				}
 				log_dbg_printf("Local process "
-					       "%s %i %s:%s\n", ctx->exec_path,
-					       ctx->pid, ctx->user, ctx->group);
+				               "%s %i %s:%s\n",
+				               ctx->lproc.exec_path,
+				               ctx->lproc.pid,
+				               ctx->lproc.user,
+				               ctx->lproc.group);
 			}
+#endif /* WITH_LOCAL_PROCINFO */
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			log_content_open(&ctx->logctx, ctx->src_str,
-			                 ctx->dst_str, ctx->exec_path,
-			                 ctx->user, ctx->group);
+			                 ctx->dst_str,
+#ifdef WITH_LOCAL_PROCINFO
+			                 ctx->lproc.exec_path,
+			                 ctx->lproc.user,
+			                 ctx->lproc.group
+#else /* WITH_LOCAL_PROCINFO */
+			                 NULL, NULL, NULL
+#endif /* WITH_LOCAL_PROCINFO */
+			                );
 		}
 
 		/* log connection if we don't analyze any headers */

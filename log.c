@@ -263,7 +263,11 @@ log_content_close_singlefile(void)
  * Returns an allocated buffer which must be freed by caller, or NULL on error.
  */
 #define PATH_BUF_INC	1024
-static char * WUNRES MALLOC NONNULL(1,2,3)
+static char *
+log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
+                            char *exec_path, char *user, char *group)
+WUNRES MALLOC NONNULL(1,2,3);
+static char *
 log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
                             char *exec_path, char *user, char *group)
 {
@@ -385,7 +389,7 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 
 void
 log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
-		 char *exec_path, char *user, char *group)
+                 char *exec_path, char *user, char *group)
 {
 	if (ctx->open)
 		return;
