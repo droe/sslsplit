@@ -41,8 +41,6 @@ int sys_pidf_open(const char *) NONNULL(1) WUNRES;
 int sys_pidf_write(int) WUNRES;
 void sys_pidf_close(int, const char *) NONNULL(2);
 
-int sys_proc_info(pid_t, char **, uid_t *, gid_t *) WUNRES NONNULL(2,3,4);
-
 char * sys_user_str(uid_t) WUNRES MALLOC;
 char * sys_group_str(gid_t) WUNRES MALLOC;
 

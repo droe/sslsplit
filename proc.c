@@ -47,7 +47,7 @@
 
 #ifdef HAVE_DARWIN_LIBPROC
 int
-proc_lookup_by_addr(pid_t *result, struct sockaddr *dst_addr,
+proc_pid_for_addr(pid_t *result, struct sockaddr *dst_addr,
                     UNUSED socklen_t dst_addrlen)
 {
 	pid_t *pids = NULL;
@@ -144,15 +144,54 @@ errout1:
 	return ret;
 }
 
-#else /* HAVE_DARWIN_LIBPROC */
+#else /* !HAVE_DARWIN_LIBPROC */
 
 int
-proc_lookup_by_addr(pid_t *result, UNUSED struct sockaddr *dst_addr,
+proc_pid_for_addr(pid_t *result, UNUSED struct sockaddr *dst_addr,
                     UNUSED socklen_t dst_addrlen) {
 	*result = -1;
 	return 0;
 }
 
 #endif /* !HAVE_DARWIN_LIBPROC */
+
+
+/*
+ * Fetch process info for the given pid.
+ * On success, returns 0 and fills in path, uid, and gid.
+ * Caller must free returned path string.
+ * Returns -1 on failure, or if unsupported on this platform.
+ */
+int
+proc_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+#if HAVE_DARWIN_LIBPROC
+	/* fetch process structure */
+	struct proc_bsdinfo bsd_info;
+	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info,
+	                 sizeof(bsd_info)) == -1) {
+		return -1;
+	}
+
+	*uid = bsd_info.pbi_uid;
+	*gid = bsd_info.pbi_gid;
+
+	/* fetch process path */
+	*path = malloc(PROC_PIDPATHINFO_MAXSIZE);
+	if (!*path) {
+		return -1;
+	}
+	int path_len = proc_pidpath(pid, *path, PROC_PIDPATHINFO_MAXSIZE);
+	if (path_len == -1) {
+		free(*path);
+		return -1;
+	}
+
+	return 0;
+#else /* !HAVE_DARWIN_LIBPROC */
+	/* unsupported */
+	return -1;
+#endif /* !HAVE_DARWIN_LIBPROC */
+}
+
 
 /* vim: set noet ft=c: */

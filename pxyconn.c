@@ -1580,12 +1580,12 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			}
 
 			/* fetch process info */
-			if (proc_lookup_by_addr(&ctx->pid,
-			                        (struct sockaddr*)&ctx->addr,
-			                        ctx->addrlen) == 0 &&
+			if (proc_pid_for_addr(&ctx->pid,
+			                      (struct sockaddr*)&ctx->addr,
+			                      ctx->addrlen) == 0 &&
 			    ctx->pid != -1 &&
-			    sys_proc_info(ctx->pid, &ctx->exec_path,
-					  &ctx->uid, &ctx->gid) == 0) {
+			    proc_get_info(ctx->pid, &ctx->exec_path,
+			                  &ctx->uid, &ctx->gid) == 0) {
 				/* fetch user/group names */
 				ctx->user = sys_user_str(ctx->uid);
 				ctx->group = sys_group_str(ctx->gid);

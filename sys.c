@@ -198,42 +198,6 @@ sys_pidf_close(int fd, const char *fn)
 }
 
 /*
- * Fetch process info for the given pid.
- * On success, returns 0 and fills in path, uid, and gid.
- * Caller must free returned path string.
- * Returns -1 on failure, or if unsupported on this platform.
- */
-int
-sys_proc_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
-#if HAVE_DARWIN_LIBPROC
-	/* fetch process structure */
-	struct proc_bsdinfo bsd_info;
-	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info, sizeof(bsd_info)) == -1) {
-		return -1;
-	}
-
-	*uid = bsd_info.pbi_uid;
-	*gid = bsd_info.pbi_gid;
-
-	/* fetch process path */
-	*path = malloc(PROC_PIDPATHINFO_MAXSIZE);
-	if (!*path) {
-		return -1;
-	}
-	int path_len = proc_pidpath(pid, *path, PROC_PIDPATHINFO_MAXSIZE);
-	if (path_len == -1) {
-		free(*path);
-		return -1;
-	}
-
-	return 0;
-#else
-	/* unsupported */
-	return -1;
-#endif
-}
-
-/*
  * Converts a local uid into a printable string representation.
  * Returns an allocated buffer which must be freed by caller, or NULL on error.
  */

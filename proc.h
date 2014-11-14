@@ -36,8 +36,8 @@
 
 #include <event2/util.h>
 
-int proc_lookup_by_addr(pid_t *, struct sockaddr *, socklen_t) WUNRES NONNULL(1,2);
-
+int proc_pid_for_addr(pid_t *, struct sockaddr *, socklen_t) WUNRES NONNULL(1,2);
+int proc_get_info(pid_t, char **, uid_t *, gid_t *) WUNRES NONNULL(2,3,4);
 
 #endif /* !PROC_H */
 
