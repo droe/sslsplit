@@ -354,23 +354,26 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 			break;
 		}
 
-		/* growing the buffer to fit elem_len + terminating \0 */
-		if (path_buflen - path_len < elem_len + 1) {
-			/* Grow in PATH_BUF_INC chunks.
-			 * Note that the use of `PATH_BUF_INC' provides our
-			 * gauranteed space for a trailing '\0' */
-			path_buflen += elem_len + PATH_BUF_INC;
-			char *newbuf = realloc(path_buf, path_buflen);
-			if (newbuf == NULL) {
-				log_err_printf("failed to reallocate path buffer");
-				free(path_buf);
-				return NULL;
+		if (elem_len > 0) {
+			/* growing the buffer to fit elem_len + terminating \0 */
+			if (path_buflen - path_len < elem_len + 1) {
+				/* Grow in PATH_BUF_INC chunks.
+				 * Note that the use of `PATH_BUF_INC' provides
+				 * our guaranteed space for a trailing '\0' */
+				path_buflen += elem_len + PATH_BUF_INC;
+				char *newbuf = realloc(path_buf, path_buflen);
+				if (newbuf == NULL) {
+					log_err_printf("failed to reallocate"
+					               " path buffer\n");
+					free(path_buf);
+					return NULL;
+				}
+				path_buf = newbuf;
 			}
-			path_buf = newbuf;
-		}
 
-		strncat(path_buf, elem, elem_len);
-		path_len += elem_len;
+			strncat(path_buf, elem, elem_len);
+			path_len += elem_len;
+		}
 	}
 
 	/* apply terminating NUL */
