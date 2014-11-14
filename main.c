@@ -78,6 +78,16 @@ main_version(void)
 		fprintf(stderr, "Features: %s\n", features);
 	}
 	nat_version();
+	fprintf(stderr, "Local process info support: ");
+#ifdef HAVE_LOCAL_PROCINFO
+	fprintf(stderr, "yes");
+#ifdef HAVE_DARWIN_LIBPROC
+	fprintf(stderr, " (Darwin libproc)");
+#endif /* HAVE_DARWIN_LIBPROC */
+	fprintf(stderr, "\n");
+#else /* !HAVE_LOCAL_PROCINFO */
+	fprintf(stderr, "no\n");
+#endif /* !HAVE_LOCAL_PROCINFO */
 	ssl_openssl_version();
 	fprintf(stderr, "compiled against libevent %s\n", LIBEVENT_VERSION);
 	fprintf(stderr, "rtlinked against libevent %s\n", event_get_version());
