@@ -94,7 +94,7 @@ typedef struct pxy_conn_desc {
 	unsigned int closed : 1;
 } pxy_conn_desc_t;
 
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 /* local process data - filled in iff pid != -1 */
 typedef struct pxy_conn_lproc_desc {
 	pid_t pid;
@@ -106,7 +106,7 @@ typedef struct pxy_conn_lproc_desc {
 	char *user;
 	char *group;
 } pxy_conn_lproc_desc_t;
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 
 /* actual proxy connection state consisting of two connection descriptors,
  * connection-wide state and the specs and options */
@@ -148,10 +148,10 @@ typedef struct pxy_conn_ctx {
 	char *ssl_names;
 	char *ssl_orignames;
 
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 	/* local process information */
 	pxy_conn_lproc_desc_t lproc;
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 
 	/* content log context */
 	log_content_ctx_t logctx;
@@ -195,9 +195,9 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->fd = fd;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 	ctx->lproc.pid = -1;
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 #ifdef DEBUG_PROXY
 	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("%p             pxy_conn_ctx_new\n",
@@ -252,7 +252,7 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	if (ctx->ssl_orignames) {
 		free(ctx->ssl_orignames);
 	}
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 	if (ctx->lproc.exec_path) {
 		free(ctx->lproc.exec_path);
 	}
@@ -262,7 +262,7 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	if (ctx->lproc.group) {
 		free(ctx->lproc.group);
 	}
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 	if (ctx->origcrt) {
 		X509_free(ctx->origcrt);
 	}
@@ -1591,7 +1591,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				pxy_conn_terminate_free(ctx);
 				return;
 			}
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 			/* fetch process info */
 			if (proc_pid_for_addr(&ctx->lproc.pid,
 			                      (struct sockaddr*)&ctx->addr,
@@ -1616,18 +1616,18 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				               ctx->lproc.user,
 				               ctx->lproc.group);
 			}
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			log_content_open(&ctx->logctx, ctx->src_str,
 			                 ctx->dst_str,
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 			                 ctx->lproc.exec_path,
 			                 ctx->lproc.user,
 			                 ctx->lproc.group
-#else /* WITH_LOCAL_PROCINFO */
+#else /* HAVE_LOCAL_PROCINFO */
 			                 NULL, NULL, NULL
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 			                );
 		}
 

@@ -37,13 +37,13 @@
 #include <event2/util.h>
 
 #ifdef HAVE_DARWIN_LIBPROC
-#define WITH_LOCAL_PROCINFO
+#define HAVE_LOCAL_PROCINFO
 #endif /* HAVE_DARWIN_LIBPROC */
 
-#ifdef WITH_LOCAL_PROCINFO
+#ifdef HAVE_LOCAL_PROCINFO
 int proc_pid_for_addr(pid_t *, struct sockaddr *, socklen_t) WUNRES NONNULL(1,2);
 int proc_get_info(pid_t, char **, uid_t *, gid_t *) WUNRES NONNULL(2,3,4);
-#endif /* WITH_LOCAL_PROCINFO */
+#endif /* HAVE_LOCAL_PROCINFO */
 
 #endif /* !PROC_H */
 

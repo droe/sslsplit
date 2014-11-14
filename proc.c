@@ -40,6 +40,8 @@
 #include <libproc.h>
 #endif /* HAVE_DARWIN_LIBPROC */
 
+#ifdef HAVE_LOCAL_PROCINFO
+
 
 /*
  * Local process lookup.
@@ -194,5 +196,6 @@ proc_get_info(UNUSED pid_t pid, UNUSED char **path,
 }
 #endif /* !HAVE_DARWIN_LIBPROC */
 
+#endif /* HAVE_LOCAL_PROCINFO */
 
 /* vim: set noet ft=c: */
