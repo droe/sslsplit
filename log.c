@@ -263,7 +263,7 @@ log_content_close_singlefile(void)
  * Returns an allocated buffer which must be freed by caller, or NULL on error.
  */
 #define PATH_BUF_INC	1024
-static char * WUNRES NONNULL(1,2,3)
+static char * WUNRES MALLOC NONNULL(1,2,3)
 log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
                             char *exec_path, char *user, char *group)
 {
@@ -402,6 +402,10 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 		filename = log_content_format_pathspec(content_logspec,
 		                                       srcaddr, dstaddr,
 		                                       exec_path, user, group);
+		if (!filename) {
+			ctx->fd = -1;
+			return;
+		}
 
 		/* statefully create parent directories by iteratively rewriting
 		 * the path at each directory seperator */
@@ -426,6 +430,7 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 					               "directory '%s': %s\n",
 					               parent, strerror(errno));
 					ctx->fd = -1;
+					free(filename);
 					return;
 				}
 			} else if (!S_ISDIR(sbuf.st_mode)) {
@@ -433,6 +438,7 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 				               "%s is not a directory\n",
 				               filename, parent);
 				ctx->fd = -1;
+				free(filename);
 				return;
 			}
 
@@ -449,6 +455,7 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 			log_err_printf("Failed to open '%s': %s\n",
 			               filename, strerror(errno));
 		}
+		free(filename);
 	} else {
 		/* per-connection-file content log (-S) */
 		char filename[1024];
