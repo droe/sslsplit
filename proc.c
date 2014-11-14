@@ -48,7 +48,7 @@
 #ifdef HAVE_DARWIN_LIBPROC
 int
 proc_pid_for_addr(pid_t *result, struct sockaddr *dst_addr,
-                    UNUSED socklen_t dst_addrlen)
+                  UNUSED socklen_t dst_addrlen)
 {
 	pid_t *pids = NULL;
 	struct proc_fdinfo *fds = NULL;
@@ -143,16 +143,13 @@ errout2:
 errout1:
 	return ret;
 }
-
 #else /* !HAVE_DARWIN_LIBPROC */
-
 int
 proc_pid_for_addr(pid_t *result, UNUSED struct sockaddr *dst_addr,
                     UNUSED socklen_t dst_addrlen) {
 	*result = -1;
 	return 0;
 }
-
 #endif /* !HAVE_DARWIN_LIBPROC */
 
 
@@ -162,9 +159,9 @@ proc_pid_for_addr(pid_t *result, UNUSED struct sockaddr *dst_addr,
  * Caller must free returned path string.
  * Returns -1 on failure, or if unsupported on this platform.
  */
+#if HAVE_DARWIN_LIBPROC
 int
 proc_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
-#if HAVE_DARWIN_LIBPROC
 	/* fetch process structure */
 	struct proc_bsdinfo bsd_info;
 	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info,
@@ -187,11 +184,15 @@ proc_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 	}
 
 	return 0;
+}
 #else /* !HAVE_DARWIN_LIBPROC */
+int
+proc_get_info(UNUSED pid_t pid, UNUSED char **path,
+              UNUSED uid_t *uid, UNUSED gid_t *gid) {
 	/* unsupported */
 	return -1;
-#endif /* !HAVE_DARWIN_LIBPROC */
 }
+#endif /* !HAVE_DARWIN_LIBPROC */
 
 
 /* vim: set noet ft=c: */
