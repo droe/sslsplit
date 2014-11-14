@@ -35,6 +35,7 @@
 #include "proxy.h"
 #include "ssl.h"
 #include "nat.h"
+#include "proc.h"
 #include "cachemgr.h"
 #include "sys.h"
 #include "log.h"
@@ -144,12 +145,21 @@ main_usage(void)
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
 "              %%d - dest address:port\n"
 "              %%s - source address:port\n"
-"              %%x - base name of local process (skipped if unavailable)\n"
-"              %%X - full path to local process (skipped if unavailable)\n"
-"              %%u - user name or id of local process (skipped if unavailable)\n"
-"              %%g - group name or id of local process (skipped if unavailable)\n"
+#ifdef HAVE_LOCAL_PROCINFO
+"              %%x - base name of local process        (requires -i)\n"
+"              %%X - full path to local process        (requires -i)\n"
+"              %%u - user name or id of local process  (requires -i)\n"
+"              %%g - group name or id of local process (requires -i)\n"
+#endif /* HAVE_LOCAL_PROCINFO */
 "              %%%% - literal '%%'\n"
-"      e.g.    \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T\"\n"
+#ifdef HAVE_LOCAL_PROCINFO
+"      e.g.    \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T.log\"\n"
+"  -i          look up local process owning each connection for logging\n"
+#define OPT_i "i"
+#else /* !HAVE_LOCAL_PROCINFO */
+"      e.g.    \"/var/log/sslsplit/%%T-%%s-%%d.log\"\n"
+#define OPT_i 
+#endif /* HAVE_LOCAL_PROCINFO */
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
@@ -258,7 +268,7 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z
+	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i
 	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
@@ -503,6 +513,11 @@ main(int argc, char *argv[])
 				opts->contentlogdir = 0;
 				opts->contentlogspec = 1;
 				break;
+#ifdef HAVE_LOCAL_PROCINFO
+			case 'i':
+				opts->lprocinfo = 1;
+				break;
+#endif /* HAVE_LOCAL_PROCINFO */
 			case 'd':
 				opts->detach = 1;
 				break;

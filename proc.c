@@ -49,8 +49,8 @@
 
 #ifdef HAVE_DARWIN_LIBPROC
 int
-proc_pid_for_addr(pid_t *result, struct sockaddr *dst_addr,
-                  UNUSED socklen_t dst_addrlen)
+proc_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
+                  UNUSED socklen_t src_addrlen)
 {
 	pid_t *pids = NULL;
 	struct proc_fdinfo *fds = NULL;
@@ -109,25 +109,25 @@ proc_pid_for_addr(pid_t *result, struct sockaddr *dst_addr,
 				continue;
 			}
 
-			uint16_t sock_fport = sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_fport;
+			uint16_t sock_lport = sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_lport;
 			if (sinfo.psi.soi_family == AF_INET &&
-			    dst_addr->sa_family == AF_INET) {
-				struct sockaddr_in *dst_sai = (struct sockaddr_in *)dst_addr;
-				if (dst_sai->sin_addr.s_addr != sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_46.i46a_addr4.s_addr) {
+			    src_addr->sa_family == AF_INET) {
+				struct sockaddr_in *src_sai = (struct sockaddr_in *)src_addr;
+				if (src_sai->sin_addr.s_addr != sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4.s_addr) {
 					continue;
 				}
 
-				if (dst_sai->sin_port != sock_fport) {
+				if (src_sai->sin_port != sock_lport) {
 					continue;
 				}
 			} else if (sinfo.psi.soi_family == AF_INET6 &&
-			           dst_addr->sa_family == AF_INET6) {
-				struct sockaddr_in6 *dst_sai = (struct sockaddr_in6 *)dst_addr;
-				if (memcmp(dst_sai->sin6_addr.s6_addr,  sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_faddr.ina_6.s6_addr, 16) != 0) {
+			           src_addr->sa_family == AF_INET6) {
+				struct sockaddr_in6 *src_sai = (struct sockaddr_in6 *)src_addr;
+				if (memcmp(src_sai->sin6_addr.s6_addr,  sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6.s6_addr, 16) != 0) {
 					continue;
 				}
 
-				if (dst_sai->sin6_port != sock_fport) {
+				if (src_sai->sin6_port != sock_lport) {
 					continue;
 				}
 			}
@@ -147,8 +147,8 @@ errout1:
 }
 #else /* !HAVE_DARWIN_LIBPROC */
 int
-proc_pid_for_addr(pid_t *result, UNUSED struct sockaddr *dst_addr,
-                    UNUSED socklen_t dst_addrlen) {
+proc_pid_for_addr(pid_t *result, UNUSED struct sockaddr *src_addr,
+                    UNUSED socklen_t src_addrlen) {
 	*result = -1;
 	return 0;
 }

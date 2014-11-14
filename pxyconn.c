@@ -97,6 +97,9 @@ typedef struct pxy_conn_desc {
 #ifdef HAVE_LOCAL_PROCINFO
 /* local process data - filled in iff pid != -1 */
 typedef struct pxy_conn_lproc_desc {
+	struct sockaddr_storage srcaddr;
+	socklen_t srcaddrlen;
+
 	pid_t pid;
 	uid_t uid;
 	gid_t gid;
@@ -1591,30 +1594,36 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				pxy_conn_terminate_free(ctx);
 				return;
 			}
+
 #ifdef HAVE_LOCAL_PROCINFO
-			/* fetch process info */
-			if (proc_pid_for_addr(&ctx->lproc.pid,
-			                      (struct sockaddr*)&ctx->addr,
-			                      ctx->addrlen) == 0 &&
-			    ctx->lproc.pid != -1 &&
-			    proc_get_info(ctx->lproc.pid,
-			                  &ctx->lproc.exec_path,
-			                  &ctx->lproc.uid,
-			                  &ctx->lproc.gid) == 0) {
-				/* fetch user/group names */
-				ctx->lproc.user = sys_user_str(ctx->lproc.uid);
-				ctx->lproc.group = sys_group_str(ctx->lproc.gid);
-				if (!ctx->lproc.user || !ctx->lproc.group) {
-					ctx->enomem = 1;
-					pxy_conn_terminate_free(ctx);
-					return;
+			if (ctx->opts->lprocinfo) {
+				/* fetch process info */
+				if (proc_pid_for_addr(&ctx->lproc.pid,
+				        (struct sockaddr*)&ctx->lproc.srcaddr,
+				        ctx->lproc.srcaddrlen) == 0 &&
+				    ctx->lproc.pid != -1 &&
+				    proc_get_info(ctx->lproc.pid,
+				                  &ctx->lproc.exec_path,
+				                  &ctx->lproc.uid,
+				                  &ctx->lproc.gid) == 0) {
+					/* fetch user/group names */
+					ctx->lproc.user = sys_user_str(
+					                ctx->lproc.uid);
+					ctx->lproc.group = sys_group_str(
+					                ctx->lproc.gid);
+					if (!ctx->lproc.user ||
+					    !ctx->lproc.group) {
+						ctx->enomem = 1;
+						pxy_conn_terminate_free(ctx);
+						return;
+					}
+					log_dbg_printf("Local process "
+					               "%s %i %s:%s\n",
+					               ctx->lproc.exec_path,
+					               ctx->lproc.pid,
+					               ctx->lproc.user,
+					               ctx->lproc.group);
 				}
-				log_dbg_printf("Local process "
-				               "%s %i %s:%s\n",
-				               ctx->lproc.exec_path,
-				               ctx->lproc.pid,
-				               ctx->lproc.user,
-				               ctx->lproc.group);
 			}
 #endif /* HAVE_LOCAL_PROCINFO */
 		}
@@ -2016,6 +2025,12 @@ pxy_conn_setup(evutil_socket_t fd,
 		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
 		if (!ctx->src_str)
 			goto memout;
+#ifdef HAVE_LOCAL_PROCINFO
+		if (ctx->opts->lprocinfo) {
+			memcpy(&ctx->lproc.srcaddr, peeraddr, peeraddrlen);
+			ctx->lproc.srcaddrlen = peeraddrlen;
+		}
+#endif /* HAVE_LOCAL_PROCINFO */
 	}
 
 	/* for SSL, defer dst connection setup to initial_readcb */

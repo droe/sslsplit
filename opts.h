@@ -29,6 +29,7 @@
 #ifndef OPTS_H
 #define OPTS_H
 
+#include "proc.h"
 #include "nat.h"
 #include "ssl.h"
 #include "attrib.h"
@@ -76,6 +77,9 @@ typedef struct opts {
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlogdir : 1;
 	unsigned int contentlogspec : 1;
+#ifdef HAVE_LOCAL_PROCINFO
+	unsigned int lprocinfo : 1;
+#endif /* HAVE_LOCAL_PROCINFO */
 	char *ciphers;
 	char *tgcrtdir;
 	char *dropuser;
