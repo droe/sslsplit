@@ -118,7 +118,7 @@ nat_pf_fini(void)
 
 static int
 nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                 pid_t *pid, evutil_socket_t s,
+                 evutil_socket_t s,
                  struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
 #ifdef __APPLE__
@@ -252,9 +252,6 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 	struct natlookup nl;
 	struct ipfobj ipfo;
 
-	/* pid lookup is unsupported. */
-	*pid = -1;
-
 	our_addrlen = sizeof(struct sockaddr_storage);
 	if (getsockname(s, (struct sockaddr *)&our_addr, &our_addrlen) == -1) {
 		log_err_printf("Error from getsockname(): %s\n",
@@ -326,14 +323,10 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
  */
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                        pid_t *pid, evutil_socket_t s,
-                        struct sockaddr *src_addr,
-                        UNUSED socklen_t src_addrlen)
+                        evutil_socket_t s,
+                        struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
 	int rv;
-
-	/* pid lookup is unsupported. */
-	*pid = -1;
 
 	if (src_addr->sa_family != AF_INET) {
 		log_err_printf("The netfilter NAT engine only "
@@ -383,13 +376,10 @@ nat_iptransparent_socket_cb(evutil_socket_t s)
  */
 static int
 nat_getsockname_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
-                          pid_t *pid, evutil_socket_t s,
+                          evutil_socket_t s,
                           UNUSED struct sockaddr *src_addr,
                           UNUSED socklen_t src_addrlen)
 {
-	/* pid lookup is unsupported. */
-	*pid = -1;
-
 	if (getsockname(s, dst_addr, dst_addrlen) == -1) {
 		log_err_printf("Error from getsockname(): %s\n",
 		               strerror(errno));
