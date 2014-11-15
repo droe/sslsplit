@@ -40,8 +40,6 @@
 #include <libproc.h>
 #endif /* HAVE_DARWIN_LIBPROC */
 
-#ifdef HAVE_LOCAL_PROCINFO
-
 
 /*
  * Local process lookup.
@@ -145,14 +143,7 @@ errout2:
 errout1:
 	return ret;
 }
-#else /* !HAVE_DARWIN_LIBPROC */
-int
-proc_pid_for_addr(pid_t *result, UNUSED struct sockaddr *src_addr,
-                    UNUSED socklen_t src_addrlen) {
-	*result = -1;
-	return 0;
-}
-#endif /* !HAVE_DARWIN_LIBPROC */
+#endif /* HAVE_DARWIN_LIBPROC */
 
 
 /*
@@ -187,15 +178,6 @@ proc_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 
 	return 0;
 }
-#else /* !HAVE_DARWIN_LIBPROC */
-int
-proc_get_info(UNUSED pid_t pid, UNUSED char **path,
-              UNUSED uid_t *uid, UNUSED gid_t *gid) {
-	/* unsupported */
-	return -1;
-}
-#endif /* !HAVE_DARWIN_LIBPROC */
-
-#endif /* HAVE_LOCAL_PROCINFO */
+#endif /* HAVE_DARWIN_LIBPROC */
 
 /* vim: set noet ft=c: */
