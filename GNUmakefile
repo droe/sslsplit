@@ -319,8 +319,8 @@ endif
 %.o: %.c $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n 0)\""
-test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n 0)\""
+test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n 0||echo 0)\""
+test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n 0||echo 0)\""
 test: $(TARGET).test
 	$(RM) extra/pki/session.pem
 	$(MAKE) -C extra/pki testreqs session
