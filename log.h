@@ -64,8 +64,8 @@ typedef struct log_content_ctx {
 	char *header_in;
 	char *header_out;
 } log_content_ctx_t;
-void log_content_open(log_content_ctx_t *, char *, char *,
-                      char *, char *, char *) NONNULL(1,2,3);
+int log_content_open(log_content_ctx_t *, char *, char *,
+                     char *, char *, char *) NONNULL(1,2,3) WUNRES;
 void log_content_submit(log_content_ctx_t *, logbuf_t *, int) NONNULL(1,2);
 void log_content_close(log_content_ctx_t *) NONNULL(1);
 

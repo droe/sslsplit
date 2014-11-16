@@ -1706,16 +1706,21 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 #endif /* HAVE_LOCAL_PROCINFO */
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
-			log_content_open(&ctx->logctx, ctx->src_str,
-			                 ctx->dst_str,
+			if (log_content_open(&ctx->logctx, ctx->src_str,
+			                     ctx->dst_str,
 #ifdef HAVE_LOCAL_PROCINFO
-			                 ctx->lproc.exec_path,
-			                 ctx->lproc.user,
-			                 ctx->lproc.group
+			                     ctx->lproc.exec_path,
+			                     ctx->lproc.user,
+			                     ctx->lproc.group
 #else /* HAVE_LOCAL_PROCINFO */
-			                 NULL, NULL, NULL
+			                     NULL, NULL, NULL
 #endif /* HAVE_LOCAL_PROCINFO */
-			                );
+			                    ) == -1) {
+				if (errno == ENOMEM)
+					ctx->enomem = 1;
+				pxy_conn_terminate_free(ctx);
+				return;
+			}
 		}
 
 		/* log connection if we don't analyze any headers */

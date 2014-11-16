@@ -388,18 +388,25 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 }
 #undef PATH_BUF_INC
 
-void
+int
 log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
                  char *exec_path, char *user, char *group)
 {
 	if (ctx->open)
-		return;
+		return 0;
 
 	if (content_fd != -1) {
 		/* single-file content log (-L) */
 		ctx->fd = content_fd;
-		asprintf(&ctx->header_in, "%s -> %s", srcaddr, dstaddr);
-		asprintf(&ctx->header_out, "%s -> %s", dstaddr, srcaddr);
+		if (asprintf(&ctx->header_in, "%s -> %s",
+		             srcaddr, dstaddr) == -1) {
+			return -1;
+		}
+		if (asprintf(&ctx->header_out, "%s -> %s",
+		             dstaddr, srcaddr) == -1) {
+			free(ctx->header_in);
+			return -1;
+		}
 	} else if (content_logspec) {
 		/* per-connection-file content log with logspec (-F) */
 		char *filename, *filedir;
@@ -408,8 +415,7 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 		                                       srcaddr, dstaddr,
 		                                       exec_path, user, group);
 		if (!filename) {
-			ctx->fd = -1;
-			return;
+			return -1;
 		}
 
 		filedir = dirname(filename);
@@ -417,14 +423,15 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 			log_err_printf("Could not create directory '%s': %s\n",
 			               filedir, strerror(errno));
 			free(filename);
-			ctx->fd = -1;
-			return;
+			return -1;
 		}
 
 		ctx->fd = open(filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
 		if (ctx->fd == -1) {
 			log_err_printf("Failed to open '%s': %s\n",
 			               filename, strerror(errno));
+			free(filename);
+			return -1;
 		}
 		free(filename);
 	} else {
@@ -434,18 +441,36 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 		time_t epoch;
 		struct tm *utc;
 
-		time(&epoch);
-		utc = gmtime(&epoch);
-		strftime(timebuf, sizeof(timebuf), "%Y%m%dT%H%M%SZ", utc);
-		snprintf(filename, sizeof(filename), "%s/%s-%s-%s.log",
-		         content_basedir, timebuf, srcaddr, dstaddr);
+		if (time(&epoch) == -1) {
+			log_err_printf("Failed to get time\n");
+			return -1;
+		}
+		if ((utc = gmtime(&epoch)) == NULL) {
+			log_err_printf("Failed to convert time: %s\n",
+			               strerror(errno));
+			return -1;
+		}
+		if (!strftime(timebuf, sizeof(timebuf),
+		              "%Y%m%dT%H%M%SZ", utc)) {
+			log_err_printf("Failed to format time: %s\n",
+			               strerror(errno));
+			return -1;
+		}
+		if (snprintf(filename, sizeof(filename), "%s/%s-%s-%s.log",
+		             content_basedir, timebuf, srcaddr, dstaddr) < 0) {
+			log_err_printf("Failed to format filename: %s\n",
+			               strerror(errno));
+			return -1;
+		}
 		ctx->fd = open(filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
 		if (ctx->fd == -1) {
 			log_err_printf("Failed to open '%s': %s\n",
 			               filename, strerror(errno));
+			return -1;
 		}
 	}
 	ctx->open = 1;
+	return 0;
 }
 
 void
