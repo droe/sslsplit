@@ -155,8 +155,9 @@ Display help on usage and exit.
 .TP
 .B \-i
 For each connection, find the local process owning the connection.  This makes
-process information such as pid, owner:group and process name for connections
-originating on the same system as SSLsplit available to the logging facilities.
+process information such as pid, owner:group and executable path for
+connections originating on the same system as SSLsplit available to the
+connect log and enables the respective \fB-F\fP path specification directives.
 .TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
