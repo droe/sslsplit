@@ -405,6 +405,7 @@ out:
 		free(lpi);
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
+	return;
 }
 
 static void
