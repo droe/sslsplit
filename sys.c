@@ -331,6 +331,54 @@ sys_isdir(const char *path)
 }
 
 /*
+ * Create directory including parent directories with mode_t.
+ * Mode of existing parent directories is not changed.
+ * Returns 0 on success, -1 and sets errno on error.
+ */
+int
+sys_mkpath(const char *path, mode_t mode)
+{
+	char parent[strlen(path)+1];
+	char *p;
+
+	memcpy(parent, path, sizeof(parent));
+
+	p = parent;
+	do {
+		/* skip leading '/' characters */
+		while (*p == '/') p++;
+		p = strchr(p, '/');
+		if (p) {
+			/* overwrite '/' to terminate the string at the next
+			 * parent directory */
+			*p = '\0';
+		}
+
+		struct stat sbuf;
+		if (stat(parent, &sbuf) == -1) {
+			if (errno == ENOENT) {
+				if (mkdir(parent, mode) != 0)
+					return -1;
+			} else {
+				return -1;
+			}
+		} else if (!S_ISDIR(sbuf.st_mode)) {
+			errno = ENOTDIR;
+			return -1;
+		}
+
+		if (p) {
+			/* replace the overwritten slash */
+			*p = '/';
+			p++;
+		}
+	} while (p);
+
+	return 0;
+}
+
+
+/*
  * Iterate over all files in a directory hierarchy, calling the callback
  * cb for each file, passing the filename and arg as arguments.  Files and
  * directories beginning with a dot are skipped, symlinks are followed.

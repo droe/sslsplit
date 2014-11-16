@@ -49,6 +49,7 @@ int sys_sockaddr_parse(struct sockaddr_storage *, socklen_t *,
 char * sys_sockaddr_str(struct sockaddr *, socklen_t) NONNULL(1) MALLOC;
 
 int sys_isdir(const char *) NONNULL(1) WUNRES;
+int sys_mkpath(const char *, mode_t) NONNULL(1) WUNRES;
 
 typedef void (*sys_dir_eachfile_cb_t)(const char *, void *) NONNULL(1);
 int sys_dir_eachfile(const char *, sys_dir_eachfile_cb_t, void *) NONNULL(1,2);

@@ -40,12 +40,14 @@
 #include <check.h>
 
 #define TARGETDIR "extra/pki/targets"
-static char basedir[] = "/tmp/" BNAME ".test.XXXXXX";
+static char template[] = "/tmp/" BNAME ".test.XXXXXX";
+static char *basedir;
 static char *file, *lfile, *dir, *ldir, *notexist;
 
 static void
 sys_isdir_setup(void)
 {
+	basedir = strdup(template);
 	if (!mkdtemp(basedir)) {
 		perror("mkdtemp");
 		exit(EXIT_FAILURE);
@@ -107,6 +109,41 @@ END_TEST
 START_TEST(sys_isdir_05)
 {
 	fail_unless(!sys_isdir(lfile), "Symlink file isdir");
+}
+END_TEST
+
+static void
+sys_mkpath_setup(void)
+{
+	basedir = strdup(template);
+	if (!mkdtemp(basedir)) {
+		perror("mkdtemp");
+		exit(EXIT_FAILURE);
+	}
+}
+
+static void
+sys_mkpath_teardown(void)
+{
+	char *cmd;
+
+	asprintf(&cmd, "rm -r '%s'", basedir);
+	if (cmd) {
+		system(cmd);
+	}
+}
+
+START_TEST(sys_mkpath_01)
+{
+	char *dir;
+
+	asprintf(&dir, "%s/a/bb/ccc/dddd/eeeee/ffffff/ggggggg/hhhhhhhh",
+	         basedir);
+	fail_unless(dir, "asprintf failed");
+	fail_unless(!sys_isdir(dir), "dir already sys_isdir()");
+	fail_unless(!sys_mkpath(dir, 0755), "sys_mkpath failed");
+	fail_unless(sys_isdir(dir), "dir not sys_isdir()");
+	free(dir);
 }
 END_TEST
 
@@ -182,6 +219,11 @@ sys_suite(void)
 	tcase_add_test(tc, sys_isdir_03);
 	tcase_add_test(tc, sys_isdir_04);
 	tcase_add_test(tc, sys_isdir_05);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sys_mkpath");
+	tcase_add_unchecked_fixture(tc, sys_mkpath_setup, sys_mkpath_teardown);
+	tcase_add_test(tc, sys_mkpath_01);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("sys_dir_eachfile");

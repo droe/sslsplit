@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <syslog.h>
+#include <libgen.h>
 #include <assert.h>
 #include <sys/stat.h>
 
@@ -401,7 +402,7 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 		asprintf(&ctx->header_out, "%s -> %s", dstaddr, srcaddr);
 	} else if (content_logspec) {
 		/* per-connection-file content log with logspec (-F) */
-		char *filename;
+		char *filename, *filedir;
 
 		filename = log_content_format_pathspec(content_logspec,
 		                                       srcaddr, dstaddr,
@@ -411,47 +412,13 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 			return;
 		}
 
-		/* statefully create parent directories by iteratively rewriting
-		 * the path at each directory seperator */
-		char parent[strlen(filename)+1];
-		char *p;
-
-		memcpy(parent, filename, sizeof(parent));
-
-		/* skip leading '/' characters */
-		p = parent;
-		while (*p == '/') p++;
-
-		while ((p = strchr(p, '/')) != NULL) {
-			/* overwrite '/' to terminate the string at the next
-			 * parent directory */
-			*p = '\0';
-
-			struct stat sbuf;
-			if (stat(parent, &sbuf) != 0) {
-				if (mkdir(parent, 0755) != 0) {
-					log_err_printf("Could not create "
-					               "directory '%s': %s\n",
-					               parent, strerror(errno));
-					ctx->fd = -1;
-					free(filename);
-					return;
-				}
-			} else if (!S_ISDIR(sbuf.st_mode)) {
-				log_err_printf("Failed to open '%s': "
-				               "%s is not a directory\n",
-				               filename, parent);
-				ctx->fd = -1;
-				free(filename);
-				return;
-			}
-
-			/* replace the overwritten slash */
-			*p = '/';
-			p++;
-
-			/* skip leading '/' characters */
-			while (*p == '/') p++;
+		filedir = dirname(filename);
+		if (!filedir || sys_mkpath(filedir, 0755) == -1) {
+			log_err_printf("Could not create directory '%s': %s\n",
+			               filedir, strerror(errno));
+			free(filename);
+			ctx->fd = -1;
+			return;
 		}
 
 		ctx->fd = open(filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
