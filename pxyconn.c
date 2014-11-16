@@ -1617,13 +1617,13 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 						pxy_conn_terminate_free(ctx);
 						return;
 					}
-					log_dbg_printf("Local process "
-					               "%s %i %s:%s\n",
-					               ctx->lproc.exec_path,
-					               ctx->lproc.pid,
-					               ctx->lproc.user,
-					               ctx->lproc.group);
 				}
+				log_dbg_printf("Local process: "
+				               "%i %s:%s %s\n",
+				               ctx->lproc.pid,
+				               STRORDASH(ctx->lproc.user),
+				               STRORDASH(ctx->lproc.group),
+				               STRORDASH(ctx->lproc.exec_path));
 			}
 #endif /* HAVE_LOCAL_PROCINFO */
 		}
