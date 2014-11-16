@@ -153,6 +153,20 @@ START_TEST(pthread_create_01)
 }
 END_TEST
 
+START_TEST(sys_user_str_01)
+{
+	char *name = sys_user_str(0);
+	fail_unless(!strcmp(name, TEST_ZEROUSR), "User 0 name mismatch");
+}
+END_TEST
+
+START_TEST(sys_group_str_01)
+{
+	char *name = sys_group_str(0);
+	fail_unless(!strcmp(name, TEST_ZEROGRP), "Group 0 name mismatch");
+}
+END_TEST
+
 Suite *
 sys_suite(void)
 {
@@ -180,6 +194,14 @@ sys_suite(void)
 
 	tc = tcase_create("pthread_create");
 	tcase_add_test(tc, pthread_create_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sys_user_str");
+	tcase_add_test(tc, sys_user_str_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sys_group_str");
+	tcase_add_test(tc, sys_group_str_01);
 	suite_add_tcase(s, tc);
 
 	return s;
