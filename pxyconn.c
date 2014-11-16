@@ -338,25 +338,58 @@ static void
 pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 {
 	char *msg;
+#ifdef HAVE_LOCAL_PROCINFO
+	char *lpi = NULL;
+#endif /* HAVE_LOCAL_PROCINFO */
 	int rv;
 
+#ifdef HAVE_LOCAL_PROCINFO
+	if (ctx->opts->lprocinfo) {
+		rv = asprintf(&lpi, "pid:%i powner:%s:%s pexecpath:%s",
+		              ctx->lproc.pid,
+		              STRORDASH(ctx->lproc.user),
+		              STRORDASH(ctx->lproc.group),
+		              STRORDASH(ctx->lproc.exec_path));
+		if ((rv == -1) || !lpi) {
+			ctx->enomem = 1;
+			goto out;
+		}
+	}
+#endif /* HAVE_LOCAL_PROCINFO */
+
 	if (!ctx->spec->ssl || ctx->passthrough) {
-		rv = asprintf(&msg, "%s %s %s\n",
+		rv = asprintf(&msg, "%s %s %s"
+#ifdef HAVE_LOCAL_PROCINFO
+		              " %s"
+#endif /* HAVE_LOCAL_PROCINFO */
+		              "\n",
 		              ctx->passthrough ? "passthrough" : "tcp",
 		              STRORDASH(ctx->src_str),
-		              STRORDASH(ctx->dst_str));
+		              STRORDASH(ctx->dst_str)
+#ifdef HAVE_LOCAL_PROCINFO
+		              , lpi
+#endif /* HAVE_LOCAL_PROCINFO */
+		             );
 	} else {
 		rv = asprintf(&msg, "ssl %s %s "
-		              "sni:%s crt:%s origcrt:%s\n",
+		              "sni:%s crt:%s origcrt:%s"
+#ifdef HAVE_LOCAL_PROCINFO
+		              " %s"
+#endif /* HAVE_LOCAL_PROCINFO */
+		              "\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
-		              STRORDASH(ctx->ssl_orignames));
+		              STRORDASH(ctx->ssl_orignames)
+#ifdef HAVE_LOCAL_PROCINFO
+		              , lpi
+#endif /* HAVE_LOCAL_PROCINFO */
+		             );
 	}
 	if ((rv == -1) || !msg) {
 		ctx->enomem = 1;
-		return;
+		goto out;
 	}
 	if (!ctx->opts->detach) {
 		log_err_printf("%s", msg);
@@ -366,12 +399,21 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	} else {
 		free(msg);
 	}
+out:
+#ifdef HAVE_LOCAL_PROCINFO
+	if (lpi) {
+		free(lpi);
+	}
+#endif /* HAVE_LOCAL_PROCINFO */
 }
 
 static void
 pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 {
 	char *msg;
+#ifdef HAVE_LOCAL_PROCINFO
+	char *lpi = NULL;
+#endif /* HAVE_LOCAL_PROCINFO */
 	int rv;
 
 #ifdef DEBUG_PROXY
@@ -382,8 +424,26 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	}
 #endif
 
+#ifdef HAVE_LOCAL_PROCINFO
+	if (ctx->opts->lprocinfo) {
+		rv = asprintf(&lpi, "pid:%i powner:%s:%s pexecpath:%s",
+		              ctx->lproc.pid,
+		              STRORDASH(ctx->lproc.user),
+		              STRORDASH(ctx->lproc.group),
+		              STRORDASH(ctx->lproc.exec_path));
+		if ((rv == -1) || !lpi) {
+			ctx->enomem = 1;
+			goto out;
+		}
+	}
+#endif /* HAVE_LOCAL_PROCINFO */
+
 	if (!ctx->spec->ssl) {
-		rv = asprintf(&msg, "http %s %s %s %s %s %s %s%s\n",
+		rv = asprintf(&msg, "http %s %s %s %s %s %s %s"
+#ifdef HAVE_LOCAL_PROCINFO
+		              " %s"
+#endif /* HAVE_LOCAL_PROCINFO */
+		              "%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -391,10 +451,17 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->http_uri),
 		              STRORDASH(ctx->http_status_code),
 		              STRORDASH(ctx->http_content_length),
+#ifdef HAVE_LOCAL_PROCINFO
+		              lpi,
+#endif /* HAVE_LOCAL_PROCINFO */
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	} else {
 		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
-		              "sni:%s crt:%s origcrt:%s%s\n",
+		              "sni:%s crt:%s origcrt:%s"
+#ifdef HAVE_LOCAL_PROCINFO
+		              " %s"
+#endif /* HAVE_LOCAL_PROCINFO */
+		              "%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -405,11 +472,14 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
 		              STRORDASH(ctx->ssl_orignames),
+#ifdef HAVE_LOCAL_PROCINFO
+		              lpi,
+#endif /* HAVE_LOCAL_PROCINFO */
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	}
 	if ((rv == -1) || !msg) {
 		ctx->enomem = 1;
-		return;
+		goto out;
 	}
 	if (!ctx->opts->detach) {
 		log_err_printf("%s", msg);
@@ -419,6 +489,13 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	} else {
 		free(msg);
 	}
+out:
+#ifdef HAVE_LOCAL_PROCINFO
+	if (lpi) {
+		free(lpi);
+	}
+#endif /* HAVE_LOCAL_PROCINFO */
+	return;
 }
 
 /*
