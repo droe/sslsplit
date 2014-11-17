@@ -149,7 +149,6 @@ typedef struct pxy_conn_ctx {
 
 	/* log strings from SSL context */
 	char *ssl_names;
-	char *ssl_orignames;
 
 #ifdef HAVE_LOCAL_PROCINFO
 	/* local process information */
@@ -252,9 +251,6 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	if (ctx->ssl_names) {
 		free(ctx->ssl_names);
 	}
-	if (ctx->ssl_orignames) {
-		free(ctx->ssl_orignames);
-	}
 #ifdef HAVE_LOCAL_PROCINFO
 	if (ctx->lproc.exec_path) {
 		free(ctx->lproc.exec_path);
@@ -345,7 +341,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 
 #ifdef HAVE_LOCAL_PROCINFO
 	if (ctx->opts->lprocinfo) {
-		rv = asprintf(&lpi, "pid:%i powner:%s:%s pexecpath:%s",
+		rv = asprintf(&lpi, "lproc:%i:%s:%s:%s",
 		              ctx->lproc.pid,
 		              STRORDASH(ctx->lproc.user),
 		              STRORDASH(ctx->lproc.group),
@@ -372,7 +368,8 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		             );
 	} else {
 		rv = asprintf(&msg, "ssl %s %s "
-		              "sni:%s crt:%s origcrt:%s"
+		              "sni:%s names:%s "
+		              "sproto:%s:%s dproto:%s:%s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -430,7 +427,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 
 #ifdef HAVE_LOCAL_PROCINFO
 	if (ctx->opts->lprocinfo) {
-		rv = asprintf(&lpi, "pid:%i powner:%s:%s pexecpath:%s",
+		rv = asprintf(&lpi, "lproc:%i:%s:%s:%s",
 		              ctx->lproc.pid,
 		              STRORDASH(ctx->lproc.user),
 		              STRORDASH(ctx->lproc.group),
@@ -461,7 +458,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	} else {
 		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
-		              "sni:%s crt:%s origcrt:%s"
+		              "sni:%s names:%s "
+		              "sproto:%s:%s dproto:%s:%s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -828,15 +826,11 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 	}
 
 	if (WANT_CONNECT_LOG(ctx)) {
-		ctx->ssl_names = ssl_x509_names_to_str(cert->crt);
+		ctx->ssl_names = ssl_x509_names_to_str(ctx->origcrt ?
+		                                       ctx->origcrt :
+		                                       cert->crt);
 		if (!ctx->ssl_names)
 			ctx->enomem = 1;
-		if (ctx->origcrt) {
-			ctx->ssl_orignames = ssl_x509_names_to_str(
-			                     ctx->origcrt);
-			if (!ctx->ssl_orignames)
-				ctx->enomem = 1;
-		}
 	}
 
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
@@ -1628,7 +1622,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				               "ignoring event\n");
 			}
 #endif /* DEBUG_PROXY */
-			return;
+			goto connected;
 		}
 
 		/* dst has connected */
@@ -1702,12 +1696,6 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 						return;
 					}
 				}
-				log_dbg_printf("Local process: "
-				               "%i %s:%s %s\n",
-				               ctx->lproc.pid,
-				               STRORDASH(ctx->lproc.user),
-				               STRORDASH(ctx->lproc.group),
-				               STRORDASH(ctx->lproc.exec_path));
 			}
 #endif /* HAVE_LOCAL_PROCINFO */
 		}
@@ -1733,6 +1721,30 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		if (!ctx->spec->http || ctx->passthrough) {
 			if (WANT_CONNECT_LOG(ctx)) {
 				pxy_log_connect_nonhttp(ctx);
+			}
+		}
+
+connected:
+		if (OPTS_DEBUG(ctx->opts)) {
+			if (this->ssl) {
+				/* for SSL, we get two connect events */
+				log_dbg_printf("SSL connected %s %s %s %s\n",
+				               bev == ctx->dst.bev ?
+				               "to" : "from",
+				               bev == ctx->dst.bev ?
+				               ctx->dst_str : ctx->src_str,
+				               SSL_get_version(this->ssl),
+				               SSL_get_cipher(this->ssl));
+			} else {
+				/* for TCP, we get only a dst connect event,
+				 * since src was already connected from the
+				 * beginning; mirror SSL debug output anyway
+				 * in order not to confuse anyone who might be
+				 * looking closely at the output */
+				log_dbg_printf("TCP connected to %s\n",
+				               ctx->dst_str);
+				log_dbg_printf("TCP connected from %s\n",
+				               ctx->src_str);
 			}
 		}
 
@@ -1877,6 +1889,16 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 	return;
 
 leave:
+	/* we only get a single disconnect event here for both connections */
+	if (OPTS_DEBUG(ctx->opts)) {
+		log_dbg_printf("%s disconnected to %s\n",
+		               this->ssl ? "SSL" : "TCP",
+		               ctx->dst_str);
+		log_dbg_printf("%s disconnected from %s\n",
+		               this->ssl ? "SSL" : "TCP",
+		               ctx->src_str);
+	}
+
 	this->closed = 1;
 	bufferevent_free_and_close_fd(bev, ctx);
 	if (other->closed) {
