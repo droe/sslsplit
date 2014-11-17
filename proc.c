@@ -131,14 +131,18 @@ proc_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 				if (src_sai->sin6_port != sock_lport) {
 					continue;
 				}
+			} else {
+				/* other address family */
+				continue;
 			}
 
 			/* valid match */
 			*result = pid;
-			break;
+			goto success;
 		}
 	}
 
+success:
 	ret = 0;
 	free(fds);
 errout2:
