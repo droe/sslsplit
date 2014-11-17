@@ -614,7 +614,7 @@ nat_version(void)
 	fprintf(stderr, "ipfilter: version %d\n", IPFILTER_VERSION);
 #endif /* HAVE_IPFILTER */
 #ifdef HAVE_NETFILTER
-	fprintf(stderr, "netfilter: ");
+	fprintf(stderr, "netfilter:");
 #ifdef IP_TRANSPARENT
 	fprintf(stderr, " IP_TRANSPARENT");
 #else /* !IP_TRANSPARENT */
