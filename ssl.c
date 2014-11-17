@@ -418,22 +418,28 @@ ssl_fini(void)
 	CRYPTO_cleanup_all_ex_data();
 }
 
+/*
+ * Format SSL state into newly allocated string.
+ * Returns pointer to string that must be freed by caller, or NULL on error.
+ */
 char *
 ssl_ssl_state_to_str(SSL *ssl)
 {
-	char *str;
+	char *str = NULL;
+	int rv;
 
-	asprintf(&str, "%08x = %s%s%s%04x = %s (%s) [%s]",
-	         ssl->state,
-	         (ssl->state & SSL_ST_CONNECT) ? "SSL_ST_CONNECT|" : "",
-	         (ssl->state & SSL_ST_ACCEPT) ? "SSL_ST_ACCEPT|" : "",
-	         (ssl->state & SSL_ST_BEFORE) ? "SSL_ST_BEFORE|" : "",
-	         ssl->state & SSL_ST_MASK,
-	         SSL_state_string(ssl),
-	         SSL_state_string_long(ssl),
-	         (ssl->type == SSL_ST_CONNECT) ? "connect socket"
-	                                       : "accept socket");
-	return str;
+	rv = asprintf(&str, "%08x = %s%s%s%04x = %s (%s) [%s]",
+	              ssl->state,
+	              (ssl->state & SSL_ST_CONNECT) ? "SSL_ST_CONNECT|" : "",
+	              (ssl->state & SSL_ST_ACCEPT) ? "SSL_ST_ACCEPT|" : "",
+	              (ssl->state & SSL_ST_BEFORE) ? "SSL_ST_BEFORE|" : "",
+	              ssl->state & SSL_ST_MASK,
+	              SSL_state_string(ssl),
+	              SSL_state_string_long(ssl),
+	              (ssl->type == SSL_ST_CONNECT) ? "connect socket"
+	                                            : "accept socket");
+
+	return (rv < 0) ? NULL : str;
 }
 
 #ifndef OPENSSL_NO_DH
@@ -772,7 +778,7 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 		if (!names) {
 			/* no subjectAltName present: add new one */
 			char *cfval;
-			if (asprintf(&cfval, "DNS:%s", extraname) == -1)
+			if (asprintf(&cfval, "DNS:%s", extraname) < 0)
 				goto errout;
 			if (ssl_x509_v3ext_add(&ctx, crt, "subjectAltName",
 			                       cfval) == -1) {

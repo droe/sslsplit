@@ -659,7 +659,12 @@ main(int argc, char *argv[])
 				                        spec->connect_addrlen);
 			}
 			if (spec->sni_port) {
-				asprintf(&cbuf, "sni %i", spec->sni_port);
+				if (asprintf(&cbuf, "sni %i",
+				             spec->sni_port) < 0) {
+					fprintf(stderr, "%s: out of memory\n",
+					                argv0);
+					exit(EXIT_FAILURE);
+				}
 			}
 			log_dbg_printf("- %s %s %s %s\n", lbuf,
 			               (spec->ssl ? "ssl" : "tcp"),

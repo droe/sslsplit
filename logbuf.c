@@ -111,7 +111,7 @@ logbuf_new_printf(int fd, logbuf_t *next, const char *fmt, ...)
 	va_start(ap, fmt);
 	lb->sz = vasprintf((char**)&lb->buf, fmt, ap);
 	va_end(ap);
-	if (lb->sz == -1) {
+	if (lb->sz < 0) {
 		free(lb);
 		return NULL;
 	}

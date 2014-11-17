@@ -216,7 +216,7 @@ sys_user_str(uid_t uid)
 	if (getpwuid_r(uid, &pwd, buffer, bufsize, &result) != 0 || !result) {
 		/* no entry found; return the integer representation */
 		char *name;
-		if (asprintf(&name, "%llu", (long long) uid) == -1) {
+		if (asprintf(&name, "%llu", (long long) uid) < 0) {
 			return NULL;
 		}
 		return name;
@@ -244,7 +244,7 @@ sys_group_str(gid_t gid)
 	if (getgrgid_r(gid, &grp, buffer, bufsize, &result) != 0 || !result) {
 		/* no entry found; return the integer representation */
 		char *name;
-		if (asprintf(&name, "%llu", (long long) gid) == -1) {
+		if (asprintf(&name, "%llu", (long long) gid) < 0) {
 			return NULL;
 		}
 		return name;

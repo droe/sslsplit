@@ -191,7 +191,7 @@ logger_printf(logger_t *logger, int fd, const char *fmt, ...)
 	va_start(ap, fmt);
 	lb->sz = vasprintf((char**)&lb->buf, fmt, ap);
 	va_end(ap);
-	if (lb->sz == -1) {
+	if (lb->sz < 0) {
 		logbuf_free(lb);
 		return -1;
 	}

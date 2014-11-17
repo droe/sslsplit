@@ -41,8 +41,8 @@ int sys_pidf_open(const char *) NONNULL(1) WUNRES;
 int sys_pidf_write(int) WUNRES;
 void sys_pidf_close(int, const char *) NONNULL(2);
 
-char * sys_user_str(uid_t) WUNRES MALLOC;
-char * sys_group_str(gid_t) WUNRES MALLOC;
+char * sys_user_str(uid_t) MALLOC;
+char * sys_group_str(gid_t) MALLOC;
 
 int sys_sockaddr_parse(struct sockaddr_storage *, socklen_t *,
                        char *, char *, int, int) NONNULL(1,2,3,4) WUNRES;

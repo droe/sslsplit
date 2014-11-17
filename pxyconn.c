@@ -350,7 +350,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->lproc.user),
 		              STRORDASH(ctx->lproc.group),
 		              STRORDASH(ctx->lproc.exec_path));
-		if ((rv == -1) || !lpi) {
+		if ((rv < 0) || !lpi) {
 			ctx->enomem = 1;
 			goto out;
 		}
@@ -381,13 +381,16 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
-		              STRORDASH(ctx->ssl_orignames)
+		              SSL_get_version(ctx->src.ssl),
+		              SSL_get_cipher(ctx->src.ssl),
+		              SSL_get_version(ctx->dst.ssl),
+		              SSL_get_cipher(ctx->dst.ssl)
 #ifdef HAVE_LOCAL_PROCINFO
 		              , lpi
 #endif /* HAVE_LOCAL_PROCINFO */
 		             );
 	}
-	if ((rv == -1) || !msg) {
+	if ((rv < 0) || !msg) {
 		ctx->enomem = 1;
 		goto out;
 	}
@@ -432,7 +435,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->lproc.user),
 		              STRORDASH(ctx->lproc.group),
 		              STRORDASH(ctx->lproc.exec_path));
-		if ((rv == -1) || !lpi) {
+		if ((rv < 0) || !lpi) {
 			ctx->enomem = 1;
 			goto out;
 		}
@@ -472,13 +475,16 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              STRORDASH(ctx->http_content_length),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
-		              STRORDASH(ctx->ssl_orignames),
+		              SSL_get_version(ctx->src.ssl),
+		              SSL_get_cipher(ctx->src.ssl),
+		              SSL_get_version(ctx->dst.ssl),
+		              SSL_get_cipher(ctx->dst.ssl),
 #ifdef HAVE_LOCAL_PROCINFO
 		              lpi,
 #endif /* HAVE_LOCAL_PROCINFO */
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	}
-	if ((rv == -1) || !msg) {
+	if ((rv < 0 ) || !msg) {
 		ctx->enomem = 1;
 		goto out;
 	}

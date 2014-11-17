@@ -84,7 +84,7 @@ log_err_printf(const char *fmt, ...)
 	va_start(ap, fmt);
 	rv = vasprintf(&buf, fmt, ap);
 	va_end(ap);
-	if (rv == -1)
+	if (rv < 0)
 		return -1;
 	if (err_started) {
 		return logger_write_freebuf(err_log, 0, buf, strlen(buf) + 1);
@@ -144,7 +144,7 @@ log_dbg_printf(const char *fmt, ...)
 	va_start(ap, fmt);
 	rv = vasprintf(&buf, fmt, ap);
 	va_end(ap);
-	if (rv == -1)
+	if (rv < 0)
 		return -1;
 	return log_dbg_print_free(buf);
 }
@@ -399,11 +399,11 @@ log_content_open(log_content_ctx_t *ctx, char *srcaddr, char *dstaddr,
 		/* single-file content log (-L) */
 		ctx->fd = content_fd;
 		if (asprintf(&ctx->header_in, "%s -> %s",
-		             srcaddr, dstaddr) == -1) {
+		             srcaddr, dstaddr) < 0) {
 			return -1;
 		}
 		if (asprintf(&ctx->header_out, "%s -> %s",
-		             dstaddr, srcaddr) == -1) {
+		             dstaddr, srcaddr) < 0) {
 			free(ctx->header_in);
 			return -1;
 		}

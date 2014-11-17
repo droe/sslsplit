@@ -95,7 +95,8 @@ proc_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 				continue;
 			}
 
-			if (proc_pidfdinfo(pid, fd->proc_fd, PROC_PIDFDSOCKETINFO,
+			if (proc_pidfdinfo(pid, fd->proc_fd,
+			                   PROC_PIDFDSOCKETINFO,
 			                   &sinfo,
 			                   sizeof(struct socket_fdinfo)) == -1) {
 				/* process may have exited or socket may have
@@ -111,6 +112,7 @@ proc_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 			if (sinfo.psi.soi_family == AF_INET &&
 			    src_addr->sa_family == AF_INET) {
 				struct sockaddr_in *src_sai = (struct sockaddr_in *)src_addr;
+
 				if (src_sai->sin_addr.s_addr != sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_46.i46a_addr4.s_addr) {
 					continue;
 				}
@@ -121,7 +123,8 @@ proc_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 			} else if (sinfo.psi.soi_family == AF_INET6 &&
 			           src_addr->sa_family == AF_INET6) {
 				struct sockaddr_in6 *src_sai = (struct sockaddr_in6 *)src_addr;
-				if (memcmp(src_sai->sin6_addr.s6_addr,  sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6.s6_addr, 16) != 0) {
+
+				if (memcmp(src_sai->sin6_addr.s6_addr, sinfo.psi.soi_proto.pri_tcp.tcpsi_ini.insi_laddr.ina_6.s6_addr, 16) != 0) {
 					continue;
 				}
 
