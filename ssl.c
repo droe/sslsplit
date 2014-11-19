@@ -60,7 +60,8 @@
  * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031
  * http://openssl.6102.n7.nabble.com/NULL-ptr-deref-when-calling-SSL-get-certificate-with-1-0-0k-td43636.html
  */
-#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+#if (OPENSSL_VERSION_NUMBER == 0x0090819fL) || \
+    (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
     (OPENSSL_VERSION_NUMBER == 0x1000105fL)
 /*
  * OpenSSL internal declarations from ssl_locl.h, reduced to what is needed.
@@ -85,7 +86,7 @@ ssl_ssl_cert_get(SSL *s)
 {
 	return s->cert ? s->cert->key->x509 : NULL;
 }
-#endif /* OpenSSL 1.0.0k or 1.0.1e */
+#endif /* OpenSSL 0.9.8y, 1.0.0k or 1.0.1e */
 
 
 /*
@@ -120,10 +121,11 @@ ssl_openssl_version(void)
 #else /* !SSL_MODE_RELEASE_BUFFERS */
 	fprintf(stderr, "Not using SSL_MODE_RELEASE_BUFFERS\n");
 #endif /* !SSL_MODE_RELEASE_BUFFERS */
-#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+#if (OPENSSL_VERSION_NUMBER == 0x0090819fL) || \
+    (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
     (OPENSSL_VERSION_NUMBER == 0x1000105fL)
 	fprintf(stderr, "Using direct access workaround when loading certs\n");
-#endif /* OpenSSL 1.0.0k or 1.0.1e */
+#endif /* OpenSSL 0.9.8y, 1.0.0k or 1.0.1e */
 
 	fprintf(stderr, "SSL/TLS protocol availability: %s\n",
 	                SSL_PROTO_SUPPORT_S);

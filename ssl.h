@@ -60,15 +60,16 @@
 #endif
 
 /*
- * Workaround for bug in OpenSSL 1.0.0k and 1.0.1e
+ * Workaround for bug in OpenSSL 0.9.8y, 1.0.0k and 1.0.1e
  * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031
  * http://openssl.6102.n7.nabble.com/NULL-ptr-deref-when-calling-SSL-get-certificate-with-1-0-0k-td43636.html
  */
-#if (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
+#if (OPENSSL_VERSION_NUMBER == 0x0090819fL) || \
+    (OPENSSL_VERSION_NUMBER == 0x100000bfL) || \
     (OPENSSL_VERSION_NUMBER == 0x1000105fL)
 #define SSL_get_certificate(x) ssl_ssl_cert_get(x)
 X509 * ssl_ssl_cert_get(SSL *);
-#endif /* OpenSSL 1.0.0k or 1.0.1e */
+#endif /* OpenSSL 0.9.8y or 1.0.0k or 1.0.1e */
 
 #if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
 #define SSL2_S "ssl2 "
