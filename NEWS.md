@@ -10,6 +10,8 @@
 -   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
     WITH_SSLV2 build knob.
 -   Fix startup memory leaks in key/cert loader (pull req #56 by @wjjensen).
+-   Extend the certificate loading workaround for OpenSSL 1.0.0k and 1.0.1e
+    also to OpenSSL 0.9.8y; fixes cert loading crash due to bug in in OpenSSL.
 -   Minor bugfixes and improvements.
 
 
