@@ -60,6 +60,16 @@
 #endif
 
 /*
+ * The constructors returning a SSL_METHOD * were changed to return
+ * a const SSL_METHOD * between 0.9.8 and 1.0.0.
+ */
+#if (OPENSSL_VERSION_NUMBER < 0x1000000fL)
+#define CONST_SSL_METHOD SSL_METHOD
+#else /* >= OpenSSL 1.0.0 */
+#define CONST_SSL_METHOD const SSL_METHOD
+#endif /* >= OpensSL 1.0.0 */
+
+/*
  * Workaround for bug in OpenSSL 0.9.8y, 1.0.0k and 1.0.1e
  * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=703031
  * http://openssl.6102.n7.nabble.com/NULL-ptr-deref-when-calling-SSL-get-certificate-with-1-0-0k-td43636.html
