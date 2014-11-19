@@ -204,25 +204,46 @@ sys_pidf_close(int fd, const char *fn)
 char *
 sys_user_str(uid_t uid)
 {
-	int bufsize;
-	if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1) {
-		log_err_printf("failed to get password bufsize: %s\n",
-		               strerror(errno));
-		return NULL;
+	static int bufsize = 0;
+
+	if (!bufsize) {
+		/* on some platforms this compiles, but does not succeed */
+		if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1) {
+			bufsize = 64;
+		}
 	}
 
-	char buffer[bufsize];
+	char *buf;
 	struct passwd pwd, *result = NULL;
-	if (getpwuid_r(uid, &pwd, buffer, bufsize, &result) != 0 || !result) {
-		/* no entry found; return the integer representation */
-		char *name;
-		if (asprintf(&name, "%llu", (long long) uid) < 0) {
+	int rv;
+	char *name;
+
+	if (!(buf = malloc(bufsize)))
+		return NULL;
+
+	do {
+		rv = getpwuid_r(uid, &pwd, buf, bufsize, &result);
+		if (rv == 0) {
+			if (result) {
+				name = strdup(pwd.pw_name);
+				free(buf);
+				return name;
+			}
+
+			/* no entry found; return the integer representation */
+			if (asprintf(&name, "%llu", (long long) uid) < 0) {
+				return NULL;
+			}
+			return name;
+		}
+		bufsize *= 2;
+		if (!(buf = realloc(buf, bufsize))) {
 			return NULL;
 		}
-		return name;
-	}
+	} while (rv == ERANGE);
 
-	return strdup(pwd.pw_name);
+	log_err_printf("Failed to lookup uid: %s (%i)\n", strerror(rv), rv);
+	return NULL;
 }
 
 /*
@@ -232,25 +253,46 @@ sys_user_str(uid_t uid)
 char *
 sys_group_str(gid_t gid)
 {
-	int bufsize;
-        if ((bufsize = sysconf(_SC_GETGR_R_SIZE_MAX)) == -1) {
-		log_err_printf("failed to get group bufsize: %s\n",
-		               strerror(errno));
-		return NULL;
+	static int bufsize = 0;
+
+	if (!bufsize) {
+		/* on some platforms this compiles, but does not succeed */
+		if ((bufsize = sysconf(_SC_GETGR_R_SIZE_MAX)) == -1) {
+			bufsize = 64;
+		}
 	}
 
-	char buffer[bufsize];
+	char *buf;
 	struct group grp, *result = NULL;
-	if (getgrgid_r(gid, &grp, buffer, bufsize, &result) != 0 || !result) {
-		/* no entry found; return the integer representation */
-		char *name;
-		if (asprintf(&name, "%llu", (long long) gid) < 0) {
+	int rv;
+	char *name;
+
+	if (!(buf = malloc(bufsize)))
+		return NULL;
+
+	do {
+		rv = getgrgid_r(gid, &grp, buf, bufsize, &result);
+		if (rv == 0) {
+			if (result) {
+				name = strdup(grp.gr_name);
+				free(buf);
+				return name;
+			}
+
+			/* no entry found; return the integer representation */
+			if (asprintf(&name, "%llu", (long long) gid) < 0) {
+				return NULL;
+			}
+			return name;
+		}
+		bufsize *= 2;
+		if (!(buf = realloc(buf, bufsize))) {
 			return NULL;
 		}
-		return name;
-	}
+	} while (rv == ERANGE);
 
-	return strdup(grp.gr_name);
+	log_err_printf("Failed to lookup gid: %s (%i)\n", strerror(rv), rv);
+	return NULL;
 }
 
 /*
