@@ -350,6 +350,8 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 			ctx->enomem = 1;
 			goto out;
 		}
+	} else {
+		lpi = "";
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
@@ -401,7 +403,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 out:
 #ifdef HAVE_LOCAL_PROCINFO
-	if (lpi) {
+	if (lpi && ctx->opts->lprocinfo) {
 		free(lpi);
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -1717,14 +1719,14 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			}
 		}
 
+connected:
 		/* log connection if we don't analyze any headers */
-		if (!ctx->spec->http || ctx->passthrough) {
-			if (WANT_CONNECT_LOG(ctx)) {
-				pxy_log_connect_nonhttp(ctx);
-			}
+		if ((!this->ssl || (bev == ctx->src.bev)) &&
+		    (!ctx->spec->http || ctx->passthrough) &&
+		    WANT_CONNECT_LOG(ctx)) {
+			pxy_log_connect_nonhttp(ctx);
 		}
 
-connected:
 		if (OPTS_DEBUG(ctx->opts)) {
 			if (this->ssl) {
 				/* for SSL, we get two connect events */
