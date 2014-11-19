@@ -36,14 +36,27 @@
 
 #include <event2/util.h>
 
-#ifdef HAVE_DARWIN_LIBPROC
+#if defined(HAVE_DARWIN_LIBPROC) || defined(__FreeBSD__)
 #define HAVE_LOCAL_PROCINFO
+#endif
+
+#ifdef HAVE_DARWIN_LIBPROC
+#ifndef proc_pid_for_addr
+#define proc_pid_for_addr(a,b,c)	proc_darwin_pid_for_addr(a,b,c)
+#define proc_get_info(a,b,c,d)		proc_darwin_get_info(a,b,c,d)
+#endif /* proc_pid_for_addr */
+int proc_darwin_pid_for_addr(pid_t *, struct sockaddr *, socklen_t) WUNRES NONNULL(1,2);
+int proc_darwin_get_info(pid_t, char **, uid_t *, gid_t *) WUNRES NONNULL(2,3,4);
 #endif /* HAVE_DARWIN_LIBPROC */
 
-#ifdef HAVE_LOCAL_PROCINFO
-int proc_pid_for_addr(pid_t *, struct sockaddr *, socklen_t) WUNRES NONNULL(1,2);
-int proc_get_info(pid_t, char **, uid_t *, gid_t *) WUNRES NONNULL(2,3,4);
-#endif /* HAVE_LOCAL_PROCINFO */
+#ifdef __FreeBSD__
+#ifndef proc_pid_for_addr
+#define proc_pid_for_addr(a,b,c)	proc_freebsd_pid_for_addr(a,b,c)
+#define proc_get_info(a,b,c,d)		proc_freebsd_get_info(a,b,c,d)
+#endif /* proc_pid_for_addr */
+int proc_freebsd_pid_for_addr(pid_t *, struct sockaddr *, socklen_t) WUNRES NONNULL(1,2);
+int proc_freebsd_get_info(pid_t, char **, uid_t *, gid_t *) WUNRES NONNULL(2,3,4);
+#endif /* __FreeBSD__ */
 
 #endif /* !PROC_H */
 

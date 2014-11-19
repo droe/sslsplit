@@ -4,7 +4,8 @@
 -   Add option -F to log to separate files with printf-style % directives,
     including process information for connections originating on the same
     system when also using -i (pull reqs #36, #53, #54, #55 by @landonf).
--   Add option -i to look up local process owning a connection for logging.
+-   Add option -i to look up local process owning a connection for logging;
+    initial support on Mac OS X (by @landonf) and FreeBSD.
 -   Add option -r to force a specific SSL/TLS protocol version (issue #30).
 -   Add option -R to disable specific SSL/TLS protocol versions (issue #30).
 -   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single

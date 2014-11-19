@@ -158,6 +158,8 @@ For each connection, find the local process owning the connection.  This makes
 process information such as pid, owner:group and executable path for
 connections originating on the same system as SSLsplit available to the
 connect log and enables the respective \fB-F\fP path specification directives.
+\fB-i\fP is available on Mac OS X and FreeBSD; support for other platforms has
+not been implemented yet.
 .TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
@@ -407,9 +409,8 @@ SSLsplit currently supports the following NAT engines:
 .TP
 .B pf
 OpenBSD packet filter (pf) \fBrdr\fP/\fBrdr-to\fP NAT redirects, also available
-on FreeBSD, NetBSD and Mac OS X 10.7+.
-Fully supported on BSD, including IPv6.
-Experimental on Mac OS X.
+on FreeBSD, NetBSD and Mac OS X.
+Fully supported, including IPv6.
 Assuming inbound interface \fBem0\fP, first in old (FreeBSD, Mac OS X),
 then in new (OpenBSD 4.7+) syntax:
 .LP

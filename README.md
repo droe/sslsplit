@@ -41,7 +41,7 @@ SSLsplit currently supports the following operating systems and NAT mechanisms:
 -   FreeBSD: pf rdr and divert-to, ipfw fwd, ipfilter rdr
 -   OpenBSD: pf rdr-to and divert-to
 -   Linux: netfilter REDIRECT and TPROXY
--   Mac OS X: ipfw fwd and pf rdr
+-   Mac OS X: pf rdr and ipfw fwd
 
 
 ## Installation

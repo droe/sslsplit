@@ -26,6 +26,23 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __FreeBSD__
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/socketvar.h>
+#include <sys/sysctl.h>
+#include <sys/file.h>
+#include <sys/user.h>
+
+#include <netinet/in.h>
+#include <netinet/in_pcb.h>
+#include <netinet/tcp.h>
+#include <netinet/tcp_seq.h>
+#include <netinet/tcp_var.h>
+#include <arpa/inet.h>
+#endif /* __FreeBSD__ */
+
 #include "proc.h"
 
 #include "log.h"
@@ -45,10 +62,251 @@
  * Local process lookup.
  */
 
-#ifdef HAVE_DARWIN_LIBPROC
+
+#ifdef __FreeBSD__
+
+/*
+ * Get the list of open files from the kernel and do basic consistency checks.
+ * If successful, returns 0, and *pxfiles will receive a pointer to the
+ * received xfiles structure and *pnxfiles the number of file records in it.
+ * If unsuccessful, returns -1 and *pxfiles will be NULL.
+ * Caller is responsible to free() *pxfiles after use.
+ */
+static int
+proc_freebsd_getfiles(struct xfile **pxfiles, int *pnxfiles)
+{
+	int mib[4];
+	size_t sz;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_FILE;
+	mib[2] = mib[3] = 0;
+
+	for (;;) {
+		if (sysctl(mib, 2, NULL, &sz, NULL, 0) < 0) {
+			*pxfiles = NULL;
+			return -1;
+		}
+		if (!(*pxfiles = malloc(sz))) {
+			return -1;
+		}
+		if (sysctl(mib, 2, *pxfiles, &sz, NULL, 0) < 0) {
+			free(*pxfiles);
+			if (errno == ENOMEM)
+				continue;
+			*pxfiles = NULL;
+			return -1;
+		}
+		break;
+	}
+
+	if (sz > 0 && (*pxfiles)->xf_size != sizeof **pxfiles) {
+		log_err_printf("struct xfile size mismatch\n");
+		return -1;
+	}
+	*pnxfiles = sz / sizeof **pxfiles;
+
+	return 0;
+}
+
+/*
+ * Get the list of active TCP connections and do basic consistency checks.
+ * If successful, returns 0, and *pxig will receive a pointer to the
+ * received data structure, *pexig a pointer to the end of the buffer.
+ * If unsuccessful, returns -1 and *pxig will be NULL.
+ * Caller is responsible to free() *pxig after use.
+ */
+static int
+proc_freebsd_gettcppcblist(struct xinpgen **pxig, struct xinpgen **pexig)
+{
+	int mib[4];
+	size_t sz;
+	int retry = 5;
+
+	mib[0] = CTL_NET;
+	mib[1] = PF_INET;
+	mib[2] = IPPROTO_TCP;
+	mib[3] = TCPCTL_PCBLIST;
+	do {
+		for (;;) {
+			if (sysctl(mib, 4, NULL, &sz, NULL, 0) < 0) {
+				*pxig = NULL;
+				return -1;
+			}
+			if (!(*pxig = malloc(sz))) {
+				return -1;
+			}
+			if (sysctl(mib, 4, *pxig, &sz, NULL, 0) < 0) {
+				free(*pxig);
+				if (errno == ENOMEM)
+					continue;
+				*pxig = NULL;
+				return -1;
+			}
+			break;
+		}
+
+		*pexig = (struct xinpgen *)(void *)
+		         ((char *)(*pxig) + sz - sizeof(**pexig));
+		if ((*pxig)->xig_len != sizeof(**pxig) ||
+		    (*pexig)->xig_len != sizeof(**pexig)) {
+			log_err_printf("struct xinpgen size mismatch\n");
+			free(*pxig);
+			*pxig = NULL;
+			return -1;
+		}
+	} while ((*pxig)->xig_gen != (*pexig)->xig_gen && retry--);
+
+	/* check if first and last record are from same generation */
+	if ((*pxig)->xig_gen != (*pexig)->xig_gen) {
+		log_err_printf("Warning: data inconsistent "
+		               "(xig->xig_gen != exig->xig_gen)\n");
+	}
+
+	return 0;
+}
+
 int
-proc_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
-                  UNUSED socklen_t src_addrlen)
+proc_freebsd_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
+                          UNUSED socklen_t src_addrlen)
+{
+	struct xfile *xfiles;
+	int nxfiles;
+	struct xfile *xf;
+
+	struct xinpgen *xig, *exig, *txig;
+	struct xtcpcb *xtp;
+	struct inpcb *inp;
+	struct xsocket *so;
+
+	if (proc_freebsd_getfiles(&xfiles, &nxfiles) == -1) {
+		return -1;
+	}
+
+	if (proc_freebsd_gettcppcblist(&xig, &exig) == -1) {
+		free(xfiles);
+		return -1;
+	}
+
+	for (txig = (struct xinpgen *)(void *)((char *)xig + xig->xig_len);
+	     txig < exig;
+	     txig = (struct xinpgen *)(void *)((char *)txig + txig->xig_len)) {
+		xtp = (struct xtcpcb *)txig;
+		if (xtp->xt_len != sizeof *xtp) {
+			free(xfiles);
+			free(xig);
+			return -1;
+		}
+		inp = &xtp->xt_inp;
+		so = &xtp->xt_socket;
+
+		if (!(so->so_state & SS_ISCONNECTED))
+			/* we are only interested in connected sockets */
+			continue;
+
+		if ((inp->inp_vflag & INP_IPV4) &&
+		    (src_addr->sa_family == AF_INET)) {
+			struct sockaddr_in *src_sai =
+					(struct sockaddr_in *)src_addr;
+
+			if (src_sai->sin_addr.s_addr != inp->inp_laddr.s_addr) {
+				continue;
+			}
+
+			if (src_sai->sin_port != inp->inp_lport) {
+				continue;
+			}
+		} else if ((inp->inp_vflag & INP_IPV6) &&
+		          (src_addr->sa_family == AF_INET6)) {
+			struct sockaddr_in6 *src_sai =
+					(struct sockaddr_in6 *)src_addr;
+
+			if (memcmp(src_sai->sin6_addr.s6_addr, inp->in6p_laddr.s6_addr, 16) != 0) {
+				continue;
+			}
+
+			if (src_sai->sin6_port != inp->inp_lport) {
+				continue;
+			}
+		} else {
+			/* other address family */
+			continue;
+		}
+
+		/* valid match */
+
+		/* only do this if we have a match */
+		xf = NULL;
+		for (int i = 0; i < nxfiles; ++i) {
+			if (so->xso_so == xfiles[i].xf_data) {
+				/* there can be several processes sharing a
+				 * connected socket file descriptor */
+				xf = &xfiles[i];
+			}
+		}
+		if (!xf)
+			continue;
+		*result = xf->xf_pid;
+		break;
+	}
+
+	free(xfiles);
+	free(xig);
+	return 0;
+}
+
+int
+proc_freebsd_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+	static struct kinfo_proc proc;
+	size_t len;
+	int mib[4];
+	char buf[PATH_MAX + 1];
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PATHNAME;
+	mib[3] = (int)pid;
+	len = sizeof(buf);
+	if (sysctl(mib, 4, buf, &len, NULL, 0) == -1) {
+		if (errno != ESRCH) {
+			log_err_printf("Failed to get proc pathname: %s (%i)",
+			               strerror(errno), errno);
+		}
+		*path = NULL;
+	} else {
+		*path = strdup(buf);
+	}
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PID;
+	mib[3] = (int)pid;
+	len = sizeof proc;
+	if (sysctl(mib, 4, &proc, &len, NULL, 0) == -1) {
+		if (errno != ESRCH) {
+			log_err_printf("Failed to get proc info: %s (%i)",
+			               strerror(errno), errno);
+		}
+		*uid = -1;
+		*gid = -1;
+	} else {
+		if (*path == NULL)
+			*path = strdup(proc.ki_comm);
+		*uid = proc.ki_uid;
+		*gid = proc.ki_groups[0];
+	}
+
+	return 0;
+}
+
+#endif /* __FreeBSD__ */
+
+
+#ifdef HAVE_DARWIN_LIBPROC
+
+int
+proc_darwin_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
+                         UNUSED socklen_t src_addrlen)
 {
 	pid_t *pids = NULL;
 	struct proc_fdinfo *fds = NULL;
@@ -150,8 +408,6 @@ errout2:
 errout1:
 	return ret;
 }
-#endif /* HAVE_DARWIN_LIBPROC */
-
 
 /*
  * Fetch process info for the given pid.
@@ -159,9 +415,8 @@ errout1:
  * Caller must free returned path string.
  * Returns -1 on failure, or if unsupported on this platform.
  */
-#if HAVE_DARWIN_LIBPROC
 int
-proc_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+proc_darwin_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 	/* fetch process structure */
 	struct proc_bsdinfo bsd_info;
 	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info,
@@ -185,6 +440,10 @@ proc_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 
 	return 0;
 }
+
 #endif /* HAVE_DARWIN_LIBPROC */
 
 /* vim: set noet ft=c: */
+
+
+
