@@ -75,8 +75,8 @@ typedef struct opts {
 #endif /* SSL_OP_NO_TLSv1_2 */
 	unsigned int passthrough : 1;
 	unsigned int deny_ocsp : 1;
-	unsigned int contentlogdir : 1;
-	unsigned int contentlogspec : 1;
+	unsigned int contentlog_isdir : 1;
+	unsigned int contentlog_isspec : 1;
 #ifdef HAVE_LOCAL_PROCINFO
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */

@@ -578,10 +578,10 @@ int
 log_preinit(opts_t *opts)
 {
 	if (opts->contentlog) {
-		if (opts->contentlogdir) {
+		if (opts->contentlog_isdir) {
 			if (log_content_open_logdir(opts->contentlog) == -1)
 				goto out;
-		} else if (opts->contentlogspec) {
+		} else if (opts->contentlog_isspec) {
 			if (log_content_open_logspec(opts->contentlog) == -1)
 				goto out;
 		} else {
