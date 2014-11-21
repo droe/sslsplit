@@ -223,15 +223,15 @@ log_connect_close(void)
  * This is guaranteed by the current pxythr architecture.
  */
 
-#define PREPFLAG_OUTBOUND 1
+#define PREPFLAG_REQUEST 1
 
 struct log_content_ctx {
 	unsigned int open : 1;
 	int fd;
 	union {
 		struct {
-			char *header_in;
-			char *header_out;
+			char *header_req;
+			char *header_resp;
 		} file;
 		struct {
 			char *filename;
@@ -448,13 +448,13 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 	} else {
 		/* single-file content log (-L) */
 		ctx->fd = content_fd;
-		if (asprintf(&ctx->u.file.header_in, "%s -> %s",
+		if (asprintf(&ctx->u.file.header_req, "%s -> %s",
 		             srcaddr, dstaddr) < 0) {
 			goto errout;
 		}
-		if (asprintf(&ctx->u.file.header_out, "%s -> %s",
+		if (asprintf(&ctx->u.file.header_resp, "%s -> %s",
 		             dstaddr, srcaddr) < 0) {
-			free(ctx->u.file.header_in);
+			free(ctx->u.file.header_req);
 			goto errout;
 		}
 	}
@@ -470,28 +470,33 @@ errout:
 	return -1;
 }
 
-void
-log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_outbound)
+int
+log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 {
 	unsigned long prepflags = 0;
 
 	if (!ctx->open) {
 		log_err_printf("log_content_submit called on closed ctx\n");
-		return;
+		return -1;
 	}
 
-	if (is_outbound)
-		prepflags |= PREPFLAG_OUTBOUND;
-	logger_submit(content_log, ctx, prepflags, lb);
+	if (is_request)
+		prepflags |= PREPFLAG_REQUEST;
+	return logger_submit(content_log, ctx, prepflags, lb);
 }
 
-void
+int
 log_content_close(log_content_ctx_t **pctx)
 {
+	int rv = 0;
+
 	if (!(*pctx)->open)
-		return;
-	logger_close(content_log, *pctx);
+		return -1;
+	if (logger_close(content_log, *pctx) == -1) {
+		rv = -1;
+	}
 	*pctx = NULL;
+	return rv;
 }
 
 /*
@@ -599,11 +604,11 @@ log_content_file_closecb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
 
-	if (ctx->u.file.header_in) {
-		free(ctx->u.file.header_in);
+	if (ctx->u.file.header_req) {
+		free(ctx->u.file.header_req);
 	}
-	if (ctx->u.file.header_out) {
-		free(ctx->u.file.header_out);
+	if (ctx->u.file.header_resp) {
+		free(ctx->u.file.header_resp);
 	}
 
 	free(ctx);
@@ -613,14 +618,14 @@ static logbuf_t *
 log_content_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 {
 	log_content_ctx_t *ctx = fh;
-	int is_outbound = !!(prepflags & PREPFLAG_OUTBOUND);
+	int is_request = !!(prepflags & PREPFLAG_REQUEST);
 	logbuf_t *head;
 	time_t epoch;
 	struct tm *utc;
 	char *header;
 
-	if (!(header = is_outbound ? ctx->u.file.header_out
-	                           : ctx->u.file.header_in))
+	if (!(header = is_request ? ctx->u.file.header_req
+	                          : ctx->u.file.header_resp))
 		goto out;
 
 	/* prepend size tag and newline */

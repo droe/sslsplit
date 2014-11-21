@@ -272,7 +272,9 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 		free(ctx->sni);
 	}
 	if (WANT_CONTENT_LOG(ctx)) {
-		log_content_close(&ctx->logctx);
+		if (log_content_close(&ctx->logctx) == -1) {
+			log_err_printf("Warning: Content log close failed\n");
+		}
 	}
 	free(ctx);
 }
@@ -397,7 +399,10 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		log_err_printf("%s", msg);
 	}
 	if (ctx->opts->connectlog) {
-		log_connect_print_free(msg);
+		if (log_connect_print_free(msg) == -1) {
+			free(msg);
+			log_err_printf("Warning: Connection logging failed\n");
+		}
 	} else {
 		free(msg);
 	}
@@ -492,7 +497,10 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		log_err_printf("%s", msg);
 	}
 	if (ctx->opts->connectlog) {
-		log_connect_print_free(msg);
+		if (log_connect_print_free(msg) == -1) {
+			free(msg);
+			log_err_printf("Warning: Connection logging failed\n");
+		}
 	} else {
 		free(msg);
 	}
@@ -1380,7 +1388,12 @@ deny:
 			                      NULL, NULL);
 			if (lb &&
 			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-				log_content_submit(ctx->logctx, lb, 0);
+				if (log_content_submit(ctx->logctx, lb,
+				                       1/*req*/) == -1) {
+					logbuf_free(lb);
+					log_err_printf("Warning: Content log "
+					               "submission failed\n");
+				}
 			}
 		}
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
@@ -1394,7 +1407,12 @@ deny:
 		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1,
 		                     NULL, NULL);
 		if (lb) {
-			log_content_submit(ctx->logctx, lb, 1);
+			if (log_content_submit(ctx->logctx, lb,
+			                       0/*resp*/) == -1) {
+				logbuf_free(lb);
+				log_err_printf("Warning: Content log "
+				               "submission failed\n");
+			}
 		}
 	}
 }
@@ -1484,7 +1502,12 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			log_content_submit(ctx->logctx, lb, 0);
+			if (log_content_submit(ctx->logctx, lb,
+			                       1/*req*/) == -1) {
+				logbuf_free(lb);
+				log_err_printf("Warning: Content log "
+				               "submission failed\n");
+			}
 		}
 		if (!ctx->seen_req_header)
 			return;
@@ -1527,7 +1550,12 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			log_content_submit(ctx->logctx, lb, 0);
+			if (log_content_submit(ctx->logctx, lb,
+			                       0/*resp*/) == -1) {
+				logbuf_free(lb);
+				log_err_printf("Warning: Content log "
+				               "submission failed\n");
+			}
 		}
 		if (!ctx->seen_resp_header)
 			return;
@@ -1547,8 +1575,12 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		logbuf_t *lb;
 		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL, NULL);
 		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-			log_content_submit(ctx->logctx, lb,
-			                   (bev != ctx->src.bev));
+			if (log_content_submit(ctx->logctx, lb,
+			                       (bev == ctx->src.bev)) == -1) {
+				logbuf_free(lb);
+				log_err_printf("Warning: Content log "
+				               "submission failed\n");
+			}
 		}
 	}
 	evbuffer_add_buffer(outbuf, inbuf);
