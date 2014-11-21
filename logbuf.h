@@ -37,20 +37,26 @@
 typedef struct logbuf {
 	unsigned char *buf;
 	ssize_t sz;
-	int fd;
+	void *fh;
+	unsigned long ctl;
 	struct logbuf *next;
 } logbuf_t;
 
-typedef ssize_t (*writefunc_t)(int, const void *, size_t);
+typedef ssize_t (*writefunc_t)(void *, const void *, size_t);
 
-logbuf_t * logbuf_new(void *, size_t, int, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_alloc(size_t, int, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_copy(const void *, size_t, int, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_printf(int, logbuf_t *, const char *, ...)
+logbuf_t * logbuf_new(void *, size_t, void *, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_alloc(size_t, void *, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_copy(const void *, size_t, void *, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_printf(void *, logbuf_t *, const char *, ...)
            MALLOC PRINTF(3,4);
 ssize_t logbuf_size(logbuf_t *) NONNULL(1) WUNRES;
 ssize_t logbuf_write_free(logbuf_t *, writefunc_t) NONNULL(1);
 void logbuf_free(logbuf_t *) NONNULL(1);
+
+#define logbuf_ctl_clear(x) (x)->ctl = 0
+#define logbuf_ctl_set(x, y) (x)->ctl |= (y)
+#define logbuf_ctl_unset(x, y) (x)->ctl &= ~(y)
+#define logbuf_ctl_isset(x, y) (!!((x)->ctl & (y)))
 
 #endif /* !LOGBUF_H */
 

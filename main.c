@@ -502,8 +502,8 @@ main(int argc, char *argv[])
 				opts->contentlog = strdup(optarg);
 				if (!opts->contentlog)
 					oom_die(argv0);
-				opts->contentlogdir = 0;
-				opts->contentlogspec = 0;
+				opts->contentlog_isdir = 0;
+				opts->contentlog_isspec = 0;
 				break;
 			case 'S':
 				if (opts->contentlog)
@@ -511,8 +511,8 @@ main(int argc, char *argv[])
 				opts->contentlog = strdup(optarg);
 				if (!opts->contentlog)
 					oom_die(argv0);
-				opts->contentlogdir = 1;
-				opts->contentlogspec = 0;
+				opts->contentlog_isdir = 1;
+				opts->contentlog_isspec = 0;
 				break;
 			case 'F':
 				if (opts->contentlog)
@@ -520,8 +520,8 @@ main(int argc, char *argv[])
 				opts->contentlog = strdup(optarg);
 				if (!opts->contentlog)
 					oom_die(argv0);
-				opts->contentlogdir = 0;
-				opts->contentlogspec = 1;
+				opts->contentlog_isdir = 0;
+				opts->contentlog_isspec = 1;
 				break;
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
@@ -619,7 +619,7 @@ main(int argc, char *argv[])
 			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
-	    !opts->contentlogdir && !opts->contentlogspec) {
+	    !opts->contentlog_isdir && !opts->contentlog_isspec) {
 		opts->dropuser = strdup("nobody");
 		if (!opts->dropuser)
 			oom_die(argv0);

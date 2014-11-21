@@ -47,27 +47,44 @@ void log_dbg_mode(int);
 
 extern logger_t *connect_log;
 #define log_connect_printf(fmt, ...) \
-        logger_printf(connect_log, -1, (fmt), __VA_ARGS__)
+        logger_printf(connect_log, NULL, 0, (fmt), __VA_ARGS__)
 #define log_connect_print(s) \
-        logger_print(connect_log, -1, (s))
+        logger_print(connect_log, NULL, 0, (s))
 #define log_connect_write(buf, sz) \
-        logger_write(connect_log, -1, (buf), (sz))
+        logger_write(connect_log, NULL, 0, (buf), (sz))
 #define log_connect_print_free(s) \
-        logger_print_freebuf(connect_log, -1, (s))
+        logger_print_freebuf(connect_log, NULL, 0, (s))
 #define log_connect_write_free(buf, sz) \
-        logger_write_freebuf(connect_log, -1, (buf), (sz))
+        logger_write_freebuf(connect_log, NULL, 0, (buf), (sz))
 
-typedef struct log_content_ctx {
-	int open;
-	char *basedir;
+/* per-connection ctx struct for content logging */
+typedef struct log_content_ctx
+#if 0
+{
+	unsigned int open : 1;
+
+	/* used by all content log types */
 	int fd;
-	char *header_in;
-	char *header_out;
-} log_content_ctx_t;
-int log_content_open(log_content_ctx_t *, char *, char *,
+	/* content log type specific data */
+	union {
+		struct {
+			char *header_in;
+			char *header_out;
+		} file;
+		struct {
+			char *filename;
+		} dir;
+		struct {
+			char *filename;
+		} spec;
+	} u;
+}
+#endif
+log_content_ctx_t;
+int log_content_open(log_content_ctx_t **, opts_t *, char *, char *,
                      char *, char *, char *) NONNULL(1,2,3) WUNRES;
 void log_content_submit(log_content_ctx_t *, logbuf_t *, int) NONNULL(1,2);
-void log_content_close(log_content_ctx_t *) NONNULL(1);
+void log_content_close(log_content_ctx_t **) NONNULL(1);
 
 int log_preinit(opts_t *) NONNULL(1) WUNRES;
 int log_init(opts_t *) NONNULL(1) WUNRES;
