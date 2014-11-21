@@ -156,7 +156,7 @@ typedef struct pxy_conn_ctx {
 #endif /* HAVE_LOCAL_PROCINFO */
 
 	/* content log context */
-	log_content_ctx_t logctx;
+	log_content_ctx_t *logctx;
 
 	/* store fd and fd event while connected is 0 */
 	evutil_socket_t fd;
@@ -1377,10 +1377,10 @@ deny:
 		if (WANT_CONTENT_LOG(ctx)) {
 			logbuf_t *lb;
 			lb = logbuf_new_alloc(evbuffer_get_length(inbuf),
-			                      -1, NULL);
+			                      NULL, NULL);
 			if (lb &&
 			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-				log_content_submit(&ctx->logctx, lb, 0);
+				log_content_submit(ctx->logctx, lb, 0);
 			}
 		}
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
@@ -1391,9 +1391,10 @@ deny:
 	ctx->ocsp_denied = 1;
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
-		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1, -1, NULL);
+		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1,
+		                     NULL, NULL);
 		if (lb) {
-			log_content_submit(&ctx->logctx, lb, 1);
+			log_content_submit(ctx->logctx, lb, 1);
 		}
 	}
 }
@@ -1455,7 +1456,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
-				tmp = logbuf_new_printf(-1, NULL,
+				tmp = logbuf_new_printf(NULL, NULL,
 				                        "%s\r\n", line);
 				if (tail) {
 					if (tmp) {
@@ -1483,7 +1484,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			log_content_submit(&ctx->logctx, lb, 0);
+			log_content_submit(ctx->logctx, lb, 0);
 		}
 		if (!ctx->seen_req_header)
 			return;
@@ -1498,7 +1499,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
-				tmp = logbuf_new_printf(-1, NULL,
+				tmp = logbuf_new_printf(NULL, NULL,
 				                        "%s\r\n", line);
 				if (tail) {
 					if (tmp) {
@@ -1526,7 +1527,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			log_content_submit(&ctx->logctx, lb, 0);
+			log_content_submit(ctx->logctx, lb, 0);
 		}
 		if (!ctx->seen_resp_header)
 			return;
@@ -1544,9 +1545,9 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
-		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), -1, NULL);
+		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL, NULL);
 		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-			log_content_submit(&ctx->logctx, lb,
+			log_content_submit(ctx->logctx, lb,
 			                   (bev != ctx->src.bev));
 		}
 	}
@@ -1702,8 +1703,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 #endif /* HAVE_LOCAL_PROCINFO */
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
-			if (log_content_open(&ctx->logctx, ctx->src_str,
-			                     ctx->dst_str,
+			if (log_content_open(&ctx->logctx, ctx->opts,
+			                     ctx->src_str, ctx->dst_str,
 #ifdef HAVE_LOCAL_PROCINFO
 			                     ctx->lproc.exec_path,
 			                     ctx->lproc.user,

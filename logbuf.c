@@ -34,7 +34,8 @@
 #include <string.h>
 
 /*
- * Dynamic log buffer with zero-copy chaining and fd meta information.
+ * Dynamic log buffer with zero-copy chaining, generic void * file handle
+ * and ctl for status control flags.
  * Logbuf always owns the internal allocated buffer.
  */
 
@@ -43,7 +44,7 @@
  * The provided buffer will be freed by logbuf_free() if non-NULL.
  */
 logbuf_t *
-logbuf_new(void *buf, size_t sz, int fd, logbuf_t *next)
+logbuf_new(void *buf, size_t sz, void *fh, logbuf_t *next)
 {
 	logbuf_t *lb;
 
@@ -51,7 +52,8 @@ logbuf_new(void *buf, size_t sz, int fd, logbuf_t *next)
 		return NULL;
 	lb->buf = buf;
 	lb->sz = sz;
-	lb->fd = fd;
+	lb->fh = fh;
+	lb->ctl = 0;
 	lb->next = next;
 	return lb;
 }
@@ -60,7 +62,7 @@ logbuf_new(void *buf, size_t sz, int fd, logbuf_t *next)
  * Create new logbuf, allocating sz bytes into the internal buffer.
  */
 logbuf_t *
-logbuf_new_alloc(size_t sz, int fd, logbuf_t *next)
+logbuf_new_alloc(size_t sz, void *fh, logbuf_t *next)
 {
 	logbuf_t *lb;
 
@@ -71,7 +73,8 @@ logbuf_new_alloc(size_t sz, int fd, logbuf_t *next)
 		return NULL;
 	}
 	lb->sz = sz;
-	lb->fd = fd;
+	lb->fh = fh;
+	lb->ctl = 0;
 	lb->next = next;
 	return lb;
 }
@@ -80,7 +83,7 @@ logbuf_new_alloc(size_t sz, int fd, logbuf_t *next)
  * Create new logbuf, copying buf into a newly allocated internal buffer.
  */
 logbuf_t *
-logbuf_new_copy(const void *buf, size_t sz, int fd, logbuf_t *next)
+logbuf_new_copy(const void *buf, size_t sz, void *fh, logbuf_t *next)
 {
 	logbuf_t *lb;
 
@@ -92,16 +95,17 @@ logbuf_new_copy(const void *buf, size_t sz, int fd, logbuf_t *next)
 	}
 	memcpy(lb->buf, buf, sz);
 	lb->sz = sz;
-	lb->fd = fd;
+	lb->fh = fh;
+	lb->ctl = 0;
 	lb->next = next;
 	return lb;
 }
 
 /*
- * Create new logbuf using printf, setting fd and next.
+ * Create new logbuf using printf, setting fh and next.
  */
 logbuf_t *
-logbuf_new_printf(int fd, logbuf_t *next, const char *fmt, ...)
+logbuf_new_printf(void *fh, logbuf_t *next, const char *fmt, ...)
 {
 	va_list ap;
 	logbuf_t *lb;
@@ -115,7 +119,8 @@ logbuf_new_printf(int fd, logbuf_t *next, const char *fmt, ...)
 		free(lb);
 		return NULL;
 	}
-	lb->fd = fd;
+	lb->fh = fh;
+	lb->ctl = 0;
 	lb->next = next;
 	return lb;
 }
@@ -145,13 +150,15 @@ logbuf_write_free(logbuf_t *lb, writefunc_t writefunc)
 {
 	ssize_t rv1, rv2 = 0;
 
-	rv1 = writefunc(lb->fd, lb->buf, lb->sz);
-	free(lb->buf);
+	rv1 = writefunc(lb->fh, lb->buf, lb->sz);
+	if (lb->buf) {
+		free(lb->buf);
+	}
 	if (lb->next) {
 		if (rv1 == -1) {
 			logbuf_free(lb->next);
 		} else {
-			lb->next->fd = lb->fd;
+			lb->next->fh = lb->fh;
 			rv2 = logbuf_write_free(lb->next, writefunc);
 		}
 	}
