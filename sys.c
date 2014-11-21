@@ -213,7 +213,7 @@ sys_user_str(uid_t uid)
 		}
 	}
 
-	char *buf;
+	char *buf, *newbuf;
 	struct passwd pwd, *result = NULL;
 	int rv;
 	char *name;
@@ -229,6 +229,7 @@ sys_user_str(uid_t uid)
 				free(buf);
 				return name;
 			}
+			free(buf);
 
 			/* no entry found; return the integer representation */
 			if (asprintf(&name, "%llu", (long long) uid) < 0) {
@@ -237,11 +238,14 @@ sys_user_str(uid_t uid)
 			return name;
 		}
 		bufsize *= 2;
-		if (!(buf = realloc(buf, bufsize))) {
+		if (!(newbuf = realloc(buf, bufsize))) {
+			free(buf);
 			return NULL;
 		}
+		buf = newbuf;
 	} while (rv == ERANGE);
 
+	free(buf);
 	log_err_printf("Failed to lookup uid: %s (%i)\n", strerror(rv), rv);
 	return NULL;
 }
@@ -262,7 +266,7 @@ sys_group_str(gid_t gid)
 		}
 	}
 
-	char *buf;
+	char *buf, *newbuf;
 	struct group grp, *result = NULL;
 	int rv;
 	char *name;
@@ -278,6 +282,7 @@ sys_group_str(gid_t gid)
 				free(buf);
 				return name;
 			}
+			free(buf);
 
 			/* no entry found; return the integer representation */
 			if (asprintf(&name, "%llu", (long long) gid) < 0) {
@@ -286,11 +291,14 @@ sys_group_str(gid_t gid)
 			return name;
 		}
 		bufsize *= 2;
-		if (!(buf = realloc(buf, bufsize))) {
+		if (!(newbuf = realloc(buf, bufsize))) {
+			free(buf);
 			return NULL;
 		}
+		buf = newbuf;
 	} while (rv == ERANGE);
 
+	free(buf);
 	log_err_printf("Failed to lookup gid: %s (%i)\n", strerror(rv), rv);
 	return NULL;
 }
