@@ -57,30 +57,7 @@ extern logger_t *connect_log;
 #define log_connect_write_free(buf, sz) \
         logger_write_freebuf(connect_log, NULL, 0, (buf), (sz))
 
-/* per-connection ctx struct for content logging */
-typedef struct log_content_ctx
-#if 0
-{
-	unsigned int open : 1;
-
-	/* used by all content log types */
-	int fd;
-	/* content log type specific data */
-	union {
-		struct {
-			char *header_in;
-			char *header_out;
-		} file;
-		struct {
-			char *filename;
-		} dir;
-		struct {
-			char *filename;
-		} spec;
-	} u;
-}
-#endif
-log_content_ctx_t;
+typedef struct log_content_ctx log_content_ctx_t;
 int log_content_open(log_content_ctx_t **, opts_t *, char *, char *,
                      char *, char *, char *) NONNULL(1,2,3) WUNRES;
 void log_content_submit(log_content_ctx_t *, logbuf_t *, int) NONNULL(1,2);
