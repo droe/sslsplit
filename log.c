@@ -244,8 +244,6 @@ struct log_content_ctx {
 
 logger_t *content_log = NULL;
 static int content_fd = -1; /* if set, we are in single file mode */
-static const char *content_basedir = NULL;
-static const char *content_logspec = NULL;
 
 static int
 log_content_file_preinit(const char *logfile)
@@ -256,20 +254,6 @@ log_content_file_preinit(const char *logfile)
 		               logfile, strerror(errno));
 		return -1;
 	}
-	return 0;
-}
-
-static int
-log_content_dir_preinit(const char *basedir)
-{
-	content_basedir = basedir;
-	return 0;
-}
-
-static int
-log_content_spec_preinit(const char *logspec)
-{
-	content_logspec = logspec;
 	return 0;
 }
 
@@ -447,7 +431,7 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 			goto errout;
 		}
 		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s-%s.log",
-		             content_basedir, timebuf, srcaddr, dstaddr) < 0) {
+		             opts->contentlog, timebuf, srcaddr, dstaddr) < 0) {
 			log_err_printf("Failed to format filename: %s (%i)\n",
 			               strerror(errno), errno);
 			goto errout;
@@ -455,7 +439,7 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 	} else if (opts->contentlog_isspec) {
 		/* per-connection-file content log with logspec (-F) */
 		ctx->u.spec.filename = log_content_format_pathspec(
-		                                       content_logspec,
+		                                       opts->contentlog,
 		                                       srcaddr, dstaddr,
 		                                       exec_path, user, group);
 		if (!ctx->u.spec.filename) {
@@ -694,15 +678,11 @@ log_preinit(opts_t *opts)
 
 	if (opts->contentlog) {
 		if (opts->contentlog_isdir) {
-			if (log_content_dir_preinit(opts->contentlog) == -1)
-				goto out;
 			opencb = log_content_dir_opencb;
 			closecb = log_content_dir_closecb;
 			writecb = log_content_common_writecb;
 			prepcb = NULL;
 		} else if (opts->contentlog_isspec) {
-			if (log_content_spec_preinit(opts->contentlog) == -1)
-				goto out;
 			opencb = log_content_spec_opencb;
 			closecb = log_content_spec_closecb;
 			writecb = log_content_common_writecb;
