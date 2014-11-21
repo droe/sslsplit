@@ -498,4 +498,96 @@ sys_get_cpu_cores(void)
 #endif /* !_SC_NPROCESSORS_ONLN */
 }
 
+/*
+ * Send a message and optional file descriptor on a connected AF_UNIX
+ * SOCKET_DGRAM socket s.  Returns the return value of sendmsg().
+ * If fd is -1, no file descriptor is passed.
+ */
+ssize_t
+sys_sendmsgfd(int sock, void *buf, size_t bufsz, int fd)
+{
+	struct iovec iov;
+	struct msghdr msg;
+	struct cmsghdr *cmsg;
+	char cmsgbuf[CMSG_SPACE(sizeof(int))];
+
+	iov.iov_base = buf;
+	iov.iov_len = bufsz;
+
+	msg.msg_name = NULL;
+	msg.msg_namelen = 0;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+	if (fd != -1) {
+		msg.msg_control = cmsgbuf;
+		msg.msg_controllen = sizeof(cmsgbuf);
+
+		cmsg = CMSG_FIRSTHDR(&msg);
+		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+		cmsg->cmsg_level = SOL_SOCKET;
+		cmsg->cmsg_type = SCM_RIGHTS;
+
+		*((int *) CMSG_DATA(cmsg)) = fd;
+	} else {
+		msg.msg_control = NULL;
+		msg.msg_controllen = 0;
+	}
+#ifdef MSG_NOSIGNAL
+	return sendmsg(sock, &msg, MSG_NOSIGNAL);
+#else /* !MSG_NOSIGNAL */
+	return sendmsg(sock, &msg, 0);
+#endif /* !MSG_NOSIGNAL */
+}
+
+/*
+ * Receive a message and optional file descriptor on a connected AF_UNIX
+ * SOCKET_DGRAM socket s.  Returns the return value of recvmsg()/recv()
+ * and sets errno to EINVAL if the received message is malformed.
+ * If pfd is NULL, no file descriptor is received; if a file descriptor was
+ * part of the received message and pfd is NULL, then the kernel will close it.
+ */
+ssize_t
+sys_recvmsgfd(int sock, void *buf, size_t bufsz, int *pfd)
+{
+	ssize_t n;
+
+	if (pfd) {
+		struct iovec iov;
+		struct msghdr msg;
+		struct cmsghdr *cmsg;
+		unsigned char cmsgbuf[CMSG_SPACE(sizeof(int))];
+
+		iov.iov_base = buf;
+		iov.iov_len = bufsz;
+
+		msg.msg_name = NULL;
+		msg.msg_namelen = 0;
+		msg.msg_iov = &iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = cmsgbuf;
+		msg.msg_controllen = sizeof(cmsgbuf);
+		if ((n = recvmsg(sock, &msg, 0)) <= 0)
+			return n;
+		cmsg = CMSG_FIRSTHDR(&msg);
+		if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
+			if (cmsg->cmsg_level != SOL_SOCKET) {
+				errno = EINVAL;
+				return -1;
+			}
+			if (cmsg->cmsg_type != SCM_RIGHTS) {
+				errno = EINVAL;
+				return -1;
+			}
+			*pfd = *((int *) CMSG_DATA(cmsg));
+		} else {
+			*pfd = -1;
+		}
+	} else {
+		n = recv(sock, buf, bufsz, 0);
+	}
+	return n;
+}
+
 /* vim: set noet ft=c: */
+

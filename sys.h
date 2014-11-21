@@ -56,6 +56,9 @@ int sys_dir_eachfile(const char *, sys_dir_eachfile_cb_t, void *) NONNULL(1,2);
 
 uint32_t sys_get_cpu_cores(void) WUNRES;
 
+ssize_t sys_sendmsgfd(int, void *, size_t, int) NONNULL(2) WUNRES;
+ssize_t sys_recvmsgfd(int, void *, size_t, int *) NONNULL(2) WUNRES;
+
 #endif /* !SYS_H */
 
 /* vim: set noet ft=c: */
