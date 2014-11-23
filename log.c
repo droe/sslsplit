@@ -543,7 +543,7 @@ log_content_dir_closecb(void *fh)
 }
 
 static int
-log_content_spec_opencb(UNUSED void *fh)
+log_content_spec_opencb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
 	char *filedir, *filename2;
