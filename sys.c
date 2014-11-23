@@ -76,6 +76,7 @@ sys_privdrop(const char *username, const char *groupname, const char *jaildir)
 	int ret = -1;
 
 	if (groupname) {
+		errno = 0;
 		if (!(gr = getgrnam(groupname))) {
 			log_err_printf("Failed to getgrnam group '%s': %s\n",
 			               groupname, strerror(errno));
@@ -84,6 +85,7 @@ sys_privdrop(const char *username, const char *groupname, const char *jaildir)
 	}
 
 	if (username) {
+		errno = 0;
 		if (!(pw = getpwnam(username))) {
 			log_err_printf("Failed to getpwnam user '%s': %s\n",
 			               username, strerror(errno));
@@ -139,6 +141,42 @@ error:
 		endpwent();
 	}
 	return ret;
+}
+
+/*
+ * Returns 1 if username can be loaded from user database, 0 otherwise.
+ */
+int
+sys_isuser(const char *username)
+{
+	errno = 0;
+	if (!getpwnam(username)) {
+		if (errno != 0 && errno != ENOENT) {
+			log_err_printf("Failed to load user '%s': %s (%i)\n",
+			               username, strerror(errno), errno);
+		}
+		return 0;
+	}
+
+	endpwent();
+	return 1;
+}
+
+/*
+ * Returns 1 if groupname can be loaded from group database, 0 otherwise.
+ */
+int
+sys_isgroup(const char *groupname)
+{
+	errno = 0;
+	if (!getgrnam(groupname)) {
+		if (errno != 0 && errno != ENOENT) {
+			log_err_printf("Failed to load group '%s': %s (%i)\n",
+			               groupname, strerror(errno), errno);
+		}
+		return 0;
+	}
+	return 1;
 }
 
 /*
@@ -373,8 +411,13 @@ sys_isdir(const char *path)
 {
 	struct stat s;
 
-	if (stat(path, &s) == -1)
+	if (stat(path, &s) == -1) {
+		if (errno != ENOENT) {
+			log_err_printf("Error stating file: %s (%i)\n",
+			               strerror(errno), errno);
+		}
 		return 0;
+	}
 	if (s.st_mode & S_IFDIR)
 		return 1;
 	return 0;

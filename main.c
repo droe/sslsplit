@@ -462,6 +462,12 @@ main(int argc, char *argv[])
 				exit(EXIT_SUCCESS);
 				break;
 			case 'u':
+				if (!sys_isuser(optarg)) {
+					fprintf(stderr, "%s: '%s' is not an "
+					                "existing user\n",
+					                argv0, optarg);
+					exit(EXIT_FAILURE);
+				}
 				if (opts->dropuser)
 					free(opts->dropuser);
 				opts->dropuser = strdup(optarg);
@@ -469,6 +475,12 @@ main(int argc, char *argv[])
 					oom_die(argv0);
 				break;
 			case 'm':
+				if (!sys_isgroup(optarg)) {
+					fprintf(stderr, "%s: '%s' is not an "
+					                "existing group\n",
+					                argv0, optarg);
+					exit(EXIT_FAILURE);
+				}
 				if (opts->dropgroup)
 					free(opts->dropgroup);
 				opts->dropgroup = strdup(optarg);
