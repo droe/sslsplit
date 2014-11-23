@@ -58,7 +58,7 @@
  */
 
 static logger_t *err_log = NULL;
-static int err_started = 0; /* while 0, shortcut the thrqueue */
+static int err_shortcut_logger = 0;
 static int err_mode = LOG_ERR_MODE_STDERR;
 
 static ssize_t
@@ -86,7 +86,7 @@ log_err_printf(const char *fmt, ...)
 	va_end(ap);
 	if (rv < 0)
 		return -1;
-	if (err_started) {
+	if (err_shortcut_logger) {
 		return logger_write_freebuf(err_log, NULL, 0,
 		                            buf, strlen(buf) + 1);
 	} else {
@@ -117,7 +117,7 @@ log_dbg_write_free(void *buf, size_t sz)
 	if (dbg_mode == LOG_DBG_MODE_NONE)
 		return 0;
 
-	if (err_started) {
+	if (err_shortcut_logger) {
 		return logger_write_freebuf(err_log, NULL, 0, buf, sz);
 	} else {
 		log_err_writecb(NULL, buf, sz);
@@ -742,7 +742,7 @@ log_init(opts_t *opts)
 		if (logger_start(err_log) == -1)
 			return -1;
 	if (!opts->debug) {
-		err_started = 1;
+		err_shortcut_logger = 1;
 	}
 	if (connect_log)
 		if (logger_start(connect_log) == -1)
