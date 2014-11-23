@@ -483,6 +483,12 @@ main(int argc, char *argv[])
 					oom_die(argv0);
 				break;
 			case 'j':
+				if (!sys_isdir(optarg)) {
+					fprintf(stderr, "%s: '%s' is not a "
+					                "directory\n",
+					                argv0, optarg);
+					exit(EXIT_FAILURE);
+				}
 				if (opts->jaildir)
 					free(opts->jaildir);
 				opts->jaildir = strdup(optarg);
@@ -506,6 +512,12 @@ main(int argc, char *argv[])
 				opts->contentlog_isspec = 0;
 				break;
 			case 'S':
+				if (!sys_isdir(optarg)) {
+					fprintf(stderr, "%s: '%s' is not a "
+					                "directory\n",
+					                argv0, optarg);
+					exit(EXIT_FAILURE);
+				}
 				if (opts->contentlog)
 					free(opts->contentlog);
 				opts->contentlog = strdup(optarg);
