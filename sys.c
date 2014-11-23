@@ -510,6 +510,7 @@ sys_sendmsgfd(int sock, void *buf, size_t bufsz, int fd)
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
 	char cmsgbuf[CMSG_SPACE(sizeof(int))];
+	ssize_t n;
 
 	iov.iov_base = buf;
 	iov.iov_len = bufsz;
@@ -533,11 +534,14 @@ sys_sendmsgfd(int sock, void *buf, size_t bufsz, int fd)
 		msg.msg_control = NULL;
 		msg.msg_controllen = 0;
 	}
+	do {
 #ifdef MSG_NOSIGNAL
-	return sendmsg(sock, &msg, MSG_NOSIGNAL);
+		n = sendmsg(sock, &msg, MSG_NOSIGNAL);
 #else /* !MSG_NOSIGNAL */
-	return sendmsg(sock, &msg, 0);
+		n = sendmsg(sock, &msg, 0);
 #endif /* !MSG_NOSIGNAL */
+	} while (n == -1 && errno == EINTR);
+	return n;
 }
 
 /*
@@ -567,7 +571,10 @@ sys_recvmsgfd(int sock, void *buf, size_t bufsz, int *pfd)
 		msg.msg_iovlen = 1;
 		msg.msg_control = cmsgbuf;
 		msg.msg_controllen = sizeof(cmsgbuf);
-		if ((n = recvmsg(sock, &msg, 0)) <= 0)
+		do {
+			n = recvmsg(sock, &msg, 0);
+		} while (n == -1 && errno == EINTR);
+		if (n <= 0)
 			return n;
 		cmsg = CMSG_FIRSTHDR(&msg);
 		if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
@@ -584,7 +591,9 @@ sys_recvmsgfd(int sock, void *buf, size_t bufsz, int *pfd)
 			*pfd = -1;
 		}
 	} else {
-		n = recv(sock, buf, bufsz, 0);
+		do {
+			n = recv(sock, buf, bufsz, 0);
+		} while (n == -1 && errno == EINTR);
 	}
 	return n;
 }
