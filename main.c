@@ -278,8 +278,8 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i
-	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
+	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
+	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
