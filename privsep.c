@@ -33,9 +33,11 @@
 #include "log.h"
 #include "attrib.h"
 
-#include <sys/select.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <sys/wait.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
