@@ -760,23 +760,30 @@ log_init(opts_t *opts)
 void
 log_fini(void)
 {
+	/* switch back to direct logging so we can still log errors while
+	 * tearing down the logging infrastructure */
+	err_shortcut_logger = 1;
+
 	if (content_log)
 		logger_leave(content_log);
 	if (connect_log)
 		logger_leave(connect_log);
-	logger_leave(err_log);
+	if (err_log)
+		logger_leave(err_log);
 
 	if (content_log)
 		logger_join(content_log);
 	if (connect_log)
 		logger_join(connect_log);
-	logger_join(err_log);
+	if (err_log)
+		logger_join(err_log);
 
 	if (content_log)
 		logger_free(content_log);
 	if (connect_log)
 		logger_free(connect_log);
-	logger_free(err_log);
+	if (err_log)
+		logger_free(err_log);
 
 	if (content_log)
 		log_content_file_fini();
