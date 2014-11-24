@@ -50,7 +50,7 @@
  * Privilege separation functionality.
  *
  * The server code has limitations on the internal functionality that can be
- * used, namely only those that are initialized before forking can be used.
+ * used, namely only those that are initialized before forking.
  */
 
 /* maximal message sizes */
@@ -68,11 +68,13 @@
 #define PRIVSEP_ANS_DENIED	3	/* request denied */
 #define PRIVSEP_ANS_SYS_ERR	4	/* system error; arg=errno */
 
-int received_sighup;
-int received_sigint;
-int received_sigquit;
-int received_sigchld;
-int selfpipe_wrfd;
+/* communication with signal handler */
+static int received_sighup;
+static int received_sigint;
+static int received_sigquit;
+static int received_sigchld;
+static int received_sigusr1;
+static int selfpipe_wrfd; /* write end of pipe used for unblocking select */
 
 static void
 privsep_server_signal_handler(int sig)
@@ -92,6 +94,9 @@ privsep_server_signal_handler(int sig)
 		break;
 	case SIGCHLD:
 		received_sigchld = 1;
+		break;
+	case SIGUSR1:
+		received_sigusr1 = 1;
 		break;
 	}
 	if (selfpipe_wrfd != -1) {
@@ -383,11 +388,15 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 }
 
 /*
+ * Privilege separation server (main privileged monitor loop)
+ *
  * sigpipe is the self-pipe trick pipe used for communicating signals to
  * the main event loop and break out of select() without race conditions.
  * srvsock[] is a dynamic array of connected privsep server sockets to serve.
  * Caller is responsible for freeing memory after returning, if necessary.
  * childpid is the pid of the child process to forward signals to.
+ *
+ * Returns 0 on a successful clean exit and -1 on errors.
  */
 static int
 privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
@@ -435,7 +444,13 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 				kill(childpid, SIGHUP);
 				received_sighup = 0;
 			}
+			if (received_sigusr1) {
+				kill(childpid, SIGUSR1);
+				received_sigusr1 = 0;
+			}
 			if (received_sigint) {
+				/* if we don't detach from the TTY, the
+				 * child process receives SIGINT directly */
 				if (opts->detach)
 					kill(childpid, SIGINT);
 				received_sigint = 0;
@@ -605,6 +620,7 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 	received_sighup = 0;
 	received_sigint = 0;
 	received_sigchld = 0;
+	received_sigusr1 = 0;
 
 	if (pipe(selfpipev) == -1) {
 		log_err_printf("Failed to create self-pipe: %s (%i)\n",
@@ -692,6 +708,11 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 	}
 	if (signal(SIGQUIT, privsep_server_signal_handler) == SIG_ERR) {
 		log_err_printf("Failed to install SIGQUIT handler: %s (%i)\n",
+		               strerror(errno), errno);
+		return -1;
+	}
+	if (signal(SIGUSR1, privsep_server_signal_handler) == SIG_ERR) {
+		log_err_printf("Failed to install SIGUSR1 handler: %s (%i)\n",
 		               strerror(errno), errno);
 		return -1;
 	}
