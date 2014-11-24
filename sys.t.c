@@ -141,7 +141,7 @@ START_TEST(sys_mkpath_01)
 	         basedir);
 	fail_unless(!!dir, "asprintf failed");
 	fail_unless(!sys_isdir(dir), "dir already sys_isdir()");
-	fail_unless(!sys_mkpath(dir, 0755), "sys_mkpath failed");
+	fail_unless(!sys_mkpath(dir, 0777), "sys_mkpath failed");
 	fail_unless(sys_isdir(dir), "dir not sys_isdir()");
 	free(dir);
 }

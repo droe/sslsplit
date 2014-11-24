@@ -26,18 +26,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PROXY_H
-#define PROXY_H
+#ifndef PRIVSEP_H
+#define PRIVSEP_H
 
-#include "opts.h"
 #include "attrib.h"
+#include "opts.h"
 
-typedef struct proxy_ctx proxy_ctx_t;
+int privsep_fork(opts_t *, int[], size_t);
 
-proxy_ctx_t * proxy_new(opts_t *, int) NONNULL(1) MALLOC;
-void proxy_run(proxy_ctx_t *) NONNULL(1);
-void proxy_free(proxy_ctx_t *) NONNULL(1);
+int privsep_client_openfile(int, const char *, int);
+int privsep_client_opensock(int, const proxyspec_t *spec);
+int privsep_client_close(int);
 
-#endif /* !PROXY_H */
+#endif /* !PRIVSEP_H */
 
 /* vim: set noet ft=c: */

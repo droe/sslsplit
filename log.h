@@ -63,9 +63,12 @@ int log_content_open(log_content_ctx_t **, opts_t *, char *, char *,
 int log_content_submit(log_content_ctx_t *, logbuf_t *, int)
                        NONNULL(1,2) WUNRES;
 int log_content_close(log_content_ctx_t **) NONNULL(1) WUNRES;
+int log_content_split_pathspec(const char *, char **,
+                               char **) NONNULL(1,2,3) WUNRES;
 
 int log_preinit(opts_t *) NONNULL(1) WUNRES;
-int log_init(opts_t *) NONNULL(1) WUNRES;
+void log_preinit_undo(void);
+int log_init(opts_t *, int) NONNULL(1) WUNRES;
 void log_fini(void);
 
 #endif /* !LOG_H */

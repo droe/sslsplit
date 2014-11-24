@@ -33,6 +33,7 @@
 
 #include "opts.h"
 #include "proxy.h"
+#include "privsep.h"
 #include "ssl.h"
 #include "nat.h"
 #include "proc.h"
@@ -60,6 +61,8 @@
 #undef daemon
 extern int daemon(int, int);
 #endif /* __APPLE__ */
+
+#define DEFAULT_DROPUSER "nobody"
 
 /*
  * Print version information to stderr.
@@ -144,9 +147,10 @@ main_usage(void)
 "  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL:-aNULL)\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
-"  -u user     drop privileges to user (default if run as root: nobody)\n"
+"  -u user     drop privileges to user (default if run as root: "
+               DEFAULT_DROPUSER ")\n"
 "  -m group    when using -u, override group (default: primary group of user)\n"
-"  -j jaildir  chroot() to jaildir (impacts -S and sni, see manual page)\n"
+"  -j jaildir  chroot() to jaildir (impacts sni proxyspecs, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
 "  -L logfile  content log: full data to file or named pipe (excludes -S/-F)\n"
@@ -204,14 +208,14 @@ main_loadtgcrt(const char *filename, void *arg)
 		log_err_printf("Failed to load cert and key from PEM file "
 		                "'%s'\n", filename);
 		log_fini();
-		exit(EXIT_FAILURE); /* XXX */
+		exit(EXIT_FAILURE);
 	}
 	if (X509_check_private_key(cert->crt, cert->key) != 1) {
 		log_err_printf("Cert does not match key in PEM file "
 		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
 		log_fini();
-		exit(EXIT_FAILURE); /* XXX */
+		exit(EXIT_FAILURE);
 	}
 
 #ifdef DEBUG_CERTIFICATE
@@ -503,9 +507,15 @@ main(int argc, char *argv[])
 				}
 				if (opts->jaildir)
 					free(opts->jaildir);
-				opts->jaildir = strdup(optarg);
-				if (!opts->jaildir)
-					oom_die(argv0);
+				opts->jaildir = realpath(optarg, NULL);
+				if (!opts->jaildir) {
+					fprintf(stderr, "%s: Failed to "
+					                "canonicalize '%s': "
+					                "%s (%i)\n",
+					                argv0, optarg,
+					                strerror(errno), errno);
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'l':
 				if (opts->connectlog)
@@ -532,21 +542,89 @@ main(int argc, char *argv[])
 				}
 				if (opts->contentlog)
 					free(opts->contentlog);
-				opts->contentlog = strdup(optarg);
-				if (!opts->contentlog)
-					oom_die(argv0);
+				opts->contentlog = realpath(optarg, NULL);
+				if (!opts->contentlog) {
+					fprintf(stderr, "%s: Failed to "
+					                "canonicalize '%s': "
+					                "%s (%i)\n",
+					                argv0, optarg,
+					                strerror(errno), errno);
+					exit(EXIT_FAILURE);
+				}
 				opts->contentlog_isdir = 1;
 				opts->contentlog_isspec = 0;
 				break;
-			case 'F':
+			case 'F': {
+				char *lhs, *rhs, *p, *q;
+				size_t n;
+				if (opts->contentlog_basedir)
+					free(opts->contentlog_basedir);
 				if (opts->contentlog)
 					free(opts->contentlog);
-				opts->contentlog = strdup(optarg);
-				if (!opts->contentlog)
+				if (log_content_split_pathspec(optarg, &lhs,
+				                               &rhs) == -1) {
+					fprintf(stderr, "%s: Failed to split "
+					                "'%s' in lhs/rhs: "
+					                "%s (%i)\n",
+					                argv0, optarg,
+					                strerror(errno), errno);
+					exit(EXIT_FAILURE);
+				}
+				/* eliminate %% from lhs */
+				for (p = q = lhs; *p; p++, q++) {
+					if (q < p)
+						*q = *p;
+					if (*p == '%' && *(p+1) == '%')
+						p++;
+				}
+				*q = '\0';
+				/* all %% in lhs resolved to % */
+				if (sys_mkpath(lhs, 0777) == -1) {
+					fprintf(stderr, "%s: Failed to create "
+					                "'%s': %s (%i)\n",
+					                argv0, lhs,
+					                strerror(errno), errno);
+					exit(EXIT_FAILURE);
+				}
+				opts->contentlog_basedir = realpath(lhs, NULL);
+				if (!opts->contentlog_basedir) {
+					fprintf(stderr, "%s: Failed to "
+					                "canonicalize '%s': "
+					                "%s (%i)\n",
+					                argv0, lhs,
+					                strerror(errno), errno);
+					exit(EXIT_FAILURE);
+				}
+				/* count '%' in opts->contentlog_basedir */
+				for (n = 0, p = opts->contentlog_basedir;
+				     *p;
+				     p++) {
+					if (*p == '%')
+						n++;
+				}
+				free(lhs);
+				n += strlen(opts->contentlog_basedir);
+				if (!(lhs = malloc(n + 1)))
+					oom_die(argv0);
+				/* re-encoding % to %%, copying basedir to lhs */
+				for (p = opts->contentlog_basedir, q = lhs;
+				     *p;
+				     p++, q++) {
+					*q = *p;
+					if (*q == '%')
+						*(++q) = '%';
+				}
+				*q = '\0';
+				/* lhs contains encoded realpathed basedir */
+				if (asprintf(&opts->contentlog,
+				             "%s/%s", lhs, rhs) < 0)
 					oom_die(argv0);
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 1;
+				free(lhs);
+				free(rhs);
 				break;
+			}
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
 				opts->lprocinfo = 1;
@@ -643,8 +721,8 @@ main(int argc, char *argv[])
 			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
-	    !opts->contentlog_isdir && !opts->contentlog_isspec) {
-		opts->dropuser = strdup("nobody");
+	    sys_isuser(DEFAULT_DROPUSER)) {
+		opts->dropuser = strdup(DEFAULT_DROPUSER);
 		if (!opts->dropuser)
 			oom_die(argv0);
 	}
@@ -730,47 +808,74 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	/* Bind listeners before dropping privileges */
-	proxy_ctx_t *proxy = proxy_new(opts);
-	if (!proxy) {
-		fprintf(stderr, "%s: failed to initialize proxy.\n", argv0);
-		exit(EXIT_FAILURE);
-	}
 	/* Load certs before dropping privs but after cachemgr_preinit() */
 	if (opts->tgcrtdir) {
 		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, opts);
 	}
 
-	/* Drop privs, chroot, detach from TTY */
-	if (sys_privdrop(opts->dropuser, opts->dropgroup, opts->jaildir) == -1) {
-		fprintf(stderr, "%s: failed to drop privileges: %s\n",
-		                argv0, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
+	/* Detach from tty; from this point on, only canonicalized absolute
+	 * paths should be used (-j, -F, -S). */
 	if (opts->detach) {
 		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("Detaching from TTY, see syslog for "
 			               "errors after this point\n");
 		}
-		if (daemon(1, 0) == -1) {
+		if (daemon(0, 0) == -1) {
 			fprintf(stderr, "%s: failed to detach from TTY: %s\n",
 			                argv0, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 		log_err_mode(LOG_ERR_MODE_SYSLOG);
-		ssl_reinit();
 	}
 
+	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
+		log_err_printf("Failed to write PID to PID file '%s': %s (%i)"
+		               "\n", opts->pidfile, strerror(errno), errno);
+		return -1;
+	}
+
+	/* Fork into parent monitor process and (potentially unprivileged)
+	 * child process doing the actual work.  We request two privsep client
+	 * sockets: one for the content logger thread, one for the child
+	 * process main thread (main proxy thread) */
+	int clisock[2];
+	if (privsep_fork(opts, clisock, 2) != 0) {
+		/* parent has exited the monitor loop after waiting for child,
+		 * or an error occured */
+		if (opts->pidfile) {
+			sys_pidf_close(pidfd, opts->pidfile);
+		}
+		goto out_parent;
+	}
+	/* child */
+
+	/* close pidfile in child */
+	if (opts->pidfile)
+		close(pidfd);
+
+#if 0
+	/* Initialize proxy before dropping privs */
+	proxy_ctx_t *proxy = proxy_new(opts, clisock[0]);
+	if (!proxy) {
+		log_err_printf("Failed to initialize proxy.\n");
+		exit(EXIT_FAILURE);
+	}
+#endif
+
+	/* Drop privs, chroot */
+	if (sys_privdrop(opts->dropuser, opts->dropgroup,
+	                 opts->jaildir) == -1) {
+		log_err_printf("Failed to drop privileges: %s (%i)\n",
+		               strerror(errno), errno);
+		exit(EXIT_FAILURE);
+	}
+	ssl_reinit();
+
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
-	if (log_init(opts) == -1) {
+	if (log_init(opts, clisock[1]) == -1) {
 		fprintf(stderr, "%s: failed to init log facility: %s\n",
 		                argv0, strerror(errno));
 		goto out_log_failed;
-	}
-	if (opts->pidfile && (sys_pidf_write(pidfd) == -1)) {
-		log_err_printf("Failed to write PID to PID file '%s': %s\n",
-		               opts->pidfile, strerror(errno));
-		goto out_pidwrite_failed;
 	}
 	if (cachemgr_init() == -1) {
 		log_err_printf("Failed to init cache manager.\n");
@@ -780,21 +885,27 @@ main(int argc, char *argv[])
 		log_err_printf("Failed to init NAT state table lookup.\n");
 		goto out_nat_failed;
 	}
-
 	rv = EXIT_SUCCESS;
 
+#if 1
+	proxy_ctx_t *proxy = proxy_new(opts, clisock[0]);
+	if (!proxy) {
+		log_err_printf("Failed to initialize proxy.\n");
+		goto out_proxy_new_failed;
+	}
+#endif
 	proxy_run(proxy);
 	proxy_free(proxy);
+#if 1
+out_proxy_new_failed:
+#endif
 	nat_fini();
 out_nat_failed:
 	cachemgr_fini();
 out_cachemgr_failed:
-	if (opts->pidfile) {
-		sys_pidf_close(pidfd, opts->pidfile);
-	}
-out_pidwrite_failed:
 	log_fini();
 out_log_failed:
+out_parent:
 	opts_free(opts);
 	ssl_fini();
 	return rv;

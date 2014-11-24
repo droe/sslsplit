@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fcntl.h>
@@ -470,11 +471,11 @@ sys_mkpath(const char *path, mode_t mode)
 	return 0;
 }
 
-
 /*
  * Iterate over all files in a directory hierarchy, calling the callback
  * cb for each file, passing the filename and arg as arguments.  Files and
  * directories beginning with a dot are skipped, symlinks are followed.
+ * FIXME - there is no facility to return errors from the file handlers
  */
 int
 sys_dir_eachfile(const char *dirname, sys_dir_eachfile_cb_t cb, void *arg)
@@ -568,6 +569,8 @@ sys_sendmsgfd(int sock, void *buf, size_t bufsz, int fd)
 		msg.msg_controllen = sizeof(cmsgbuf);
 
 		cmsg = CMSG_FIRSTHDR(&msg);
+		if (!cmsg)
+			return -1;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 		cmsg->cmsg_level = SOL_SOCKET;
 		cmsg->cmsg_type = SCM_RIGHTS;
@@ -639,6 +642,132 @@ sys_recvmsgfd(int sock, void *buf, size_t bufsz, int *pfd)
 		} while (n == -1 && errno == EINTR);
 	}
 	return n;
+}
+
+/*
+ * Format AF_UNIX socket address into printable string.
+ * Returns newly allocated string that must be freed by caller.
+ */
+static char *
+sys_afunix_str(struct sockaddr *addr, socklen_t addrlen)
+{
+	struct sockaddr_un *sun = (struct sockaddr_un *)addr;
+	char *name;
+
+	if (addrlen == sizeof(sa_family_t)) {
+		asprintf(&name, "unnmd");
+	} else if (sun->sun_path[0] == '\0') {
+		/* abstract sockets is a Linux feature */
+		asprintf(&name, "abstr:%02x:%02x:%02x:%02x",
+				sun->sun_path[1],
+				sun->sun_path[2],
+				sun->sun_path[3],
+				sun->sun_path[4]);
+	} else {
+		asprintf(&name, "pname:%s", sun->sun_path);
+	}
+
+	return name;
+}
+
+/*
+ * Dump all open file descriptors to stdout - poor man's lsof/fstat/sockstat
+ */
+void
+sys_dump_fds(void)
+{
+	int maxfd = 0;
+
+#ifdef F_MAXFD
+	if (!maxfd && ((maxfd = fcntl(0, F_MAXFD)) == -1)) {
+		fprintf(stderr, "fcntl(0, F_MAXFD) failed: %s (%i)\n",
+		                strerror(errno), errno);
+	}
+#endif /* F_MAXFD */
+#ifdef _SC_OPEN_MAX
+	if (!maxfd && ((maxfd = sysconf(_SC_OPEN_MAX)) == -1)) {
+		fprintf(stderr, "sysconf(_SC_OPEN_MAX) failed: %s (%i)\n",
+		                strerror(errno), errno);
+	}
+#endif /* _SC_OPEN_MAX */
+	if (!maxfd)
+		maxfd = 65535;
+
+	for (int fd = 0; fd <= maxfd; fd++) {
+		struct stat st;
+
+		if (fstat(fd, &st) == -1) {
+			continue;
+		}
+
+		printf("%5d:", fd);
+		switch (st.st_mode & S_IFMT) {
+		case S_IFBLK:  printf(" blkdev"); break;
+		case S_IFCHR:  printf(" chrdev"); break;
+		case S_IFDIR:  printf(" dir   "); break;
+		case S_IFIFO:  printf(" fifo  "); break;
+		case S_IFLNK:  printf(" lnkfil"); break;
+		case S_IFREG:  printf(" regfil"); break;
+		case S_IFSOCK: printf(" socket"); break;
+		default:       printf(" unknwn"); break;
+		}
+
+		if ((st.st_mode & S_IFMT) == S_IFSOCK) {
+			int lrv, frv;
+			struct sockaddr_storage lss, fss;
+			socklen_t lsslen = sizeof(lss);
+			socklen_t fsslen = sizeof(fss);
+			char *laddrstr, *faddrstr;
+
+			lrv = getsockname(fd, (struct sockaddr *)&lss, &lsslen);
+			frv = getpeername(fd, (struct sockaddr *)&fss, &fsslen);
+
+			switch (lss.ss_family) {
+			case AF_INET:
+			case AF_INET6: {
+				if (lrv == 0) {
+					laddrstr = sys_sockaddr_str((struct sockaddr *)&lss, lsslen);
+				} else {
+					laddrstr = strdup("n/a");
+				}
+				if (frv == 0) {
+					faddrstr = sys_sockaddr_str((struct sockaddr *)&fss, fsslen);
+				} else {
+					faddrstr = strdup("n/a");
+				}
+				printf(" %-6s %s -> %s",
+				       lss.ss_family == AF_INET ? "in" : "in6",
+				       laddrstr, faddrstr);
+				free(laddrstr);
+				free(faddrstr);
+				break;
+			}
+			case AF_UNIX: {
+				if (lrv == 0) {
+					laddrstr = sys_afunix_str((struct sockaddr *)&lss, lsslen);
+				} else {
+					laddrstr = strdup("n/a");
+				}
+				if (frv == 0) {
+					faddrstr = sys_afunix_str((struct sockaddr *)&fss, fsslen);
+				} else {
+					faddrstr = strdup("n/a");
+				}
+				printf(" unix   %s -> %s", laddrstr, faddrstr);
+				free(laddrstr);
+				free(faddrstr);
+				break;
+			}
+			case AF_UNSPEC: {
+				printf(" unspec");
+				break;
+			}
+			default:
+				printf(" (%i)", lss.ss_family);
+			}
+		}
+		printf("\n");
+	}
 }
 
 /* vim: set noet ft=c: */

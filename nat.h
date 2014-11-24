@@ -48,6 +48,7 @@ int nat_ipv6ready(const char *) WUNRES;
 const char *nat_getdefaultname(void) WUNRES;
 void nat_list_engines(void);
 int nat_preinit(void) WUNRES;
+void nat_preinit_undo(void);
 int nat_init(void) WUNRES;
 void nat_fini(void);
 void nat_version(void);

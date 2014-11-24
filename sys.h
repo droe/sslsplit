@@ -61,6 +61,8 @@ uint32_t sys_get_cpu_cores(void) WUNRES;
 ssize_t sys_sendmsgfd(int, void *, size_t, int) NONNULL(2) WUNRES;
 ssize_t sys_recvmsgfd(int, void *, size_t, int *) NONNULL(2) WUNRES;
 
+void sys_dump_fds(void);
+
 #endif /* !SYS_H */
 
 /* vim: set noet ft=c: */

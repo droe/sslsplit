@@ -31,6 +31,7 @@
 #include "logger.h"
 #include "sys.h"
 #include "attrib.h"
+#include "privsep.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,7 +41,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <syslog.h>
-#include <libgen.h>
 #include <assert.h>
 #include <sys/stat.h>
 
@@ -242,8 +242,9 @@ struct log_content_ctx {
 	} u;
 };
 
-logger_t *content_log = NULL;
-static int content_fd = -1; /* if set, we are in single file mode */
+static logger_t *content_log = NULL;
+static int content_fd = -1; /* set in 'file' mode */
+static int content_clisock = -1; /* privsep client socket for content logger */
 
 static int
 log_content_file_preinit(const char *logfile)
@@ -267,15 +268,70 @@ log_content_file_fini(void)
 }
 
 /*
+ * Split a pathname into static LHS (including final slashes) and dynamic RHS.
+ * Returns -1 on error, 0 on success.
+ * On success, fills in lhs and rhs with newly allocated buffers that must
+ * be freed by the caller.
+ */
+int
+log_content_split_pathspec(const char *path, char **lhs, char **rhs)
+{
+	const char *p, *q, *r;
+
+	p = strchr(path, '%');
+	/* at first % or EOS */
+
+	/* skip % if next char is % (and implicitly not \0) */
+	while (p && p[1] == '%') {
+		p = strchr(p + 2, '%');
+	}
+	/* at first % that is not %%, or at EOS */
+
+	if (!p || !p[1]) {
+		/* EOS: no % that is not %% in path */
+		p = path + strlen(path);
+	}
+	/* at first hot % or at '\0' */
+
+	/* find last / before % */
+	for (r = q = strchr(path, '/'); q && (q < p); q = strchr(q + 1, '/')) {
+		r = q;
+	}
+	if (!(p = r)) {
+		/* no / found, use dummy ./ as LHS */
+		*lhs = strdup("./");
+		if (!*lhs)
+			return -1;
+		*rhs = strdup(path);
+		if (!*rhs) {
+			free(*lhs);
+			return -1;
+		}
+		return 0;
+	}
+	/* at last / terminating the static part of path */
+
+	p++; /* skip / */
+	*lhs = malloc(p - path + 1 /* for terminating null */);
+	if (!*lhs)
+		return -1;
+	memcpy(*lhs, path, p - path);
+	(*lhs)[p - path] = '\0';
+	*rhs = strdup(p);
+	if (!*rhs) {
+		free(*lhs);
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
  * Generate a log path based on the given log spec.
  * Returns an allocated buffer which must be freed by caller, or NULL on error.
  */
 #define PATH_BUF_INC	1024
-static char *
-log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
-                            char *exec_path, char *user, char *group)
-WUNRES MALLOC NONNULL(1,2,3);
-static char *
+static char * MALLOC NONNULL(1,2,3)
 log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
                             char *exec_path, char *user, char *group)
 {
@@ -521,9 +577,10 @@ log_content_dir_opencb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
 
-	ctx->fd = open(ctx->u.dir.filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
-	if (ctx->fd == -1) {
-		log_err_printf("Failed to open '%s': %s (%i)\n",
+	if ((ctx->fd = privsep_client_openfile(content_clisock,
+	                                       ctx->u.dir.filename,
+	                                       0)) == -1) {
+		log_err_printf("Opening logdir file '%s' failed: %s (%i)\n",
 		               ctx->u.dir.filename, strerror(errno), errno);
 		return -1;
 	}
@@ -546,36 +603,14 @@ static int
 log_content_spec_opencb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
-	char *filedir, *filename2;
 
-	filename2 = strdup(ctx->u.spec.filename);
-	if (!filename2) {
-		log_err_printf("Could not duplicate filname: %s (%i)\n",
-		               strerror(errno), errno);
+	if ((ctx->fd = privsep_client_openfile(content_clisock,
+	                                       ctx->u.spec.filename,
+	                                       1)) == -1) {
+		log_err_printf("Opening logspec file '%s' failed: %s (%i)\n",
+		               ctx->u.spec.filename, strerror(errno), errno);
 		return -1;
 	}
-	filedir = dirname(filename2);
-	if (!filedir) {
-		log_err_printf("Could not get dirname: %s (%i)\n",
-		               strerror(errno), errno);
-		free(filename2);
-		return -1;
-	}
-	if (sys_mkpath(filedir, 0755) == -1) {
-		log_err_printf("Could not create directory '%s': %s (%i)\n",
-		               filedir, strerror(errno), errno);
-		free(filename2);
-		return -1;
-	}
-	free(filename2);
-
-	ctx->fd = open(ctx->u.spec.filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
-	if (ctx->fd == -1) {
-		log_err_printf("Failed to open '%s': %s\n",
-		               ctx->u.spec.filename, strerror(errno));
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -732,11 +767,28 @@ out:
 }
 
 /*
+ * Close all file descriptors opened by log_preinit; used in privsep parent.
+ * Only undo content and connect log, leave error and debug log functional.
+ */
+void
+log_preinit_undo(void)
+{
+	if (content_log) {
+		log_content_file_fini();
+		logger_free(content_log);
+	}
+	if (connect_log) {
+		log_connect_close();
+		logger_free(connect_log);
+	}
+}
+
+/*
  * Log post-init: start logging threads.
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts)
+log_init(opts_t *opts, int clisock)
 {
 	if (err_log)
 		if (logger_start(err_log) == -1)
@@ -747,9 +799,13 @@ log_init(opts_t *opts)
 	if (connect_log)
 		if (logger_start(connect_log) == -1)
 			return -1;
-	if (content_log)
+	if (content_log) {
+		content_clisock = clisock;
 		if (logger_start(content_log) == -1)
 			return -1;
+	} else {
+		privsep_client_close(clisock);
+	}
 	return 0;
 }
 
@@ -789,6 +845,9 @@ log_fini(void)
 		log_content_file_fini();
 	if (connect_log)
 		log_connect_close();
+
+	if (content_clisock != -1)
+		privsep_client_close(content_clisock);
 }
 
 /* vim: set noet ft=c: */

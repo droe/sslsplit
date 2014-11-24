@@ -121,8 +121,6 @@ Log connection content to separate log files with the given path specification
 (see LOG SPECIFICATIONS below).  For each connection, a log file will be
 written, which will contain both directions of data as transmitted.
 Information about the connection will be contained in the filename only.
-If \fB-F\fP is used with \fB-j\fP, \fIlogspec\fP is relative to \fIjaildir\fP.
-If \fB-F\fP is used with \fB-u\fP, \fIlogspec\fP must be writable by \fIuser\fP.
 .TP
 .B \-g \fIpemfile\fP
 Use Diffie-Hellman group parameters from \fIpemfile\fP for Ephemereal
@@ -163,9 +161,7 @@ not been implemented yet.
 .TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
-Note that this has implications for \fB-F\fP, \fB-S\fP, and for \fBsni\fP
-\fIproxyspecs\fP.  The path given with \fB-S\fP or \fB-F\fP will be relative to
-\fIjaildir\fP since the log files cannot be opened before calling chroot(2).
+Note that this has implications for \fBsni\fP \fIproxyspecs\fP.
 Depending on your operating system, you will need to copy files such as
 \fB/etc/resolv.conf\fP to \fIjaildir\fP in order for name resolution to work.
 Using \fBsni\fP proxyspecs depends on name resolution.
@@ -268,8 +264,6 @@ Log connection content to separate log files under \fIlogdir\fP.  For each
 connection, a log file will be written, which will contain both directions of
 data as transmitted.  Information about the connection will be contained in
 the filename only.
-If \fB-S\fP is used with \fB-j\fP, \fIlogdir\fP is relative to \fIjaildir\fP.
-If \fB-S\fP is used with \fB-u\fP, \fIlogdir\fP must be writable by \fIuser\fP.
 .TP
 .B \-t \fIcertdir\fP
 Use private key, certificate and certificate chain from PEM files in
@@ -288,8 +282,7 @@ Drop privileges after opening sockets and files by setting the real,
 effective and stored user IDs to \fIuser\fP and loading the appropriate
 primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
 privileges to the stored UID if EUID != UID (setuid bit scenario), or to
-\fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0)
-and \fB-S\fP is not used.
+\fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0).
 .TP
 .B \-V
 Display version and compiled features information and exit.
