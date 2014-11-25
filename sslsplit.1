@@ -350,6 +350,7 @@ See NAT ENGINES for a list of supported NAT engines.
 .I fwdaddr port
 Static destination address, IPv4 or IPv6, with port or service name.  When this
 is used, connections are forwarded to the given server address and port.
+If \fIfwdaddr\fP is a hostname, it will be resolved to an IP address.
 .TP
 \fBsni\fP \fIport\fP
 Use the Server Name Indication (SNI) hostname sent by the client in the
@@ -362,7 +363,6 @@ no supported NAT engine or when running \fBsslsplit\fP on a different system
 than the NAT rules redirecting the actual connections.
 Note that when using \fB-j\fP with \fBsni\fP, you may need to prepare
 \fIjaildir\fP to make name resolution work from within the chroot directory.
-.LP
 .SH "LOG SPECIFICATIONS"
 Log specifications are composed of zero or more printf-style directives;
 ordinary characters are included directly in the output path.
@@ -623,7 +623,7 @@ authorityKeyIdentifier  = keyid:always,issuer:always
         -subj '/O=SSLsplit Root CA/CN=SSLsplit Root CA/' \\
         -set_serial 0 -days 3650\fP
 .fi
-.SH PERFORMANCE AND SCALABILITY
+.SH NOTES
 SSLsplit is able to handle a relatively high number of listeners and
 connections due to a multithreaded, event based architecture based on libevent,
 taking advantage of platform specific select() replacements such as kqueue.
@@ -643,8 +643,18 @@ are the actual bignum computations.
 .SH "SEE ALSO"
 openssl(1), ciphers(1), speed(1),
 pf(4), ipfw(8), iptables(8), ip6tables(8), ip(8),
-hostapd(8), arpspoof(8), parasite6(8), yersinia(8)
+hostapd(8), arpspoof(8), parasite6(8), yersinia(8),
+.I https://www.roe.ch/SSLsplit
 .SH AUTHORS
-SSLsplit was written by Daniel Roethlisberger.  The following individuals have
-contributed to the codebase, in chronological order of their first
-contribution:  Steve Wills, Landon Fuller and Wayne Jensen.
+SSLsplit was written by Daniel Roethlisberger <daniel@roe.ch>.
+
+The following individuals have contributed to the codebase, in chronological
+order of their first contribution:
+Steve Wills, Landon Fuller and Wayne Jensen.
+.SH BUGS
+Use Github for submission of bug reports or patches:
+.LP
+.RS
+.I https://github.com/droe/sslsplit
+.RE
+.LP
