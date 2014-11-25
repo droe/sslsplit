@@ -80,11 +80,7 @@ main_version(void)
 	nat_version();
 	fprintf(stderr, "Local process info support: ");
 #ifdef HAVE_LOCAL_PROCINFO
-	fprintf(stderr, "yes");
-#ifdef HAVE_DARWIN_LIBPROC
-	fprintf(stderr, " (Darwin libproc)");
-#endif /* HAVE_DARWIN_LIBPROC */
-	fprintf(stderr, "\n");
+	fprintf(stderr, "yes (" LOCAL_PROCINFO_STR ")\n");
 #else /* !HAVE_LOCAL_PROCINFO */
 	fprintf(stderr, "no\n");
 #endif /* !HAVE_LOCAL_PROCINFO */
