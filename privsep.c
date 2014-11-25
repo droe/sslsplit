@@ -32,6 +32,7 @@
 #include "util.h"
 #include "log.h"
 #include "attrib.h"
+#include "defaults.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -151,7 +152,7 @@ privsep_server_openfile(char *fn, int mkpath)
 			free(fn2);
 			return -1;
 		}
-		if (sys_mkpath(filedir, 0777) == -1) {
+		if (sys_mkpath(filedir, DFLT_DIRMODE) == -1) {
 			log_err_printf("Could not create directory '%s': %s (%i)\n",
 			               filedir, strerror(errno), errno);
 			free(fn2);
@@ -160,7 +161,7 @@ privsep_server_openfile(char *fn, int mkpath)
 		free(fn2);
 	}
 
-	fd = open(fn, O_WRONLY|O_APPEND|O_CREAT, 0666);
+	fd = open(fn, O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
 	if (fd == -1) {
 		log_err_printf("Failed to open '%s': %s (%i)\n",
 		               fn, strerror(errno), errno);

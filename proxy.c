@@ -57,7 +57,7 @@
  * Proxy engine, built around libevent 2.x.
  */
 
-static int signals[] = { SIGQUIT, SIGHUP, SIGINT, SIGPIPE };
+static int signals[] = { SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
 
 struct proxy_ctx {
 	pxy_thrmgr_ctx_t *thrmgr;
@@ -194,7 +194,7 @@ proxy_listener_setup(struct event_base *evbase, pxy_thrmgr_ctx_t *thrmgr,
 }
 
 /*
- * Signal handler for SIGQUIT, SIGINT, SIGHUP and SIGPIPE.
+ * Signal handler for SIGQUIT, SIGINT, SIGHUP, SIGPIPE and SIGUSR1.
  */
 static void
 proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
@@ -205,10 +205,25 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 		log_dbg_printf("Received signal %i\n", fd);
 	}
 
-	if (fd == SIGPIPE) {
-		log_err_printf("Warning: Received SIGPIPE; ignoring.\n");
-	} else {
+	switch(fd) {
+	case SIGQUIT:
+	case SIGINT:
+	case SIGHUP:
 		event_base_loopbreak(ctx->evbase);
+		break;
+	case SIGUSR1:
+		if (log_reopen() == -1) {
+			log_err_printf("Warning: Failed to reopen logs\n");
+		} else {
+			log_dbg_printf("Reopened log files\n");
+		}
+		break;
+	case SIGPIPE:
+		log_err_printf("Warning: Received SIGPIPE; ignoring.\n");
+		break;
+	default:
+		log_err_printf("Warning: Received unexpected signal %i\n", fd);
+		break;
 	}
 }
 

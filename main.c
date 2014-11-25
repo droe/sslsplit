@@ -41,6 +41,7 @@
 #include "sys.h"
 #include "log.h"
 #include "version.h"
+#include "defaults.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,7 +63,6 @@
 extern int daemon(int, int);
 #endif /* __APPLE__ */
 
-#define DEFAULT_DROPUSER "nobody"
 
 /*
  * Print version information to stderr.
@@ -131,7 +131,7 @@ main_usage(void)
 #define OPT_g 
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
-"  -G curve    use ECDH named curve (default: %s for non-RSA leafkey)\n"
+"  -G curve    use ECDH named curve (default: " DFLT_CURVE " for non-RSA leafkey)\n"
 #define OPT_G "G:"
 #else /* OPENSSL_NO_ECDH */
 #define OPT_G 
@@ -147,8 +147,7 @@ main_usage(void)
 "  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL:-aNULL)\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
-"  -u user     drop privileges to user (default if run as root: "
-               DEFAULT_DROPUSER ")\n"
+"  -u user     drop privileges to user (default if run as root: " DFLT_DROPUSER ")\n"
 "  -m group    when using -u, override group (default: primary group of user)\n"
 "  -j jaildir  chroot() to jaildir (impacts sni proxyspecs, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
@@ -186,11 +185,7 @@ main_usage(void)
 "              ssl 2001:db8::2 9999 pf          # ssl/6; NAT engine 'pf'\n"
 "Example:\n"
 "  %s -k ca.key -c ca.pem -P  https 127.0.0.1 8443  https ::1 8443\n"
-	"%s", BNAME,
-#ifndef OPENSSL_NO_ECDH
-	SSL_EC_KEY_CURVE_DEFAULT,
-#endif /* !OPENSSL_NO_ECDH */
-	dflt, BNAME, warn);
+	"%s", BNAME, dflt, BNAME, warn);
 }
 
 /*
@@ -721,8 +716,8 @@ main(int argc, char *argv[])
 			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
-	    sys_isuser(DEFAULT_DROPUSER)) {
-		opts->dropuser = strdup(DEFAULT_DROPUSER);
+	    sys_isuser(DFLT_DROPUSER)) {
+		opts->dropuser = strdup(DFLT_DROPUSER);
 		if (!opts->dropuser)
 			oom_die(argv0);
 	}

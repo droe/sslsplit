@@ -70,6 +70,7 @@ int log_preinit(opts_t *) NONNULL(1) WUNRES;
 void log_preinit_undo(void);
 int log_init(opts_t *, int) NONNULL(1) WUNRES;
 void log_fini(void);
+int log_reopen(void) WUNRES;
 
 #endif /* !LOG_H */
 

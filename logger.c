@@ -45,6 +45,7 @@
 
 struct logger {
 	pthread_t thr;
+	logger_reopen_func_t reopen;
 	logger_open_func_t open;
 	logger_close_func_t close;
 	logger_prep_func_t prep;
@@ -52,8 +53,9 @@ struct logger {
 	thrqueue_t *queue;
 };
 
-#define LBFLAG_OPEN	1
-#define LBFLAG_CLOSE	2
+#define LBFLAG_REOPEN	(1 << 0)
+#define LBFLAG_OPEN	(1 << 1)
+#define LBFLAG_CLOSE	(1 << 2)
 
 static void
 logger_clear(logger_t *logger)
@@ -67,8 +69,9 @@ logger_clear(logger_t *logger)
  * not in the thread calling logger_submit().
  */
 logger_t *
-logger_new(logger_open_func_t openfunc, logger_close_func_t closefunc,
-           logger_write_func_t writefunc, logger_prep_func_t prepfunc)
+logger_new(logger_reopen_func_t reopenfunc, logger_open_func_t openfunc,
+           logger_close_func_t closefunc, logger_write_func_t writefunc,
+           logger_prep_func_t prepfunc)
 {
 	logger_t *logger;
 
@@ -76,6 +79,7 @@ logger_new(logger_open_func_t openfunc, logger_close_func_t closefunc,
 	if (!logger)
 		return NULL;
 	logger_clear(logger);
+	logger->reopen = reopenfunc;
 	logger->open = openfunc;
 	logger->close = closefunc;
 	logger->write = writefunc;
@@ -116,12 +120,29 @@ logger_submit(logger_t *logger, void *fh, unsigned long prepflags,
 }
 
 /*
+ * Submit a log reopen event to the logger thread.
+ */
+int
+logger_reopen(logger_t *logger)
+{
+	logbuf_t *lb;
+
+	if (!logger->reopen)
+		return 0;
+
+	lb = logbuf_new(NULL, 0, NULL, NULL);
+	logbuf_ctl_set(lb, LBFLAG_REOPEN);
+	return thrqueue_enqueue(logger->queue, lb) ? 0 : -1;
+}
+
+/*
  * Submit a file open event to the logger thread.
  * fh is the file handle; an opaque unique address identifying the new file.
  * If no open callback is configured, returns successfully.
  * Returns 0 on success, -1 on failure.
  */
-int logger_open(logger_t *logger, void *fh)
+int
+logger_open(logger_t *logger, void *fh)
 {
 	logbuf_t *lb;
 
@@ -139,7 +160,8 @@ int logger_open(logger_t *logger, void *fh)
  * If no close callback is configured, returns successfully.
  * Returns 0 on success, -1 on failure.
  */
-int logger_close(logger_t *logger, void *fh)
+int
+logger_close(logger_t *logger, void *fh)
 {
 	logbuf_t *lb;
 
@@ -162,7 +184,9 @@ logger_thread(void *arg)
 	logbuf_t *lb;
 
 	while ((lb = thrqueue_dequeue(logger->queue))) {
-		if (logbuf_ctl_isset(lb, LBFLAG_OPEN)) {
+		if (logbuf_ctl_isset(lb, LBFLAG_REOPEN)) {
+			logger->reopen();
+		} else if (logbuf_ctl_isset(lb, LBFLAG_OPEN)) {
 			logger->open(lb->fh);
 		} else if (logbuf_ctl_isset(lb, LBFLAG_CLOSE)) {
 			logger->close(lb->fh);

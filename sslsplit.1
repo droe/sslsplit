@@ -184,11 +184,13 @@ If \fB-K\fP is not given, SSLsplit will generate a random 1024-bit RSA key.
 .B \-l \fIlogfile\fP
 Log connections to \fIlogfile\fP in a single line per connection format,
 including addresses and ports and some HTTP and SSL information, if available.
+SIGUSR1 will cause \fIlogfile\fP to be re-opened.
 .TP
 .B \-L \fIlogfile\fP
 Log connection content to \fIlogfile\fP.  The content log will contain a
 parsable log format with transmitted data, prepended with headers identifying
 the connection and the data length of each logged segment.
+SIGUSR1 will cause \fIlogfile\fP to be re-opened.
 .TP
 .B \-m
 When dropping privileges using \fB-u\fP, override the target primary group
@@ -356,6 +358,11 @@ than the NAT rules redirecting the actual connections.
 Note that when using \fB-j\fP with \fBsni\fP, you may need to prepare
 \fIjaildir\fP to make name resolution work from within the chroot directory.
 .LP
+.SH SIGNALS
+A running \fBsslsplit\fP accepts SIGINT and SIGQUIT for a clean shutdown and
+SIGUSR1 to re-open the long-living log files (\fB-l\fP and \fB-L\fP).
+Per-connection log files (\fB-S\fP and \fB-F\fP) are not re-opened because
+their filename is specific to the connection.
 .SH "LOG SPECIFICATIONS"
 Log specifications are composed of zero or more printf-style directives;
 ordinary characters are included directly in the output path.

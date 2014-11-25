@@ -122,7 +122,6 @@ void ssl_dh_refcount_inc(DH *) NONNULL(1);
 #endif /* !OPENSSL_NO_DH */
 
 #ifndef OPENSSL_NO_EC
-#define SSL_EC_KEY_CURVE_DEFAULT "secp160r2"
 EC_KEY * ssl_ec_by_name(const char *) MALLOC;
 #endif /* !OPENSSL_NO_EC */
 

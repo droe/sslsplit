@@ -29,6 +29,7 @@
 #include "sys.h"
 
 #include "log.h"
+#include "defaults.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -190,7 +191,7 @@ sys_pidf_open(const char *fn)
 {
 	int fd;
 
-	if ((fd = open(fn, O_RDWR|O_CREAT, 0640)) == -1) {
+	if ((fd = open(fn, O_RDWR|O_CREAT, DFLT_PIDFMODE)) == -1) {
 		log_err_printf("Failed to open '%s': %s\n", fn,
 		               strerror(errno));
 		return -1;
