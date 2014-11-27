@@ -271,7 +271,7 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	if (ctx->sni) {
 		free(ctx->sni);
 	}
-	if (WANT_CONTENT_LOG(ctx)) {
+	if (WANT_CONTENT_LOG(ctx) && ctx->logctx) {
 		if (log_content_close(&ctx->logctx) == -1) {
 			log_err_printf("Warning: Content log close failed\n");
 		}

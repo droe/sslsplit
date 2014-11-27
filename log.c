@@ -490,7 +490,7 @@ log_content_close(log_content_ctx_t **pctx)
 {
 	int rv = 0;
 
-	if (!(*pctx)->open)
+	if (!(*pctx) || !(*pctx)->open)
 		return -1;
 	if (logger_close(content_log, *pctx) == -1) {
 		rv = -1;
