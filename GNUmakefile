@@ -330,7 +330,7 @@ $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
 clean:
-	$(RM) -f $(TARGET) *.o $(TARGET).test *.core *~
+	$(RM) -f $(TARGET) $(TARGET).test *.o .*.o *.core *~
 	$(RM) -rf *.dSYM
 
 install: $(TARGET)
