@@ -596,6 +596,13 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+#ifdef __APPLE__
+	if (opts->dropuser && nat_used("pf")) {
+		fprintf(stderr, "%s: cannot use 'pf' proxyspec with -u due "
+		                "to Apple bug\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+#endif /* __APPLE__ */
 
 	/* prevent multiple instances running */
 	if (opts->pidfile) {
@@ -616,9 +623,18 @@ main(int argc, char *argv[])
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
 	    !opts->contentlog_isdir && !opts->contentlog_isspec) {
+#ifdef __APPLE__
+		/* Apple broke ioctl(/dev/pf) for EUID != 0 so we do not
+		 * want to automatically drop privileges to nobody there
+		 * if pf has been used in any proxyspec */
+		if (!nat_used("pf")) {
+#endif /* __APPLE__ */
 		opts->dropuser = strdup("nobody");
 		if (!opts->dropuser)
 			oom_die(argv0);
+#ifdef __APPLE__
+		}
+#endif /* __APPLE__ */
 	}
 	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
 		opts->key = ssl_key_genrsa(1024);

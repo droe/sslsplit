@@ -477,7 +477,7 @@ nat_index(const char *name)
 }
 
 /*
- * Returns 1 if the named NAT engine exists, 0 if it does not exist.
+ * Returns !=0 if the named NAT engine exists, 0 if it does not exist.
  * NULL refers to the default NAT engine.
  */
 int
@@ -486,6 +486,18 @@ nat_exist(const char *name)
 	if (!name)
 		name = engines[0].name;
 	return !!engines[nat_index(name)].name;
+}
+
+/*
+ * Returns !=0 if the named NAT engine has been marked as used, 0 if not.
+ * NULL refers to the default NAT engine.
+ */
+int
+nat_used(const char *name)
+{
+	if (!name)
+		name = engines[0].name;
+	return !!engines[nat_index(name)].used;
 }
 
 /*

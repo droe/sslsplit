@@ -41,6 +41,7 @@ typedef int (*nat_lookup_cb_t)(struct sockaddr *, socklen_t *, evutil_socket_t,
 typedef int (*nat_socket_cb_t)(evutil_socket_t);
 
 int nat_exist(const char *) WUNRES;
+int nat_used(const char *) WUNRES;
 nat_lookup_cb_t nat_getlookupcb(const char *) WUNRES;
 nat_socket_cb_t nat_getsocketcb(const char *) WUNRES;
 int nat_ipv6ready(const char *) WUNRES;

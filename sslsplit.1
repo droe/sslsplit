@@ -290,6 +290,8 @@ primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
 privileges to the stored UID if EUID != UID (setuid bit scenario), or to
 \fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0)
 and \fB-S\fP is not used.
+Due to an Apple bug, \fB-u\fP cannot be used with \fBpf\fP proxyspecs on
+Mac OS X.
 .TP
 .B \-V
 Display version and compiled features information and exit.

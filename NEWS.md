@@ -8,6 +8,8 @@
     initial support on Mac OS X (by @landonf) and FreeBSD.
 -   Add option -r to force a specific SSL/TLS protocol version (issue #30).
 -   Add option -R to disable specific SSL/TLS protocol versions (issue #30).
+-   Disallow -u with pf proxyspecs on Mac OS X because Apple restricts
+    ioctl(/dev/pf) to root even on fd opened by root (issue #65).
 -   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
     WITH_SSLV2 build knob.
 -   Fix startup memory leaks in key/cert loader (pull req #56 by @wjjensen).
