@@ -67,9 +67,9 @@ For more build options see `GNUmakefile`.
 
 ## Documentation
 
-See NEWS.md for release notes listing significant changes between releases.
-See HACKING.md for information on development and how to submit bug reports.
-See AUTHORS.md for the list of contributors.
+See `NEWS.md` for release notes listing significant changes between releases.
+See `HACKING.md` for information on development and how to submit bug reports.
+See `AUTHORS.md` for the list of contributors.
 
 
 ## License
