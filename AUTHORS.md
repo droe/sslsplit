@@ -13,7 +13,7 @@ patches or pull requests, in chronological order of their first contribution:
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.
 
-[1] https://github.com/droe/sslsplit/issues
+[1]: https://github.com/droe/sslsplit/issues
 
 All your contributions are greatly appreciated; without you, SSLsplit would not
 be what it is today.

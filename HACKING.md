@@ -2,7 +2,7 @@
 
 SSLsplit is being developed on Github as [droe/sslsplit][1].
 
-[1] https://github.com/droe/sslsplit
+[1]: https://github.com/droe/sslsplit
 
 
 ## Reporting bugs
@@ -30,8 +30,8 @@ submitting code, even though it is not a requirement, it is still appreciated
 if you also update the manual page and other documentation as necessary and
 include as many meaningful unit tests for your code as possible.
 
-[2] https://github.com/droe/sslsplit/issues
-[3] https://github.com/droe/sslsplit/labels/portability
+[2]: https://github.com/droe/sslsplit/issues
+[3]: https://github.com/droe/sslsplit/labels/portability
 
 See `HACKING.md` for the list of contributors.
 
@@ -45,6 +45,6 @@ When preparing a release, there may or may not be a `release/x.y.z` branch off
 `develop`, but in either case, the tagged release is merged back to `master`.
 Larger features are developed in feature branches off the `develop` branch.
 
-[4] http://nvie.com/posts/a-successful-git-branching-model/
+[4]: http://nvie.com/posts/a-successful-git-branching-model/
 
 
