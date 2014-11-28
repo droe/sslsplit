@@ -6,9 +6,9 @@ SSLsplit was written and is being maintained by
 The following individuals have contributed to the codebase by submitting
 patches or pull requests, in chronological order of their first contribution:
 
--   Steve Wills (@swills)
--   Landon Fuller (@landonf)
--   Wayne Jensen (@wjjensen)
+-   Steve Wills   ([swills](https://github.com/swills))
+-   Landon Fuller ([landonf](https://github.com/landonf))
+-   Wayne Jensen  ([wjjensen](https://github.com/wjjensen))
 
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.
