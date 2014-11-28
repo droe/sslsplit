@@ -1,5 +1,5 @@
 
-### SSLsplit master
+### SSLsplit 0.4.10 2014-11-28
 
 -   Add option -F to log to separate files with printf-style % directives,
     including process information for connections originating on the same
