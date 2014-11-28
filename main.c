@@ -597,7 +597,8 @@ main(int argc, char *argv[])
 		}
 	}
 #ifdef __APPLE__
-	if (opts->dropuser && nat_used("pf")) {
+	if (opts->dropuser && !!strcmp(opts->dropuser, "root") &&
+	    nat_used("pf")) {
 		fprintf(stderr, "%s: cannot use 'pf' proxyspec with -u due "
 		                "to Apple bug\n", argv0);
 		exit(EXIT_FAILURE);
