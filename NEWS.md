@@ -4,17 +4,18 @@
 -   Add option -F to log to separate files with printf-style % directives,
     including process information for connections originating on the same
     system when also using -i (pull reqs #36, #53, #54, #55 by @landonf).
--   Add option -i to look up local process owning a connection for logging;
-    initial support on Mac OS X (by @landonf) and FreeBSD.
+-   Add option -i to look up local process owning a connection for logging to
+    connection log; initial support on Mac OS X (by @landonf) and FreeBSD.
 -   Add option -r to force a specific SSL/TLS protocol version (issue #30).
 -   Add option -R to disable specific SSL/TLS protocol versions (issue #30).
 -   Disallow -u with pf proxyspecs on Mac OS X because Apple restricts
-    ioctl(/dev/pf) to root even on fd opened by root (issue #65).
--   Replaced WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
-    WITH_SSLV2 build knob.
--   Fix startup memory leaks in key/cert loader (pull req #56 by @wjjensen).
+    ioctl(/dev/pf) to root even on an fd initially opened by root (issue #65).
 -   Extend the certificate loading workaround for OpenSSL 1.0.0k and 1.0.1e
     also to OpenSSL 0.9.8y; fixes cert loading crash due to bug in in OpenSSL.
+-   Extend Mac OS X pf support to Yosemite 10.10.1.
+-   Fix startup memory leaks in key/cert loader (pull req #56 by @wjjensen).
+-   Replace WANT_SSLV2_CLIENT and WANT_SSLV2_SERVER build knobs with a single
+    WITH_SSLV2 build knob.
 -   Minor bugfixes and improvements.
 
 
