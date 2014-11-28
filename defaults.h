@@ -26,34 +26,36 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NAT_H
-#define NAT_H
+#ifndef DEFAULTS_H
+#define DEFAULTS_H
 
-#include "attrib.h"
+/*
+ * Defaults for convenient tweaking or patching.
+ */
 
-#include <sys/types.h>
-#include <sys/socket.h>
+/*
+ * User to drop privileges to by default.
+ * Packagers may want to use a specific service user account instead of
+ * overloading nobody with yet another use case.  Using nobody for source
+ * builds makes sense because chances are high that it exists.
+ */
+#define DFLT_DROPUSER "nobody"
 
-#include <event2/util.h>
+/*
+ * Default file and directory modes for newly created files and directories
+ * created as part of e.g. logging.  The default is to use full permissions
+ * subject to the system's umask, as is the default for system utilities.
+ * Use a more restrictive mode for the PID file.
+ */
+#define DFLT_DIRMODE  0777
+#define DFLT_FILEMODE 0666
+#define DFLT_PIDFMODE 0644
 
-typedef int (*nat_lookup_cb_t)(struct sockaddr *, socklen_t *, evutil_socket_t,
-                               struct sockaddr *, socklen_t);
-typedef int (*nat_socket_cb_t)(evutil_socket_t);
+/*
+ * Default elliptic curve for EC cipher suites.
+ */
+#define DFLT_CURVE "secp160r2"
 
-int nat_exist(const char *) WUNRES;
-int nat_used(const char *) WUNRES;
-nat_lookup_cb_t nat_getlookupcb(const char *) WUNRES;
-nat_socket_cb_t nat_getsocketcb(const char *) WUNRES;
-int nat_ipv6ready(const char *) WUNRES;
-
-const char *nat_getdefaultname(void) WUNRES;
-void nat_list_engines(void);
-int nat_preinit(void) WUNRES;
-void nat_preinit_undo(void);
-int nat_init(void) WUNRES;
-void nat_fini(void);
-void nat_version(void);
-
-#endif /* !NAT_H */
+#endif /* !DEFAULTS_H */
 
 /* vim: set noet ft=c: */

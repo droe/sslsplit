@@ -88,6 +88,7 @@ typedef struct opts {
 	char *pidfile;
 	char *connectlog;
 	char *contentlog;
+	char *contentlog_basedir; /* static part of logspec, for privsep srv */
 	CONST_SSL_METHOD *(*sslmethod)(void);
 	X509 *cacrt;
 	EVP_PKEY *cakey;

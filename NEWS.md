@@ -1,4 +1,12 @@
 
+### SSLsplit develop
+
+-   Add signal SIGUSR1 to re-open long-living -l/-L log files (issue #52).
+-   Introduce privilege separation architecture with privileged parent process
+    and unprivileged child process; all files are now opened with the
+    privileges of the user running SSLsplit; arguments to -S/-F are no longer
+    relative to the chroot() if used with the -j option.
+
 ### SSLsplit 0.4.10 2014-11-28
 
 -   Add option -F to log to separate files with printf-style % directives,

@@ -29,6 +29,7 @@
 #include "ssl.h"
 
 #include "log.h"
+#include "defaults.h"
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -609,7 +610,7 @@ ssl_ec_by_name(const char *curvename)
 	int nid;
 
 	if (!curvename)
-		curvename = SSL_EC_KEY_CURVE_DEFAULT;
+		curvename = DFLT_CURVE;
 
 	if ((nid = OBJ_sn2nid(curvename)) == NID_undef) {
 		return NULL;
