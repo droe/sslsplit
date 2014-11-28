@@ -43,6 +43,12 @@ SSLsplit currently supports the following operating systems and NAT mechanisms:
 -   Linux: netfilter REDIRECT and TPROXY
 -   Mac OS X: pf rdr and ipfw fwd
 
+Support for local process information (`-i`) is currently available on Mac OS X
+and FreeBSD.
+
+SSL/TLS features and compatibility greatly depend on the version of OpenSSL
+linked against; for optimal results, use the latest 1.0.1 series release.
+
 
 ## Installation
 
@@ -59,12 +65,11 @@ You can override the default install prefix (`/usr/local`) by setting `PREFIX`.
 For more build options see `GNUmakefile`.
 
 
-## Development
+## Documentation
 
-SSLsplit is being developed on Github.  For bug reports, please use the Github
-issue tracker.  For patch submissions, please send me pull requests.
-
-https://github.com/droe/sslsplit
+See NEWS.md for release notes listing significant changes between releases.
+See HACKING.md for information on development and how to submit bug reports.
+See AUTHORS.md for the list of contributors.
 
 
 ## License
@@ -80,19 +85,5 @@ SSLsplit was inspired by `mitm-ssl` by Claes M. Nyberg and `sslsniff` by Moxie
 Marlinspike, but shares no source code with them.
 
 SSLsplit includes `khash.h` by Attractive Chaos.
-
-
-## Contributors
-
-The following individuals have contributed to the SSLsplit codebase by
-submitting patches or pull requests, in chronological order of first
-contribution:
-
--   Daniel Roethlisberger (@droe), main author
--   Steve Wills (@swills)
--   Landon Fuller (@landonf)
--   Wayne Jensen (@wjjensen)
-
-See NEWS.md and `git log` for details.
 
 
