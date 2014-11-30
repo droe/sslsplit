@@ -140,7 +140,7 @@ main_usage(void)
 #endif /* !SSL_OP_NO_COMPRESSION */
 "  -r proto    only support one of " SSL_PROTO_SUPPORT_S "(default: all)\n"
 "  -R proto    disable one of " SSL_PROTO_SUPPORT_S "(default: none)\n"
-"  -s ciphers  use the given OpenSSL cipher suite spec (default: ALL:-aNULL)\n"
+"  -s ciphers  use the given OpenSSL cipher suite spec (default: " DFLT_CIPHERS ")\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: " DFLT_DROPUSER ")\n"
@@ -715,7 +715,7 @@ main(int argc, char *argv[])
 
 	/* dynamic defaults */
 	if (!opts->ciphers) {
-		opts->ciphers = strdup("ALL:-aNULL");
+		opts->ciphers = strdup(DFLT_CIPHERS);
 		if (!opts->ciphers)
 			oom_die(argv0);
 	}

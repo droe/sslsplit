@@ -52,6 +52,13 @@
 #define DFLT_PIDFMODE 0644
 
 /*
+ * Default cipher suite spec.
+ * Use 'openssl ciphers -v spec' to see what ciphers are effectively enabled
+ * by a cipher suite spec with a given version of OpenSSL.
+ */
+#define DFLT_CIPHERS "ALL:-aNULL"
+
+/*
  * Default elliptic curve for EC cipher suites.
  */
 #define DFLT_CURVE "secp160r2"
