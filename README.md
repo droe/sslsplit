@@ -74,16 +74,14 @@ See `AUTHORS.md` for the list of contributors.
 
 ## License
 
-SSLsplit is provided under the simplified BSD license.
+SSLsplit is provided under a 2-clause BSD license.
 SSLsplit contains components licensed under the MIT and APSL licenses.
-See the respective source file headers for details.
+See `LICENSE.md` and the respective source file headers for details.
 
 
 ## Credits
 
 SSLsplit was inspired by `mitm-ssl` by Claes M. Nyberg and `sslsniff` by Moxie
 Marlinspike, but shares no source code with them.
-
-SSLsplit includes `khash.h` by Attractive Chaos.
 
 

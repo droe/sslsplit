@@ -33,7 +33,8 @@ include as many meaningful unit tests for your code as possible.
 [2]: https://github.com/droe/sslsplit/issues
 [3]: https://github.com/droe/sslsplit/labels/portability
 
-See `HACKING.md` for the list of contributors.
+See `LICENSE.md` for licensing and copyright information applying to
+contributions.  See `AUTHORS.md` for the list of contributors.
 
 
 ## Branching model
