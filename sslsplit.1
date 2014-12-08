@@ -413,6 +413,8 @@ SSLsplit currently supports the following NAT engines:
 OpenBSD packet filter (pf) \fBrdr\fP/\fBrdr-to\fP NAT redirects, also available
 on FreeBSD, NetBSD and Mac OS X.
 Fully supported, including IPv6.
+Note that SSLsplit needs permission to open \fB/dev/pf\fP for reading, which by
+default means that it needs to run under \fBroot\fP privileges.
 Assuming inbound interface \fBem0\fP, first in old (FreeBSD, Mac OS X),
 then in new (OpenBSD 4.7+) syntax:
 .LP
@@ -474,6 +476,8 @@ First in IPFW, then in pf \fBdivert-to\fP syntax:
 .B ipfilter
 IPFilter (ipfilter, ipf), available on many systems, including FreeBSD, NetBSD,
 Linux and Solaris.
+Note that SSLsplit needs permission to open \fB/dev/ipnat\fP for reading, which
+by default means that it needs to run under \fBroot\fP privileges.
 Only supports IPv4 due to limitations in the SIOCGNATL ioctl(2) interface.
 Assuming inbound interface \fBbge0\fP:
 .LP
