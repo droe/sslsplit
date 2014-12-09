@@ -275,7 +275,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i
-	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhX:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -518,6 +518,13 @@ main(int argc, char *argv[])
 					oom_die(argv0);
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 1;
+				break;
+			case 'X':
+				if (opts->certgendir)
+					free(opts->certgendir);
+				opts->certgendir = strdup(optarg);
+				if (!opts->certgendir)
+					oom_die(argv0);
 				break;
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
