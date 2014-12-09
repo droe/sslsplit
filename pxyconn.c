@@ -864,10 +864,16 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		if (keyfd) {
 			PEM_write_PrivateKey(keyfd, cert->key, NULL, 0, 0, NULL, NULL);
 			fclose(keyfd);
+		} else {
+			log_err_printf("Failed to open '%s' for writing: %s\n",
+			               keyfn, strerror(errno));
 		}
 		if (crtfd) {
 			PEM_write_X509(crtfd, cert->crt);
 			fclose(crtfd);
+		} else {
+			log_err_printf("Failed to open '%s' for writing: %s\n",
+			               keyfn, strerror(errno));
 		}
 		if (ctx->opts->writeorig) {
 			char *origfn;
@@ -876,6 +882,9 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 			if (origfd) {
 				PEM_write_X509(origfd, ctx->origcrt);
 				fclose(origfd);
+			} else {
+				log_err_printf("Failed to open '%s' for writing: %s\n",
+				                keyfn, strerror(errno));
 			}
 		}
 	}
