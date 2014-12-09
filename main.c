@@ -112,6 +112,7 @@ main_usage(void)
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
+"  -X gendir   write generated key/cert pairs to gendir\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
@@ -558,6 +559,11 @@ main(int argc, char *argv[])
 	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
+		                argv0);
+		exit(EXIT_FAILURE);
+	}
+	if (opts->certgendir && opts->key)) {
+		fprintf(stderr, "%s: -K and -X are mutually exclusive.\n",
 		                argv0);
 		exit(EXIT_FAILURE);
 	}
