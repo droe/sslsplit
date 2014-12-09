@@ -704,25 +704,24 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 
 	if (ctx->opts->certgendir) {
 		unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
-		char origfprstr[SSL_X509_FPRSZ*2], newfprstr[SSL_X509_FPRSZ*2];
 		ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
 		ssl_x509_fingerprint_sha1(crt, newfpr);
-		sprintf(origfprstr,"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+		char *origfprstr, *newfprstr;
+		asprintf(&origfprstr,"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
 			 "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 			 origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
 			 origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
 			 origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
 			 origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
-		sprintf(newfprstr,"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+		asprintf(&newfprstr,"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
 			 "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 			 newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
 			 newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
 			 newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
 			 newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
-		char *keyfn = malloc(strlen(ctx->opts->certgendir)+1+SSL_X509_FPRSZ*4+1+4);
-		char *crtfn = malloc(strlen(ctx->opts->certgendir)+1+SSL_X509_FPRSZ*4+1+4);
-		sprintf(keyfn, "%s/%s-%s.key", ctx->opts->certgendir, origfprstr, newfprstr);
-		sprintf(crtfn, "%s/%s-%s.crt", ctx->opts->certgendir, origfprstr, newfprstr);
+		char *keyfn, *crtfn;
+		asprintf(&keyfn, "%s/%s-%s.key", ctx->opts->certgendir, origfprstr, newfprstr);
+		asprintf(&crtfn, "%s/%s-%s.crt", ctx->opts->certgendir, origfprstr, newfprstr);
 		FILE *keyfd, *crtfd;
 		keyfd = fopen(keyfn, "w");
 		crtfd = fopen(crtfn, "w");

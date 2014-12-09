@@ -562,7 +562,7 @@ main(int argc, char *argv[])
 		                argv0);
 		exit(EXIT_FAILURE);
 	}
-	if (opts->certgendir && opts->key)) {
+	if (opts->certgendir && opts->key) {
 		fprintf(stderr, "%s: -K and -X are mutually exclusive.\n",
 		                argv0);
 		exit(EXIT_FAILURE);
