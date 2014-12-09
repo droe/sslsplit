@@ -357,6 +357,23 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
+	unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
+	ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
+	ssl_x509_fingerprint_sha1(SSL_get_certificate(ctx->src.ssl), newfpr);
+	char *origfprstr, *newfprstr;
+	asprintf(&origfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+		origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
+		origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
+		origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
+		origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
+	asprintf(&newfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+		newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
+		newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
+		newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
+		newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
+
 	if (!ctx->spec->ssl || ctx->passthrough) {
 		rv = asprintf(&msg, "%s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
@@ -377,7 +394,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
-		              "\n",
+		              "%s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->sni),
@@ -389,7 +406,9 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              , lpi
 #endif /* HAVE_LOCAL_PROCINFO */
-		             );
+		              ,
+		              ctx->opts->certgendir ? origfprstr : "",
+		              ctx->opts->certgendir ? newfprstr : "");
 	}
 	if ((rv < 0) || !msg) {
 		ctx->enomem = 1;
@@ -446,12 +465,29 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
+	unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
+	ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
+	ssl_x509_fingerprint_sha1(SSL_get_certificate(ctx->src.ssl), newfpr);
+	char *origfprstr, *newfprstr;
+	asprintf(&origfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+		origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
+		origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
+		origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
+		origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
+	asprintf(&newfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+		newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
+		newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
+		newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
+		newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
+
 	if (!ctx->spec->ssl) {
 		rv = asprintf(&msg, "http %s %s %s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
-		              "%s\n",
+		              "%s%s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -462,7 +498,9 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              lpi,
 #endif /* HAVE_LOCAL_PROCINFO */
-		              ctx->ocsp_denied ? " ocsp:denied" : "");
+		              ctx->ocsp_denied ? " ocsp:denied" : "",
+		              ctx->opts->certgendir ? origfprstr : "",
+		              ctx->opts->certgendir ? newfprstr : "");
 	} else {
 		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
 		              "sni:%s names:%s "
@@ -470,7 +508,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
-		              "%s\n",
+		              "%s%s%s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -487,7 +525,9 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              lpi,
 #endif /* HAVE_LOCAL_PROCINFO */
-		              ctx->ocsp_denied ? " ocsp:denied" : "");
+		              ctx->ocsp_denied ? " ocsp:denied" : "",
+		              ctx->opts->certgendir ? origfprstr : "",
+		              ctx->opts->certgendir ? newfprstr : "");
 	}
 	if ((rv < 0 ) || !msg) {
 		ctx->enomem = 1;
@@ -803,14 +843,14 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
 		ssl_x509_fingerprint_sha1(cert->crt, newfpr);
 		char *origfprstr, *newfprstr;
-		asprintf(&origfprstr,"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-			 "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		asprintf(&origfprstr,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+			 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 			 origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
 			 origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
 			 origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
 			 origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
-		asprintf(&newfprstr,"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-			 "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		asprintf(&newfprstr,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+			 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 			 newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
 			 newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
 			 newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
