@@ -869,6 +869,15 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 			PEM_write_X509(crtfd, cert->crt);
 			fclose(crtfd);
 		}
+		if (ctx->opts->writeorig) {
+			char *origfn;
+			asprintf(&origfn, "%s/%s.crt", ctx->opts->certgendir, origfprstr);
+			FILE *origfd = fopen(origfn, "w");
+			if (origfd) {
+				PEM_write_X509(origfd, ctx->origcrt);
+				fclose(origfd);
+			}
+		}
 	}
 
 	return cert;

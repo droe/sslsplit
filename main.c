@@ -113,6 +113,7 @@ main_usage(void)
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -w gendir   write generated key/cert pairs to gendir\n"
+"  -W gendir   same as -w but also write the original cert\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
@@ -276,7 +277,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i
-	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhw:")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -520,7 +521,16 @@ main(int argc, char *argv[])
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 1;
 				break;
+			case 'W':
+				opts->writeorig = 1;
+				if (opts->certgendir)
+					free(opts->certgendir);
+				opts->certgendir = strdup(optarg);
+				if (!opts->certgendir)
+					oom_die(argv0);
+				break;
 			case 'w':
+				opts->writeorig = 0;
 				if (opts->certgendir)
 					free(opts->certgendir);
 				opts->certgendir = strdup(optarg);
