@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKXOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKwOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKXOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKwOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZXdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZwdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -185,7 +185,7 @@ no matching certificate in the provided certificate directory.
 Use private key from \fIpemfile\fP for certificates forged on-the-fly.
 If \fB-K\fP is not given, SSLsplit will generate a random 1024-bit RSA key.
 .TP
-.B \-X \fIgendir\fP
+.B \-w \fIgendir\fP
 Write generated keys and certificates to individual files in \fIgendir\fP.
 .TP
 .B \-l \fIlogfile\fP

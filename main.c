@@ -112,7 +112,7 @@ main_usage(void)
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
-"  -X gendir   write generated key/cert pairs to gendir\n"
+"  -w gendir   write generated key/cert pairs to gendir\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
@@ -276,7 +276,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i
-	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhX:")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhw:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -520,7 +520,7 @@ main(int argc, char *argv[])
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 1;
 				break;
-			case 'X':
+			case 'w':
 				if (opts->certgendir)
 					free(opts->certgendir);
 				opts->certgendir = strdup(optarg);
@@ -563,7 +563,7 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	if (opts->certgendir && opts->key) {
-		fprintf(stderr, "%s: -K and -X are mutually exclusive.\n",
+		fprintf(stderr, "%s: -K and -w are mutually exclusive.\n",
 		                argv0);
 		exit(EXIT_FAILURE);
 	}

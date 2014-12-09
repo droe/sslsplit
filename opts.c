@@ -105,6 +105,9 @@ opts_free(opts_t *opts)
 	if (opts->contentlog) {
 		free(opts->contentlog);
 	}
+	if (opts->certgendir) {
+		free(opts->certgendir);
+	}
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }
