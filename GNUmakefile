@@ -152,6 +152,7 @@ BUILD_DATE:=	$(shell date +%Y-%m-%d)
 
 # Autodetect dependencies known to pkg-config
 PKGS:=		
+PKGS+=		"lua5.2"
 ifndef OPENSSL_BASE
 PKGS+=		$(shell $(PKGCONFIG) --exists openssl && echo openssl)
 endif

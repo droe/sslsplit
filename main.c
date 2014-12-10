@@ -142,6 +142,7 @@ main_usage(void)
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
 "  -m group    when using -u, override group (default: primary group of user)\n"
+"  -M luafile  import luafile and run modify function for every request/response\n"
 "  -j jaildir  chroot() to jaildir (impacts -S/-F and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
@@ -275,7 +276,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i
-	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
+	                    "k:c:C:K:t:OPs:r:R:e:Eu:m:M:j:p:l:L:S:F:dDVh")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -469,6 +470,13 @@ main(int argc, char *argv[])
 					free(opts->dropgroup);
 				opts->dropgroup = strdup(optarg);
 				if (!opts->dropgroup)
+					oom_die(argv0);
+				break;
+			case 'M':
+				if (opts->luamodify)
+					free(opts->luamodify);
+				opts->luamodify = strdup(optarg);
+				if (!opts->luamodify)
 					oom_die(argv0);
 				break;
 			case 'p':
