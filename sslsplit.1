@@ -199,8 +199,9 @@ When dropping privileges using \fB-u\fP, override the target primary group
 to be set to \fIgroup\fP.
 .TP
 .B \-M luafile
-Import luafile and run the modify function. Input is a string, should return a
-string. Not guaranteed to contain a complete request.
+Import luafile and run the modify function on every request/response. Input is
+a string, should return a string. Not guaranteed to contain a complete
+request/response.
 .TP
 .B \-O
 Deny all Online Certificate Status Protocol (OCSP) requests on all

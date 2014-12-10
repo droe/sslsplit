@@ -142,7 +142,7 @@ main_usage(void)
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: nobody)\n"
 "  -m group    when using -u, override group (default: primary group of user)\n"
-"  -M luafile  import luafile and run modify function for every request\n"
+"  -M luafile  import luafile and run modify function for every request/response\n"
 "  -j jaildir  chroot() to jaildir (impacts -S/-F and sni, see manual page)\n"
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
