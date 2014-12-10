@@ -1598,7 +1598,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		success = 0;
 	}
 	luaL_openlibs(L);
-	if (luaL_dofile(L, opt->luamodify)) {
+	if (luaL_dofile(L, ctx->opts->luamodify)) {
 		log_err_printf("Error: Lua failed opening file\n");
 		success = 0;
 	}
