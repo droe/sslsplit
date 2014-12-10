@@ -41,6 +41,8 @@ DEBUG_CFLAGS?=	-g
 # for debugging reference counting of OpenSSL objects and/or
 # -DPURIFY for using valgrind and similar tools.
 
+LDFLAGS=-llua
+
 
 ### Mac OS X header selection
 
