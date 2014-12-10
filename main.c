@@ -474,10 +474,10 @@ main(int argc, char *argv[])
 				break;
 			case 'M':
 				if (opts->luamodify)
-					free(opts->luamodify)
+					free(opts->luamodify);
 				opts->luamodify = strdup(optarg);
 				if (!opts->luamodify)
-					oom_die(argv0)
+					oom_die(argv0);
 				break;
 			case 'p':
 				if (opts->pidfile)
