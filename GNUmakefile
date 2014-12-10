@@ -41,8 +41,6 @@ DEBUG_CFLAGS?=	-g
 # for debugging reference counting of OpenSSL objects and/or
 # -DPURIFY for using valgrind and similar tools.
 
-LDFLAGS=-llua
-
 
 ### Mac OS X header selection
 
@@ -168,6 +166,9 @@ TPKGS:=
 ifndef CHECK_BASE
 TPKGS+=		$(shell $(PKGCONFIG) --exists check && echo check)
 endif
+
+CFLAGS+=$(shell $(PKGCONFIG) --cflags lua5.2)
+LDFLAGS+=$(shell $(PKGCONFIG) --libs lua5.2)
 
 # Autodetect dependencies not known to pkg-config
 ifeq (,$(filter openssl,$(PKGS)))

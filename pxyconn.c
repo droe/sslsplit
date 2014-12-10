@@ -1587,34 +1587,37 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 	}
-
-	int success = 1;
-	int datalen = evbuffer_get_length(inbuf);
-	char *in = malloc(datalen);
-	evbuffer_remove(inbuf, in, datalen);
-	lua_State *L = luaL_newstate();
-	if (!L) {
-		log_err_printf("Error: Lua memory allocation error\n");
-		success = 0;
-	}
-	luaL_openlibs(L);
-	if (luaL_dofile(L, ctx->opts->luamodify)) {
-		log_err_printf("Error: Lua failed opening file\n");
-		success = 0;
-	}
-	lua_getglobal(L, "modify");
-	lua_pushlstring(L, in, datalen);
-	free(in);
-	lua_call(L, 1, 1);
-	datalen = lua_rawlen(L, -1);
-	char *out = lua_tostring(L, -1);
-	if (!out) {
-		log_err_printf("Error: Lua failed to retrieve result\n");
-		success = 0;
-	}
-	if (success) {
-		evbuffer_add(outbuf, out, datalen);
-		free(out);
+	if (ctx->opts->luamodify) {
+		int success = 1;
+		int datalen = evbuffer_get_length(inbuf);
+		char *in = malloc(datalen);
+		evbuffer_remove(inbuf, in, datalen);
+		lua_State *L = luaL_newstate();
+		if (!L) {
+			log_err_printf("Error: Lua memory allocation error\n");
+			success = 0;
+		}
+		luaL_openlibs(L);
+		if (luaL_dofile(L, ctx->opts->luamodify)) {
+			log_err_printf("Error: Lua failed opening file\n");
+			success = 0;
+		}
+		lua_getglobal(L, "modify");
+		lua_pushlstring(L, in, datalen);
+		free(in);
+		lua_call(L, 1, 1);
+		datalen = lua_rawlen(L, -1);
+		char *out = lua_tostring(L, -1);
+		if (!out) {
+			log_err_printf("Error: Lua failed to retrieve result\n");
+			success = 0;
+		}
+		if (success) {
+			evbuffer_add(outbuf, out, datalen);
+			free(out);
+		} else {
+			evbuffer_add_buffer(outbuf, inbuf);
+		}
 	} else {
 		evbuffer_add_buffer(outbuf, inbuf);
 	}
