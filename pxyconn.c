@@ -167,6 +167,8 @@ typedef struct pxy_conn_ctx {
 	socklen_t addrlen;
 	int af;
 	X509 *origcrt;
+	char *origfpr[SSL_X509_FPRSZ*2+1];
+	char *newfpr[SSL_X509_FPRSZ*2+1];
 
 	/* references to event base and configuration */
 	struct event_base *evbase;
@@ -357,23 +359,6 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
-	unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
-	ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
-	ssl_x509_fingerprint_sha1(SSL_get_certificate(ctx->src.ssl), newfpr);
-	char *origfprstr, *newfprstr;
-	asprintf(&origfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-		origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
-		origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
-		origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
-		origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
-	asprintf(&newfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-		newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
-		newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
-		newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
-		newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
-
 	if (!ctx->spec->ssl || ctx->passthrough) {
 		rv = asprintf(&msg, "%s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
@@ -394,7 +379,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
-		              "%s%s\n",
+		              " %s %s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->sni),
@@ -407,8 +392,8 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              , lpi
 #endif /* HAVE_LOCAL_PROCINFO */
 		              ,
-		              ctx->opts->certgendir ? origfprstr : "",
-		              ctx->opts->certgendir ? newfprstr : "");
+		              *ctx->origfpr,
+		              *ctx->newfpr);
 	}
 	if ((rv < 0) || !msg) {
 		ctx->enomem = 1;
@@ -465,29 +450,12 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
-	unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
-	ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
-	ssl_x509_fingerprint_sha1(SSL_get_certificate(ctx->src.ssl), newfpr);
-	char *origfprstr, *newfprstr;
-	asprintf(&origfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-		origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
-		origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
-		origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
-		origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
-	asprintf(&newfprstr," %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-		"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-		newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
-		newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
-		newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
-		newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
-
 	if (!ctx->spec->ssl) {
 		rv = asprintf(&msg, "http %s %s %s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
-		              "%s%s%s\n",
+		              "%s %s %s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -499,8 +467,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              lpi,
 #endif /* HAVE_LOCAL_PROCINFO */
 		              ctx->ocsp_denied ? " ocsp:denied" : "",
-		              ctx->opts->certgendir ? origfprstr : "",
-		              ctx->opts->certgendir ? newfprstr : "");
+		              *ctx->origfpr,
+		              *ctx->newfpr);
 	} else {
 		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
 		              "sni:%s names:%s "
@@ -508,7 +476,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
-		              "%s%s%s\n",
+		              "%s %s %s\n",
 		              STRORDASH(ctx->src_str),
 		              STRORDASH(ctx->dst_str),
 		              STRORDASH(ctx->http_host),
@@ -526,8 +494,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              lpi,
 #endif /* HAVE_LOCAL_PROCINFO */
 		              ctx->ocsp_denied ? " ocsp:denied" : "",
-		              ctx->opts->certgendir ? origfprstr : "",
-		              ctx->opts->certgendir ? newfprstr : "");
+		              *ctx->origfpr,
+		              *ctx->newfpr);
 	}
 	if ((rv < 0 ) || !msg) {
 		ctx->enomem = 1;
@@ -838,26 +806,26 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		cert_set_chain(cert, ctx->opts->chain);
 	}
 
+	unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
+	ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
+	ssl_x509_fingerprint_sha1(cert->crt, newfpr);
+	asprintf(ctx->origfpr,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+		 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+		 origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
+		 origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
+		 origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
+		 origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
+	asprintf(ctx->newfpr,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+		 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+		 newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
+		 newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
+		 newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
+		 newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
+
 	if (ctx->opts->certgendir) {
-		unsigned char origfpr[SSL_X509_FPRSZ], newfpr[SSL_X509_FPRSZ];
-		ssl_x509_fingerprint_sha1(ctx->origcrt, origfpr);
-		ssl_x509_fingerprint_sha1(cert->crt, newfpr);
-		char *origfprstr, *newfprstr;
-		asprintf(&origfprstr,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-			 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-			 origfpr[0],  origfpr[1],  origfpr[2],  origfpr[3],  origfpr[4],
-			 origfpr[5],  origfpr[6],  origfpr[7],  origfpr[8],  origfpr[9],
-			 origfpr[10], origfpr[11], origfpr[12], origfpr[13], origfpr[14],
-			 origfpr[15], origfpr[16], origfpr[17], origfpr[18], origfpr[19]);
-		asprintf(&newfprstr,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-			 "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-			 newfpr[0],  newfpr[1],  newfpr[2],  newfpr[3],  newfpr[4],
-			 newfpr[5],  newfpr[6],  newfpr[7],  newfpr[8],  newfpr[9],
-			 newfpr[10], newfpr[11], newfpr[12], newfpr[13], newfpr[14],
-			 newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
 		char *keyfn, *crtfn;
-		asprintf(&keyfn, "%s/%s-%s.key", ctx->opts->certgendir, origfprstr, newfprstr);
-		asprintf(&crtfn, "%s/%s-%s.crt", ctx->opts->certgendir, origfprstr, newfprstr);
+		asprintf(&keyfn, "%s/%s-%s.key", ctx->opts->certgendir, *ctx->origfpr, *ctx->newfpr);
+		asprintf(&crtfn, "%s/%s-%s.crt", ctx->opts->certgendir, *ctx->origfpr, *ctx->newfpr);
 		FILE *keyfd, *crtfd;
 		keyfd = fopen(keyfn, "w");
 		crtfd = fopen(crtfn, "w");
@@ -877,7 +845,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		}
 		if (ctx->opts->writeorig) {
 			char *origfn;
-			asprintf(&origfn, "%s/%s.crt", ctx->opts->certgendir, origfprstr);
+			asprintf(&origfn, "%s/%s.crt", ctx->opts->certgendir, *ctx->origfpr);
 			FILE *origfd = fopen(origfn, "w");
 			if (origfd) {
 				PEM_write_X509(origfd, ctx->origcrt);
