@@ -423,7 +423,7 @@ START_TEST(ssl_key_identifier_sha1_01)
 	X509_EXTENSION *ext = X509_get_ext(c, loc);
 	fail_unless(!!ext, "loading ext failed");
 	fail_unless(ext->value->length - 2 == SSL_KEY_IDSZ,
-	            "extension length mismatch: %i");
+	            "extension length mismatch");
 	fail_unless(!memcmp(ext->value->data + 2, keyid, SSL_KEY_IDSZ),
 	            "key id mismatch");
 }

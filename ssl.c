@@ -1041,16 +1041,15 @@ int
 ssl_key_identifier_sha1(EVP_PKEY *key, unsigned char *keyid)
 {
 	X509_PUBKEY *pubkey = NULL;
+	ASN1_BIT_STRING *pk;
 
-	if (X509_PUBKEY_set(&pubkey, key) != 1)
+	/* X509_PUBKEY_set() will attempt to free pubkey if != NULL */
+	if (X509_PUBKEY_set(&pubkey, key) != 1 || !pubkey)
 		return -1;
-
-	ASN1_BIT_STRING *pk = pubkey->public_key;
-	if (!pk)
+	if (!(pk = pubkey->public_key))
 		goto errout;
 	if (!EVP_Digest(pk->data, pk->length, keyid, NULL, EVP_sha1(), NULL))
 		goto errout;
-
 	X509_PUBKEY_free(pubkey);
 	return 0;
 
