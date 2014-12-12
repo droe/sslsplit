@@ -823,25 +823,16 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		 newfpr[15], newfpr[16], newfpr[17], newfpr[18], newfpr[19]);
 
 	if (ctx->opts->certgendir) {
-		char *keyfn, *crtfn;
-		asprintf(&keyfn, "%s/%s-%s.key", ctx->opts->certgendir, *ctx->origfpr, *ctx->newfpr);
+		char *crtfn;
 		asprintf(&crtfn, "%s/%s-%s.crt", ctx->opts->certgendir, *ctx->origfpr, *ctx->newfpr);
-		FILE *keyfd, *crtfd;
-		keyfd = fopen(keyfn, "w");
+		FILE *crtfd;
 		crtfd = fopen(crtfn, "w");
-		if (keyfd) {
-			PEM_write_PrivateKey(keyfd, cert->key, NULL, 0, 0, NULL, NULL);
-			fclose(keyfd);
-		} else {
-			log_err_printf("Failed to open '%s' for writing: %s\n",
-			               keyfn, strerror(errno));
-		}
 		if (crtfd) {
 			PEM_write_X509(crtfd, cert->crt);
 			fclose(crtfd);
 		} else {
 			log_err_printf("Failed to open '%s' for writing: %s\n",
-			               keyfn, strerror(errno));
+			               crtfn, strerror(errno));
 		}
 		if (ctx->opts->writeorig) {
 			char *origfn;
@@ -852,7 +843,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 				fclose(origfd);
 			} else {
 				log_err_printf("Failed to open '%s' for writing: %s\n",
-				                keyfn, strerror(errno));
+				                origfn, strerror(errno));
 			}
 		}
 	}

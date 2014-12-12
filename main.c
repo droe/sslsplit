@@ -770,6 +770,30 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (opts->certgendir) {
+		unsigned char *keyfpr = malloc(SSL_KEY_IDSZ);
+		if(ssl_key_identifier_sha1(opts->key, keyfpr)) {
+			fprintf(stderr, "%s: error generating RSA fingerprint\n", argv0);
+			exit(EXIT_FAILURE);
+		}
+		char *keyfn;
+		asprintf(&keyfn, "%s/%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+				"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X.key",
+				opts->certgendir,
+				keyfpr[0], keyfpr[1], keyfpr[2], keyfpr[3], keyfpr[4],
+				keyfpr[5], keyfpr[6], keyfpr[7], keyfpr[8], keyfpr[9],
+				keyfpr[10], keyfpr[11], keyfpr[12], keyfpr[13], keyfpr[14],
+				keyfpr[15], keyfpr[16], keyfpr[17], keyfpr[18], keyfpr[19]);
+		FILE *keyfd = fopen(keyfn,"w");
+		if (!keyfd) {
+			log_err_printf("Failed to open '%s' for writing: %s\n",
+			               keyfn, strerror(errno));
+		} else {
+			PEM_write_PrivateKey(keyfd, opts->key, NULL, 0, 0, NULL, NULL);
+			fclose(keyfd);
+		}
+	}
+
 	/* usage checks after defaults */
 	if (opts->dropgroup && !opts->dropuser) {
 		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
