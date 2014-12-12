@@ -33,6 +33,7 @@
 
 #include <check.h>
 
+#define TESTKEY "extra/pki/server.key"
 #define TESTCERT "extra/pki/server.crt"
 #define TESTCERT2 "extra/pki/rsa.crt"
 
@@ -404,6 +405,30 @@ START_TEST(ssl_tls_clienthello_parse_sni_07)
 END_TEST
 #endif /* !OPENSSL_NO_TLSEXT */
 
+START_TEST(ssl_key_identifier_sha1_01)
+{
+	X509 *c;
+	EVP_PKEY *k;
+	unsigned char keyid[SSL_KEY_IDSZ];
+
+	c = ssl_x509_load(TESTCERT);
+	fail_unless(!!c, "loading certificate failed");
+	k = ssl_key_load(TESTKEY);
+	fail_unless(!!k, "loading key failed");
+
+	fail_unless(ssl_key_identifier_sha1(k, keyid) == 0,
+	            "ssl_key_identifier_sha1() failed");
+
+	int loc = X509_get_ext_by_NID(c, NID_subject_key_identifier, -1);
+	X509_EXTENSION *ext = X509_get_ext(c, loc);
+	fail_unless(!!ext, "loading ext failed");
+	fail_unless(ext->value->length - 2 == SSL_KEY_IDSZ,
+	            "extension length mismatch: %i");
+	fail_unless(!memcmp(ext->value->data + 2, keyid, SSL_KEY_IDSZ),
+	            "key id mismatch");
+}
+END_TEST
+
 START_TEST(ssl_x509_names_01)
 {
 	X509 *c;
@@ -601,6 +626,11 @@ ssl_suite(void)
 	tcase_add_test(tc, ssl_tls_clienthello_parse_sni_07);
 	suite_add_tcase(s, tc);
 #endif /* !OPENSSL_NO_TLSEXT */
+
+	tc = tcase_create("ssl_key_identifier_sha1");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_key_identifier_sha1_01);
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_x509_names");
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);

@@ -1033,6 +1033,33 @@ ssl_key_genrsa(const int keysize)
 }
 
 /*
+ * Returns the subjectKeyIdentifier compatible key id of the public key.
+ * keyid will receive a binary SHA-1 hash of SSL_KEY_IDSZ bytes.
+ * Returns 0 on success, -1 on failure.
+ */
+int
+ssl_key_identifier_sha1(EVP_PKEY *key, unsigned char *keyid)
+{
+	X509_PUBKEY *pubkey = NULL;
+
+	if (X509_PUBKEY_set(&pubkey, key) != 1)
+		return -1;
+
+	ASN1_BIT_STRING *pk = pubkey->public_key;
+	if (!pk)
+		goto errout;
+	if (!EVP_Digest(pk->data, pk->length, keyid, NULL, EVP_sha1(), NULL))
+		goto errout;
+
+	X509_PUBKEY_free(pubkey);
+	return 0;
+
+errout:
+	X509_PUBKEY_free(pubkey);
+	return -1;
+}
+
+/*
  * Returns the one-line representation of the subject DN in a newly allocated
  * string which must be freed by the caller.
  */
