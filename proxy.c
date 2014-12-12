@@ -28,6 +28,7 @@
 
 #include "proxy.h"
 
+#include "privsep.h"
 #include "pxythrmgr.h"
 #include "pxyconn.h"
 #include "cachemgr.h"
@@ -56,7 +57,7 @@
  * Proxy engine, built around libevent 2.x.
  */
 
-static int signals[] = { SIGQUIT, SIGHUP, SIGINT, SIGPIPE };
+static int signals[] = { SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
 
 struct proxy_ctx {
 	pxy_thrmgr_ctx_t *thrmgr;
@@ -161,57 +162,14 @@ proxy_debug_base(const struct event_base *ev_base)
  */
 static proxy_listener_ctx_t *
 proxy_listener_setup(struct event_base *evbase, pxy_thrmgr_ctx_t *thrmgr,
-                     proxyspec_t *spec, opts_t *opts)
+                     proxyspec_t *spec, opts_t *opts, int clisock)
 {
 	proxy_listener_ctx_t *plc;
+	int fd;
 
-	evutil_socket_t fd;
-	int on = 1;
-	int rv;
-
-	fd = socket(spec->listen_addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
-	if (fd == -1) {
-		log_err_printf("Error from socket(): %s\n",
-		               strerror(errno));
-		evutil_closesocket(fd);
-		return NULL;
-	}
-
-	rv = evutil_make_socket_nonblocking(fd);
-	if (rv == -1) {
-		log_err_printf("Error making socket nonblocking: %s\n",
-		               strerror(errno));
-		evutil_closesocket(fd);
-		return NULL;
-	}
-
-	rv = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void*)&on, sizeof(on));
-	if (rv == -1) {
-		log_err_printf("Error from setsockopt(SO_KEEPALIVE): %s\n",
-		               strerror(errno));
-		evutil_closesocket(fd);
-		return NULL;
-	}
-
-	rv = evutil_make_listen_socket_reuseable(fd);
-	if (rv == -1) {
-		log_err_printf("Error from setsockopt(SO_REUSABLE): %s\n",
-		               strerror(errno));
-		evutil_closesocket(fd);
-		return NULL;
-	}
-
-	if (spec->natsocket && (spec->natsocket(fd) == -1)) {
-		log_err_printf("Error from spec->natsocket()\n");
-		evutil_closesocket(fd);
-		return NULL;
-	}
-
-	rv = bind(fd, (struct sockaddr *)&spec->listen_addr,
-	          spec->listen_addrlen);
-	if (rv == -1) {
-		log_err_printf("Error from bind(): %s\n", strerror(errno));
-		evutil_closesocket(fd);
+	if ((fd = privsep_client_opensock(clisock, spec)) == -1) {
+		log_err_printf("Error opening socket: %s (%i)\n",
+		               strerror(errno), errno);
 		return NULL;
 	}
 
@@ -236,7 +194,7 @@ proxy_listener_setup(struct event_base *evbase, pxy_thrmgr_ctx_t *thrmgr,
 }
 
 /*
- * Signal handler for SIGQUIT, SIGINT, SIGHUP and SIGPIPE.
+ * Signal handler for SIGQUIT, SIGINT, SIGHUP, SIGPIPE and SIGUSR1.
  */
 static void
 proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
@@ -247,10 +205,25 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 		log_dbg_printf("Received signal %i\n", fd);
 	}
 
-	if (fd == SIGPIPE) {
-		log_err_printf("Warning: Received SIGPIPE; ignoring.\n");
-	} else {
+	switch(fd) {
+	case SIGQUIT:
+	case SIGINT:
+	case SIGHUP:
 		event_base_loopbreak(ctx->evbase);
+		break;
+	case SIGUSR1:
+		if (log_reopen() == -1) {
+			log_err_printf("Warning: Failed to reopen logs\n");
+		} else {
+			log_dbg_printf("Reopened log files\n");
+		}
+		break;
+	case SIGPIPE:
+		log_err_printf("Warning: Received SIGPIPE; ignoring.\n");
+		break;
+	default:
+		log_err_printf("Warning: Received unexpected signal %i\n", fd);
+		break;
 	}
 }
 
@@ -273,10 +246,11 @@ proxy_gc_cb(UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 
 /*
  * Set up the core event loop.
+ * Socket clisock is the privsep client socket used for binding to ports.
  * Returns ctx on success, or NULL on error.
  */
 proxy_ctx_t *
-proxy_new(opts_t *opts)
+proxy_new(opts_t *opts, int clisock)
 {
 	proxy_listener_ctx_t *head;
 	proxy_ctx_t *ctx;
@@ -341,7 +315,7 @@ proxy_new(opts_t *opts)
 	head = ctx->lctx = NULL;
 	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 		head = proxy_listener_setup(ctx->evbase, ctx->thrmgr,
-		                            spec, opts);
+		                            spec, opts, clisock);
 		if (!head)
 			goto leave2;
 		head->next = ctx->lctx;
@@ -362,6 +336,7 @@ proxy_new(opts_t *opts)
 		goto leave4;
 	evtimer_add(ctx->gcev, &gc_delay);
 
+	privsep_client_close(clisock);
 	return ctx;
 
 leave4:
@@ -395,9 +370,11 @@ leave0:
 void
 proxy_run(proxy_ctx_t *ctx)
 {
+#if 0
 	if (ctx->opts->detach) {
 		event_reinit(ctx->evbase);
 	}
+#endif
 #ifndef PURIFY
 	if (OPTS_DEBUG(ctx->opts)) {
 		event_base_dump_events(ctx->evbase, stderr);

@@ -28,6 +28,8 @@
 
 #include "sys.h"
 
+#include "defaults.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -61,7 +63,7 @@ sys_isdir_setup(void)
 		perror("asprintf");
 		exit(EXIT_FAILURE);
 	}
-	close(open(file, O_CREAT|O_WRONLY|O_APPEND, 0600));
+	close(open(file, O_CREAT|O_WRONLY|O_APPEND, DFLT_FILEMODE));
 	symlink(file, lfile);
 	mkdir(dir, 0700);
 	symlink(dir, ldir);
@@ -141,7 +143,7 @@ START_TEST(sys_mkpath_01)
 	         basedir);
 	fail_unless(!!dir, "asprintf failed");
 	fail_unless(!sys_isdir(dir), "dir already sys_isdir()");
-	fail_unless(!sys_mkpath(dir, 0755), "sys_mkpath failed");
+	fail_unless(!sys_mkpath(dir, DFLT_DIRMODE), "sys_mkpath failed");
 	fail_unless(sys_isdir(dir), "dir not sys_isdir()");
 	free(dir);
 }

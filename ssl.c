@@ -29,6 +29,7 @@
 #include "ssl.h"
 
 #include "log.h"
+#include "defaults.h"
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -609,7 +610,7 @@ ssl_ec_by_name(const char *curvename)
 	int nid;
 
 	if (!curvename)
-		curvename = SSL_EC_KEY_CURVE_DEFAULT;
+		curvename = DFLT_CURVE;
 
 	if ((nid = OBJ_sn2nid(curvename)) == NID_undef) {
 		return NULL;
@@ -1029,6 +1030,33 @@ ssl_key_genrsa(const int keysize)
 	pkey = EVP_PKEY_new();
 	EVP_PKEY_assign_RSA(pkey, rsa); /* does not increment refcount */
 	return pkey;
+}
+
+/*
+ * Returns the subjectKeyIdentifier compatible key id of the public key.
+ * keyid will receive a binary SHA-1 hash of SSL_KEY_IDSZ bytes.
+ * Returns 0 on success, -1 on failure.
+ */
+int
+ssl_key_identifier_sha1(EVP_PKEY *key, unsigned char *keyid)
+{
+	X509_PUBKEY *pubkey = NULL;
+
+	if (X509_PUBKEY_set(&pubkey, key) != 1)
+		return -1;
+
+	ASN1_BIT_STRING *pk = pubkey->public_key;
+	if (!pk)
+		goto errout;
+	if (!EVP_Digest(pk->data, pk->length, keyid, NULL, EVP_sha1(), NULL))
+		goto errout;
+
+	X509_PUBKEY_free(pubkey);
+	return 0;
+
+errout:
+	X509_PUBKEY_free(pubkey);
+	return -1;
 }
 
 /*

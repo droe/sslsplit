@@ -26,34 +26,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NAT_H
-#define NAT_H
+#ifndef PRIVSEP_H
+#define PRIVSEP_H
 
 #include "attrib.h"
+#include "opts.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
+int privsep_fork(opts_t *, int[], size_t);
 
-#include <event2/util.h>
+int privsep_client_openfile(int, const char *, int);
+int privsep_client_opensock(int, const proxyspec_t *spec);
+int privsep_client_close(int);
 
-typedef int (*nat_lookup_cb_t)(struct sockaddr *, socklen_t *, evutil_socket_t,
-                               struct sockaddr *, socklen_t);
-typedef int (*nat_socket_cb_t)(evutil_socket_t);
-
-int nat_exist(const char *) WUNRES;
-int nat_used(const char *) WUNRES;
-nat_lookup_cb_t nat_getlookupcb(const char *) WUNRES;
-nat_socket_cb_t nat_getsocketcb(const char *) WUNRES;
-int nat_ipv6ready(const char *) WUNRES;
-
-const char *nat_getdefaultname(void) WUNRES;
-void nat_list_engines(void);
-int nat_preinit(void) WUNRES;
-void nat_preinit_undo(void);
-int nat_init(void) WUNRES;
-void nat_fini(void);
-void nat_version(void);
-
-#endif /* !NAT_H */
+#endif /* !PRIVSEP_H */
 
 /* vim: set noet ft=c: */

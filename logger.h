@@ -35,20 +35,22 @@
 #include <unistd.h>
 #include <pthread.h>
 
+typedef int (*logger_reopen_func_t)(void);
 typedef int (*logger_open_func_t)(void *);
 typedef void (*logger_close_func_t)(void *);
 typedef ssize_t (*logger_write_func_t)(void *, const void *, size_t);
 typedef logbuf_t * (*logger_prep_func_t)(void *, unsigned long, logbuf_t *);
 typedef struct logger logger_t;
 
-logger_t * logger_new(logger_open_func_t, logger_close_func_t,
-                      logger_write_func_t, logger_prep_func_t)
-                      NONNULL(3) MALLOC;
+logger_t * logger_new(logger_reopen_func_t, logger_open_func_t,
+                      logger_close_func_t, logger_write_func_t,
+                      logger_prep_func_t) NONNULL(4) MALLOC;
 void logger_free(logger_t *) NONNULL(1);
 int logger_start(logger_t *) NONNULL(1) WUNRES;
 void logger_leave(logger_t *) NONNULL(1);
 int logger_join(logger_t *) NONNULL(1);
 int logger_stop(logger_t *) NONNULL(1) WUNRES;
+int logger_reopen(logger_t *) NONNULL(1) WUNRES;
 int logger_open(logger_t *, void *) NONNULL(1,2) WUNRES;
 int logger_close(logger_t *, void *) NONNULL(1,2) WUNRES;
 int logger_submit(logger_t *, void *, unsigned long,

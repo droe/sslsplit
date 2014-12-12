@@ -31,6 +31,8 @@
 #include "logger.h"
 #include "sys.h"
 #include "attrib.h"
+#include "privsep.h"
+#include "defaults.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,7 +42,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <syslog.h>
-#include <libgen.h>
 #include <assert.h>
 #include <sys/stat.h>
 
@@ -58,7 +59,7 @@
  */
 
 static logger_t *err_log = NULL;
-static int err_started = 0; /* while 0, shortcut the thrqueue */
+static int err_shortcut_logger = 0;
 static int err_mode = LOG_ERR_MODE_STDERR;
 
 static ssize_t
@@ -86,7 +87,7 @@ log_err_printf(const char *fmt, ...)
 	va_end(ap);
 	if (rv < 0)
 		return -1;
-	if (err_started) {
+	if (err_shortcut_logger) {
 		return logger_write_freebuf(err_log, NULL, 0,
 		                            buf, strlen(buf) + 1);
 	} else {
@@ -117,7 +118,7 @@ log_dbg_write_free(void *buf, size_t sz)
 	if (dbg_mode == LOG_DBG_MODE_NONE)
 		return 0;
 
-	if (err_started) {
+	if (err_shortcut_logger) {
 		return logger_write_freebuf(err_log, NULL, 0, buf, sz);
 	} else {
 		log_err_writecb(NULL, buf, sz);
@@ -164,14 +165,37 @@ log_dbg_mode(int mode)
 
 logger_t *connect_log = NULL;
 static int connect_fd = -1;
+static char *connect_fn = NULL;
 
 static int
-log_connect_open(const char *logfile)
+log_connect_preinit(const char *logfile)
 {
-	connect_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT, 0660);
+	connect_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	if (connect_fd == -1) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               logfile, strerror(errno), errno);
+		return -1;
+	}
+	if (!(connect_fn = realpath(logfile, NULL))) {
+		log_err_printf("Failed to realpath '%s': %s (%i)\n",
+		              logfile, strerror(errno), errno);
+		close(connect_fd);
+		connect_fd = -1;
+		return -1;
+	}
+	return 0;
+}
+
+static int
+log_connect_reopencb(void)
+{
+	close(connect_fd);
+	connect_fd = open(connect_fn, O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
 	if (connect_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s\n",
-		               logfile, strerror(errno));
+		               connect_fn, strerror(errno));
+		free(connect_fn);
+		connect_fn = NULL;
 		return -1;
 	}
 	return 0;
@@ -207,7 +231,7 @@ log_connect_writecb(UNUSED void *fh, const void *buf, size_t sz)
 }
 
 static void
-log_connect_close(void)
+log_connect_fini(void)
 {
 	close(connect_fd);
 }
@@ -227,43 +251,82 @@ log_connect_close(void)
 
 struct log_content_ctx {
 	unsigned int open : 1;
-	int fd;
 	union {
 		struct {
 			char *header_req;
 			char *header_resp;
 		} file;
 		struct {
+			int fd;
 			char *filename;
 		} dir;
 		struct {
+			int fd;
 			char *filename;
 		} spec;
 	} u;
 };
 
-logger_t *content_log = NULL;
-static int content_fd = -1; /* if set, we are in single file mode */
+static logger_t *content_log = NULL;
+static int content_clisock = -1; /* privsep client socket for content logger */
 
-static int
-log_content_file_preinit(const char *logfile)
+/*
+ * Split a pathname into static LHS (including final slashes) and dynamic RHS.
+ * Returns -1 on error, 0 on success.
+ * On success, fills in lhs and rhs with newly allocated buffers that must
+ * be freed by the caller.
+ */
+int
+log_content_split_pathspec(const char *path, char **lhs, char **rhs)
 {
-	content_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT, 0660);
-	if (content_fd == -1) {
-		log_err_printf("Failed to open '%s' for writing: %s\n",
-		               logfile, strerror(errno));
+	const char *p, *q, *r;
+
+	p = strchr(path, '%');
+	/* at first % or EOS */
+
+	/* skip % if next char is % (and implicitly not \0) */
+	while (p && p[1] == '%') {
+		p = strchr(p + 2, '%');
+	}
+	/* at first % that is not %%, or at EOS */
+
+	if (!p || !p[1]) {
+		/* EOS: no % that is not %% in path */
+		p = path + strlen(path);
+	}
+	/* at first hot % or at '\0' */
+
+	/* find last / before % */
+	for (r = q = strchr(path, '/'); q && (q < p); q = strchr(q + 1, '/')) {
+		r = q;
+	}
+	if (!(p = r)) {
+		/* no / found, use dummy ./ as LHS */
+		*lhs = strdup("./");
+		if (!*lhs)
+			return -1;
+		*rhs = strdup(path);
+		if (!*rhs) {
+			free(*lhs);
+			return -1;
+		}
+		return 0;
+	}
+	/* at last / terminating the static part of path */
+
+	p++; /* skip / */
+	*lhs = malloc(p - path + 1 /* for terminating null */);
+	if (!*lhs)
+		return -1;
+	memcpy(*lhs, path, p - path);
+	(*lhs)[p - path] = '\0';
+	*rhs = strdup(p);
+	if (!*rhs) {
+		free(*lhs);
 		return -1;
 	}
-	return 0;
-}
 
-static void
-log_content_file_fini(void)
-{
-	if (content_fd != -1) {
-		close(content_fd);
-		content_fd = -1;
-	}
+	return 0;
 }
 
 /*
@@ -271,11 +334,7 @@ log_content_file_fini(void)
  * Returns an allocated buffer which must be freed by caller, or NULL on error.
  */
 #define PATH_BUF_INC	1024
-static char *
-log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
-                            char *exec_path, char *user, char *group)
-WUNRES MALLOC NONNULL(1,2,3);
-static char *
+static char * MALLOC NONNULL(1,2,3)
 log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
                             char *exec_path, char *user, char *group)
 {
@@ -447,7 +506,6 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 		}
 	} else {
 		/* single-file content log (-L) */
-		ctx->fd = content_fd;
 		if (asprintf(&ctx->u.file.header_req, "%s -> %s",
 		             srcaddr, dstaddr) < 0) {
 			goto errout;
@@ -500,30 +558,21 @@ log_content_close(log_content_ctx_t **pctx)
 }
 
 /*
- * Callback functions that are executed in the logger thread.
+ * Log-type specific code.
+ *
+ * The init/fini functions are executed globally in the main thread.
+ * Callback functions are executed in the logger thread.
  */
-
-static ssize_t
-log_content_common_writecb(void *fh, const void *buf, size_t sz)
-{
-	log_content_ctx_t *ctx = fh;
-
-	if (write(ctx->fd, buf, sz) == -1) {
-		log_err_printf("Warning: Failed to write to content log: %s\n",
-		               strerror(errno));
-		return -1;
-	}
-	return 0;
-}
 
 static int
 log_content_dir_opencb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
 
-	ctx->fd = open(ctx->u.dir.filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
-	if (ctx->fd == -1) {
-		log_err_printf("Failed to open '%s': %s (%i)\n",
+	if ((ctx->u.dir.fd = privsep_client_openfile(content_clisock,
+	                                             ctx->u.dir.filename,
+	                                             0)) == -1) {
+		log_err_printf("Opening logdir file '%s' failed: %s (%i)\n",
 		               ctx->u.dir.filename, strerror(errno), errno);
 		return -1;
 	}
@@ -537,45 +586,36 @@ log_content_dir_closecb(void *fh)
 
 	if (ctx->u.dir.filename)
 		free(ctx->u.dir.filename);
-	if (ctx->fd != 1)
-		close(ctx->fd);
+	if (ctx->u.dir.fd != 1)
+		close(ctx->u.dir.fd);
 	free(ctx);
 }
 
-static int
-log_content_spec_opencb(UNUSED void *fh)
+static ssize_t
+log_content_dir_writecb(void *fh, const void *buf, size_t sz)
 {
 	log_content_ctx_t *ctx = fh;
-	char *filedir, *filename2;
 
-	filename2 = strdup(ctx->u.spec.filename);
-	if (!filename2) {
-		log_err_printf("Could not duplicate filname: %s (%i)\n",
-		               strerror(errno), errno);
+	if (write(ctx->u.dir.fd, buf, sz) == -1) {
+		log_err_printf("Warning: Failed to write to content log: %s\n",
+		               strerror(errno));
 		return -1;
 	}
-	filedir = dirname(filename2);
-	if (!filedir) {
-		log_err_printf("Could not get dirname: %s (%i)\n",
-		               strerror(errno), errno);
-		free(filename2);
-		return -1;
-	}
-	if (sys_mkpath(filedir, 0755) == -1) {
-		log_err_printf("Could not create directory '%s': %s (%i)\n",
-		               filedir, strerror(errno), errno);
-		free(filename2);
-		return -1;
-	}
-	free(filename2);
+	return 0;
+}
 
-	ctx->fd = open(ctx->u.spec.filename, O_WRONLY|O_APPEND|O_CREAT, 0660);
-	if (ctx->fd == -1) {
-		log_err_printf("Failed to open '%s': %s\n",
-		               ctx->u.spec.filename, strerror(errno));
+static int
+log_content_spec_opencb(void *fh)
+{
+	log_content_ctx_t *ctx = fh;
+
+	if ((ctx->u.spec.fd = privsep_client_openfile(content_clisock,
+	                                              ctx->u.spec.filename,
+	                                              1)) == -1) {
+		log_err_printf("Opening logspec file '%s' failed: %s (%i)\n",
+		               ctx->u.spec.filename, strerror(errno), errno);
 		return -1;
 	}
-
 	return 0;
 }
 
@@ -586,9 +626,72 @@ log_content_spec_closecb(void *fh)
 
 	if (ctx->u.spec.filename)
 		free(ctx->u.spec.filename);
-	if (ctx->fd != -1)
-		close(ctx->fd);
+	if (ctx->u.spec.fd != -1)
+		close(ctx->u.spec.fd);
 	free(ctx);
+}
+
+static ssize_t
+log_content_spec_writecb(void *fh, const void *buf, size_t sz)
+{
+	log_content_ctx_t *ctx = fh;
+
+	if (write(ctx->u.spec.fd, buf, sz) == -1) {
+		log_err_printf("Warning: Failed to write to content log: %s\n",
+		               strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int content_file_fd = -1;
+static char *content_file_fn = NULL;
+
+static int
+log_content_file_preinit(const char *logfile)
+{
+	content_file_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
+	                       DFLT_FILEMODE);
+	if (content_file_fd == -1) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               logfile, strerror(errno), errno);
+		return -1;
+	}
+	if (!(content_file_fn = realpath(logfile, NULL))) {
+		log_err_printf("Failed to realpath '%s': %s (%i)\n",
+		              logfile, strerror(errno), errno);
+		close(content_file_fd);
+		connect_fd = -1;
+		return -1;
+	}
+	return 0;
+}
+
+static void
+log_content_file_fini(void)
+{
+	if (content_file_fn) {
+		free(content_file_fn);
+		content_file_fn = NULL;
+	}
+	if (content_file_fd != -1) {
+		close(content_file_fd);
+		content_file_fd = -1;
+	}
+}
+
+static int
+log_content_file_reopencb(void)
+{
+	close(content_file_fd);
+	content_file_fd = open(content_file_fn,
+	                       O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	if (content_file_fd == -1) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               content_file_fn, strerror(errno), errno);
+		return -1;
+	}
+	return 0;
 }
 
 /*
@@ -612,6 +715,19 @@ log_content_file_closecb(void *fh)
 	}
 
 	free(ctx);
+}
+
+static ssize_t
+log_content_file_writecb(void *fh, const void *buf, size_t sz)
+{
+	UNUSED log_content_ctx_t *ctx = fh;
+
+	if (write(content_file_fd, buf, sz) == -1) {
+		log_err_printf("Warning: Failed to write to content log: %s\n",
+		               strerror(errno));
+		return -1;
+	}
+	return 0;
 }
 
 static logbuf_t *
@@ -676,6 +792,7 @@ out:
 int
 log_preinit(opts_t *opts)
 {
+	logger_reopen_func_t reopencb;
 	logger_open_func_t opencb;
 	logger_close_func_t closecb;
 	logger_write_func_t writecb;
@@ -683,39 +800,42 @@ log_preinit(opts_t *opts)
 
 	if (opts->contentlog) {
 		if (opts->contentlog_isdir) {
+			reopencb = NULL;
 			opencb = log_content_dir_opencb;
 			closecb = log_content_dir_closecb;
-			writecb = log_content_common_writecb;
+			writecb = log_content_dir_writecb;
 			prepcb = NULL;
 		} else if (opts->contentlog_isspec) {
+			reopencb = NULL;
 			opencb = log_content_spec_opencb;
 			closecb = log_content_spec_closecb;
-			writecb = log_content_common_writecb;
+			writecb = log_content_spec_writecb;
 			prepcb = NULL;
 		} else {
 			if (log_content_file_preinit(opts->contentlog) == -1)
 				goto out;
+			reopencb = log_content_file_reopencb;
 			opencb = NULL;
 			closecb = log_content_file_closecb;
-			writecb = log_content_common_writecb;
+			writecb = log_content_file_writecb;
 			prepcb = log_content_file_prepcb;
 		}
-		if (!(content_log = logger_new(opencb, closecb, writecb,
-		                               prepcb))) {
+		if (!(content_log = logger_new(reopencb, opencb, closecb,
+		                               writecb, prepcb))) {
 			log_content_file_fini();
 			goto out;
 		}
 	}
 	if (opts->connectlog) {
-		if (log_connect_open(opts->connectlog) == -1)
+		if (log_connect_preinit(opts->connectlog) == -1)
 			goto out;
-		if (!(connect_log = logger_new(NULL, NULL,
+		if (!(connect_log = logger_new(log_connect_reopencb, NULL, NULL,
 		                               log_connect_writecb, NULL))) {
-			log_connect_close();
+			log_connect_fini();
 			goto out;
 		}
 	}
-	if (!(err_log = logger_new(NULL, NULL, log_err_writecb, NULL)))
+	if (!(err_log = logger_new(NULL, NULL, NULL, log_err_writecb, NULL)))
 		goto out;
 	return 0;
 
@@ -725,10 +845,27 @@ out:
 		logger_free(content_log);
 	}
 	if (connect_log) {
-		log_connect_close();
+		log_connect_fini();
 		logger_free(connect_log);
 	}
 	return -1;
+}
+
+/*
+ * Close all file descriptors opened by log_preinit; used in privsep parent.
+ * Only undo content and connect log, leave error and debug log functional.
+ */
+void
+log_preinit_undo(void)
+{
+	if (content_log) {
+		log_content_file_fini();
+		logger_free(content_log);
+	}
+	if (connect_log) {
+		log_connect_fini();
+		logger_free(connect_log);
+	}
 }
 
 /*
@@ -736,20 +873,24 @@ out:
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts)
+log_init(opts_t *opts, int clisock)
 {
 	if (err_log)
 		if (logger_start(err_log) == -1)
 			return -1;
 	if (!opts->debug) {
-		err_started = 1;
+		err_shortcut_logger = 1;
 	}
 	if (connect_log)
 		if (logger_start(connect_log) == -1)
 			return -1;
-	if (content_log)
+	if (content_log) {
+		content_clisock = clisock;
 		if (logger_start(content_log) == -1)
 			return -1;
+	} else {
+		privsep_client_close(clisock);
+	}
 	return 0;
 }
 
@@ -760,28 +901,53 @@ log_init(opts_t *opts)
 void
 log_fini(void)
 {
+	/* switch back to direct logging so we can still log errors while
+	 * tearing down the logging infrastructure */
+	err_shortcut_logger = 1;
+
 	if (content_log)
 		logger_leave(content_log);
 	if (connect_log)
 		logger_leave(connect_log);
-	logger_leave(err_log);
+	if (err_log)
+		logger_leave(err_log);
 
 	if (content_log)
 		logger_join(content_log);
 	if (connect_log)
 		logger_join(connect_log);
-	logger_join(err_log);
+	if (err_log)
+		logger_join(err_log);
 
 	if (content_log)
 		logger_free(content_log);
 	if (connect_log)
 		logger_free(connect_log);
-	logger_free(err_log);
+	if (err_log)
+		logger_free(err_log);
 
 	if (content_log)
 		log_content_file_fini();
 	if (connect_log)
-		log_connect_close();
+		log_connect_fini();
+
+	if (content_clisock != -1)
+		privsep_client_close(content_clisock);
+}
+
+int
+log_reopen(void)
+{
+	int rv = 0;
+
+	if (content_log)
+		if (logger_reopen(content_log) == -1)
+			rv = -1;
+	if (connect_log)
+		if (logger_reopen(connect_log) == -1)
+			rv = -1;
+
+	return rv;
 }
 
 /* vim: set noet ft=c: */

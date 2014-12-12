@@ -577,6 +577,15 @@ nat_preinit(void)
 }
 
 /*
+ * Undo nat_preinit - close all file descriptors, for use in privsep parent.
+ */
+void
+nat_preinit_undo(void)
+{
+	nat_fini();
+}
+
+/*
  * Initialize all NAT engines which were marked as used by previous calls to
  * nat_getlookupcb().
  *

@@ -122,13 +122,14 @@ void ssl_dh_refcount_inc(DH *) NONNULL(1);
 #endif /* !OPENSSL_NO_DH */
 
 #ifndef OPENSSL_NO_EC
-#define SSL_EC_KEY_CURVE_DEFAULT "secp160r2"
 EC_KEY * ssl_ec_by_name(const char *) MALLOC;
 #endif /* !OPENSSL_NO_EC */
 
 EVP_PKEY * ssl_key_load(const char *) NONNULL(1) MALLOC;
 EVP_PKEY * ssl_key_genrsa(const int) MALLOC;
 void ssl_key_refcount_inc(EVP_PKEY *) NONNULL(1);
+#define SSL_KEY_IDSZ 20
+int ssl_key_identifier_sha1(EVP_PKEY *, unsigned char *) NONNULL(1,2);
 
 #ifndef OPENSSL_NO_TLSEXT
 int ssl_x509_v3ext_add(X509V3_CTX *, X509 *, char *, char *) NONNULL(1,2,3,4);
