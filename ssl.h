@@ -113,6 +113,8 @@ int ssl_init(void) WUNRES;
 void ssl_reinit(void);
 void ssl_fini(void);
 
+char * ssl_sha1_to_str(unsigned char *, int) NONNULL(1) MALLOC;
+
 char * ssl_ssl_state_to_str(SSL *) NONNULL(1) MALLOC;
 
 #ifndef OPENSSL_NO_DH
@@ -130,6 +132,7 @@ EVP_PKEY * ssl_key_genrsa(const int) MALLOC;
 void ssl_key_refcount_inc(EVP_PKEY *) NONNULL(1);
 #define SSL_KEY_IDSZ 20
 int ssl_key_identifier_sha1(EVP_PKEY *, unsigned char *) NONNULL(1,2);
+char * ssl_key_identifier(EVP_PKEY *, int) NONNULL(1) MALLOC;
 
 #ifndef OPENSSL_NO_TLSEXT
 int ssl_x509_v3ext_add(X509V3_CTX *, X509 *, char *, char *) NONNULL(1,2,3,4);
@@ -143,6 +146,7 @@ char * ssl_x509_subject(X509 *) NONNULL(1) MALLOC;
 char * ssl_x509_subject_cn(X509 *, size_t *) NONNULL(1,2) MALLOC;
 #define SSL_X509_FPRSZ 20
 int ssl_x509_fingerprint_sha1(X509 *, unsigned char *) NONNULL(1,2);
+char * ssl_x509_fingerprint(X509 *, int) NONNULL(1) MALLOC;
 char ** ssl_x509_names(X509 *) NONNULL(1) MALLOC;
 int ssl_x509_names_match(X509 *, const char *) NONNULL(1,2);
 char * ssl_x509_names_to_str(X509 *) NONNULL(1) MALLOC;
