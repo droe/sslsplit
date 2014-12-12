@@ -115,6 +115,8 @@ main_usage(void)
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
+"  -w gendir   write generated key/cert pairs to gendir\n"
+"  -W gendir   same as -w but also write the original cert\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
@@ -274,7 +276,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -615,6 +617,22 @@ main(int argc, char *argv[])
 				free(lhs);
 				free(rhs);
 				break;
+			case 'W':
+				opts->writeorig = 1;
+				if (opts->certgendir)
+					free(opts->certgendir);
+				opts->certgendir = strdup(optarg);
+				if (!opts->certgendir)
+					oom_die(argv0);
+				break;
+			case 'w':
+				opts->writeorig = 0;
+				if (opts->certgendir)
+					free(opts->certgendir);
+				opts->certgendir = strdup(optarg);
+				if (!opts->certgendir)
+					oom_die(argv0);
+				break;
 			}
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
@@ -648,6 +666,11 @@ main(int argc, char *argv[])
 	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
+		                argv0);
+		exit(EXIT_FAILURE);
+	}
+	if (opts->certgendir && opts->key) {
+		fprintf(stderr, "%s: -K and -w are mutually exclusive.\n",
 		                argv0);
 		exit(EXIT_FAILURE);
 	}
@@ -744,6 +767,30 @@ main(int argc, char *argv[])
 		}
 		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("Generated RSA key for leaf certs.\n");
+		}
+	}
+
+	if (opts->certgendir) {
+		unsigned char *keyfpr = malloc(SSL_KEY_IDSZ);
+		if(ssl_key_identifier_sha1(opts->key, keyfpr)) {
+			fprintf(stderr, "%s: error generating RSA fingerprint\n", argv0);
+			exit(EXIT_FAILURE);
+		}
+		char *keyfn;
+		asprintf(&keyfn, "%s/%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+				"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X.key",
+				opts->certgendir,
+				keyfpr[0], keyfpr[1], keyfpr[2], keyfpr[3], keyfpr[4],
+				keyfpr[5], keyfpr[6], keyfpr[7], keyfpr[8], keyfpr[9],
+				keyfpr[10], keyfpr[11], keyfpr[12], keyfpr[13], keyfpr[14],
+				keyfpr[15], keyfpr[16], keyfpr[17], keyfpr[18], keyfpr[19]);
+		FILE *keyfd = fopen(keyfn,"w");
+		if (!keyfd) {
+			log_err_printf("Failed to open '%s' for writing: %s\n",
+			               keyfn, strerror(errno));
+		} else {
+			PEM_write_PrivateKey(keyfd, opts->key, NULL, 0, 0, NULL, NULL);
+			fclose(keyfd);
 		}
 	}
 

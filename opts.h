@@ -101,6 +101,8 @@ typedef struct opts {
 	char *ecdhcurve;
 #endif /* !OPENSSL_NO_ECDH */
 	proxyspec_t *spec;
+	char *certgendir;
+	unsigned int writeorig: 1;
 } opts_t;
 
 opts_t *opts_new(void) MALLOC;
