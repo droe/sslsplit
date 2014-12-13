@@ -181,12 +181,6 @@ no matching certificate in the provided certificate directory.
 Use private key from \fIpemfile\fP for certificates forged on-the-fly.
 If \fB-K\fP is not given, SSLsplit will generate a random 1024-bit RSA key.
 .TP
-.B \-w \fIgendir\fP
-Write generated keys and certificates to individual files in \fIgendir\fP.
-.TP
-.B \-W \fIgendir\fP
-Same as -w, but also write original certificates
-.TP
 .B \-l \fIlogfile\fP
 Log connections to \fIlogfile\fP in a single line per connection format,
 including addresses and ports and some HTTP and SSL information, if available.
@@ -296,6 +290,19 @@ Mac OS X.
 .TP
 .B \-V
 Display version and compiled features information and exit.
+.TP
+.B \-w \fIgendir\fP
+Write generated keys and certificates to individual files in \fIgendir\fP.
+For keys, the key identifier is used as filename, which consists of the SHA-1
+hash of the ASN.1 bit string of the public key, as referenced by the
+subjectKeyIdentifier extension in certificates.
+For certificates, the SHA-1 fingerprints of the original and the used (forged)
+certificate are combined to form the filename.
+Note that only newly generated certificates are written to disk.
+.TP
+.B \-W \fIgendir\fP
+Same as \fB-w\fP, but also write original certificates and certificates not
+newly generated, such as those loaded from \fB-t\fP.
 .TP
 .B \-Z
 Disable SSL/TLS compression on all connections.  This is useful if your

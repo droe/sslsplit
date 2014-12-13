@@ -80,7 +80,9 @@ typedef struct opts {
 #ifdef HAVE_LOCAL_PROCINFO
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
+	unsigned int certgen_writeall: 1;
 	char *ciphers;
+	char *certgendir;
 	char *tgcrtdir;
 	char *dropuser;
 	char *dropgroup;
@@ -101,8 +103,6 @@ typedef struct opts {
 	char *ecdhcurve;
 #endif /* !OPENSSL_NO_ECDH */
 	proxyspec_t *spec;
-	char *certgendir;
-	unsigned int writeorig: 1;
 } opts_t;
 
 opts_t *opts_new(void) MALLOC;

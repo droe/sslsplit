@@ -115,10 +115,10 @@ main_usage(void)
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
-"  -w gendir   write generated key/cert pairs to gendir\n"
-"  -W gendir   same as -w but also write the original cert\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
+"  -w gendir   write leaf key and only generated certificates to gendir\n"
+"  -W gendir   write leaf key and all certificates to gendir\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
 "  -P          passthrough SSL connections if they cannot be split because of\n"
 "              client cert auth or no matching cert and no CA (default: drop)\n"
@@ -618,7 +618,7 @@ main(int argc, char *argv[])
 				free(rhs);
 				break;
 			case 'W':
-				opts->writeorig = 1;
+				opts->certgen_writeall = 1;
 				if (opts->certgendir)
 					free(opts->certgendir);
 				opts->certgendir = strdup(optarg);
@@ -626,7 +626,7 @@ main(int argc, char *argv[])
 					oom_die(argv0);
 				break;
 			case 'w':
-				opts->writeorig = 0;
+				opts->certgen_writeall = 0;
 				if (opts->certgendir)
 					free(opts->certgendir);
 				opts->certgendir = strdup(optarg);
@@ -666,11 +666,6 @@ main(int argc, char *argv[])
 	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
-		                argv0);
-		exit(EXIT_FAILURE);
-	}
-	if (opts->certgendir && opts->key) {
-		fprintf(stderr, "%s: -K and -w are mutually exclusive.\n",
 		                argv0);
 		exit(EXIT_FAILURE);
 	}
@@ -771,27 +766,37 @@ main(int argc, char *argv[])
 	}
 
 	if (opts->certgendir) {
-		unsigned char *keyfpr = malloc(SSL_KEY_IDSZ);
-		if(ssl_key_identifier_sha1(opts->key, keyfpr)) {
-			fprintf(stderr, "%s: error generating RSA fingerprint\n", argv0);
+		char *keyid, *keyfn;
+		int prv;
+		FILE *keyf;
+
+		keyid = ssl_key_identifier(opts->key, 0);
+		if (!keyid) {
+			fprintf(stderr, "%s: error generating key id\n", argv0);
 			exit(EXIT_FAILURE);
 		}
-		char *keyfn;
-		asprintf(&keyfn, "%s/%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-				"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X.key",
-				opts->certgendir,
-				keyfpr[0], keyfpr[1], keyfpr[2], keyfpr[3], keyfpr[4],
-				keyfpr[5], keyfpr[6], keyfpr[7], keyfpr[8], keyfpr[9],
-				keyfpr[10], keyfpr[11], keyfpr[12], keyfpr[13], keyfpr[14],
-				keyfpr[15], keyfpr[16], keyfpr[17], keyfpr[18], keyfpr[19]);
-		FILE *keyfd = fopen(keyfn,"w");
-		if (!keyfd) {
-			log_err_printf("Failed to open '%s' for writing: %s\n",
-			               keyfn, strerror(errno));
-		} else {
-			PEM_write_PrivateKey(keyfd, opts->key, NULL, 0, 0, NULL, NULL);
-			fclose(keyfd);
+
+		prv = asprintf(&keyfn, "%s/%s.key", opts->certgendir, keyid);
+		if (prv == -1) {
+			fprintf(stderr, "%s: %s (%i)\n", argv0,
+			                strerror(errno), errno);
+			exit(EXIT_FAILURE);
 		}
+
+		if (!(keyf = fopen(keyfn, "w"))) {
+			fprintf(stderr, "%s: Failed to open '%s' for writing: "
+			                "%s (%i)\n", argv0, keyfn,
+			                strerror(errno), errno);
+			exit(EXIT_FAILURE);
+		}
+		if (!PEM_write_PrivateKey(keyf, opts->key, NULL, 0, 0,
+		                                           NULL, NULL)) {
+			fprintf(stderr, "%s: Failed to write key to '%s': "
+			                "%s (%i)\n", argv0, keyfn,
+			                strerror(errno), errno);
+			exit(EXIT_FAILURE);
+		}
+		fclose(keyf);
 	}
 
 	/* usage checks after defaults */
