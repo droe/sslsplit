@@ -422,6 +422,30 @@ ssl_fini(void)
 }
 
 /*
+ * Format SHA1 hash into newly allocated string, with or without colons.
+ */
+char *
+ssl_sha1_to_str(unsigned char *sha1, int colons)
+{
+	char *str;
+	int rv;
+
+	rv = asprintf(&str, colons ?
+	              "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X"
+	              "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X" :
+	              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+	              sha1[ 0], sha1[ 1], sha1[ 2], sha1[ 3],
+	              sha1[ 4], sha1[ 5], sha1[ 6], sha1[ 7],
+	              sha1[ 8], sha1[ 9], sha1[10], sha1[11],
+	              sha1[12], sha1[13], sha1[14], sha1[15],
+	              sha1[16], sha1[17], sha1[18], sha1[19]);
+	if (rv == -1)
+		return NULL;
+	return str;
+}
+
+/*
  * Format SSL state into newly allocated string.
  * Returns pointer to string that must be freed by caller, or NULL on error.
  */
@@ -1083,6 +1107,21 @@ errout:
 }
 
 /*
+ * Returns the result of ssl_key_identifier_sha1() as hex characters with or
+ * without colons in a newly allocated string.
+ */
+char *
+ssl_key_identifier(EVP_PKEY *key, int colons)
+{
+	unsigned char id[SSL_KEY_IDSZ];
+
+	if (ssl_key_identifier_sha1(key, id) == -1)
+		return NULL;
+
+	return ssl_sha1_to_str(id, colons);
+}
+
+/*
  * Returns the one-line representation of the subject DN in a newly allocated
  * string which must be freed by the caller.
  */
@@ -1129,6 +1168,21 @@ ssl_x509_fingerprint_sha1(X509 *crt, unsigned char *fpr)
 	unsigned int sz = SSL_X509_FPRSZ;
 
 	return X509_digest(crt, EVP_sha1(), fpr, &sz) ? 0 : -1;
+}
+
+/*
+ * Returns the result of ssl_x509_fingerprint_sha1() as hex characters with or
+ * without colons in a newly allocated string.
+ */
+char *
+ssl_x509_fingerprint(X509 *crt, int colons)
+{
+	unsigned char fpr[SSL_X509_FPRSZ];
+
+	if (ssl_x509_fingerprint_sha1(crt, fpr) == -1)
+		return NULL;
+
+	return ssl_sha1_to_str(fpr, colons);
 }
 
 #ifndef OPENSSL_NO_DH

@@ -105,6 +105,9 @@ opts_free(opts_t *opts)
 	if (opts->contentlog) {
 		free(opts->contentlog);
 	}
+	if (opts->certgendir) {
+		free(opts->certgendir);
+	}
 	if (opts->contentlog_basedir) {
 		free(opts->contentlog_basedir);
 	}

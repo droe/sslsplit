@@ -40,6 +40,7 @@
 #include "attrib.h"
 #include "proc.h"
 
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -120,6 +121,7 @@ typedef struct pxy_conn_ctx {
 
 	/* status flags */
 	unsigned int immutable_cert : 1;  /* 1 if the cert cannot be changed */
+	unsigned int generated_cert : 1;     /* 1 if we generated a new cert */
 	unsigned int connected : 1;       /* 0 until both ends are connected */
 	unsigned int seen_req_header : 1; /* 0 until request header complete */
 	unsigned int seen_resp_header : 1;  /* 0 until response hdr complete */
@@ -147,8 +149,10 @@ typedef struct pxy_conn_ctx {
 	char *http_status_text;
 	char *http_content_length;
 
-	/* log strings from SSL context */
+	/* log strings related to SSL */
 	char *ssl_names;
+	char *origcrtfpr;
+	char *usedcrtfpr;
 
 #ifdef HAVE_LOCAL_PROCINFO
 	/* local process information */
@@ -209,9 +213,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	return ctx;
 }
 
-static void
-pxy_conn_ctx_free(pxy_conn_ctx_t *ctx) NONNULL(1);
-static void
+static void NONNULL(1)
 pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 {
 #ifdef DEBUG_PROXY
@@ -250,6 +252,12 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->ssl_names) {
 		free(ctx->ssl_names);
+	}
+	if (ctx->origcrtfpr) {
+		free(ctx->origcrtfpr);
+	}
+	if (ctx->usedcrtfpr) {
+		free(ctx->usedcrtfpr);
 	}
 #ifdef HAVE_LOCAL_PROCINFO
 	if (ctx->lproc.exec_path) {
@@ -312,17 +320,11 @@ pxy_debug_crt(X509 *crt)
 		free(names);
 	}
 
-	unsigned char fpr[SSL_X509_FPRSZ];
-	if (ssl_x509_fingerprint_sha1(crt, fpr) == -1) {
+	char *fpr;
+	if (!(fpr = ssl_x509_fingerprint(crt, 1))) {
 		log_err_printf("Warning: Error generating X509 fingerprint\n");
 	} else {
-		log_dbg_printf("Fingerprint: "     "%02x:%02x:%02x:%02x:"
-		               "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:"
-		               "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
-		               fpr[0],  fpr[1],  fpr[2],  fpr[3],  fpr[4],
-		               fpr[5],  fpr[6],  fpr[7],  fpr[8],  fpr[9],
-		               fpr[10], fpr[11], fpr[12], fpr[13], fpr[14],
-		               fpr[15], fpr[16], fpr[17], fpr[18], fpr[19]);
+		log_dbg_printf("Fingerprint: %s\n", fpr);
 	}
 
 #ifdef DEBUG_CERTIFICATE
@@ -373,7 +375,8 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	} else {
 		rv = asprintf(&msg, "ssl %s %s "
 		              "sni:%s names:%s "
-		              "sproto:%s:%s dproto:%s:%s"
+		              "sproto:%s:%s dproto:%s:%s "
+		              "origcrt:%s usedcrt:%s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -385,11 +388,13 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              SSL_get_version(ctx->src.ssl),
 		              SSL_get_cipher(ctx->src.ssl),
 		              SSL_get_version(ctx->dst.ssl),
-		              SSL_get_cipher(ctx->dst.ssl)
+		              SSL_get_cipher(ctx->dst.ssl),
+		              STRORDASH(ctx->origcrtfpr),
+		              STRORDASH(ctx->usedcrtfpr)
 #ifdef HAVE_LOCAL_PROCINFO
 		              , lpi
 #endif /* HAVE_LOCAL_PROCINFO */
-		             );
+		              );
 	}
 	if ((rv < 0) || !msg) {
 		ctx->enomem = 1;
@@ -466,7 +471,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	} else {
 		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
 		              "sni:%s names:%s "
-		              "sproto:%s:%s dproto:%s:%s"
+		              "sproto:%s:%s dproto:%s:%s "
+		              "origcrt:%s usedcrt:%s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -484,6 +490,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              SSL_get_cipher(ctx->src.ssl),
 		              SSL_get_version(ctx->dst.ssl),
 		              SSL_get_cipher(ctx->dst.ssl),
+		              STRORDASH(ctx->origcrtfpr),
+		              STRORDASH(ctx->usedcrtfpr),
 #ifdef HAVE_LOCAL_PROCINFO
 		              lpi,
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -724,6 +732,66 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 	return sslctx;
 }
 
+static int
+pxy_srccert_write_to_gendir(pxy_conn_ctx_t *ctx, X509 *crt, int is_orig)
+{
+	char *fn;
+	int rv;
+	struct stat sb;
+	FILE *f;
+
+	if (!ctx->origcrtfpr)
+		return -1;
+	if (is_orig) {
+		rv = asprintf(&fn, "%s/%s.crt", ctx->opts->certgendir,
+		              ctx->origcrtfpr);
+	} else {
+		if (!ctx->usedcrtfpr)
+			return -1;
+		rv = asprintf(&fn, "%s/%s-%s.crt", ctx->opts->certgendir,
+		              ctx->origcrtfpr, ctx->usedcrtfpr);
+	}
+	if (rv == -1) {
+		ctx->enomem = 1;
+		return -1;
+	}
+	if (stat(fn, &sb) == 0) {
+		free(fn);
+		return 0;
+	}
+	if (!(f = fopen(fn, "w"))) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               fn, strerror(errno), errno);
+		free(fn);
+		return -1;
+	}
+	if (!PEM_write_X509(f, crt)) {
+		log_err_printf("Failed to write certificate to '%s'\n", fn);
+		fclose(f);
+		free(fn);
+		return -1;
+	}
+	fclose(f);
+	free(fn);
+	return 0;
+}
+
+static void
+pxy_srccert_write(pxy_conn_ctx_t *ctx)
+{
+	if (ctx->opts->certgen_writeall || ctx->generated_cert) {
+		if (pxy_srccert_write_to_gendir(ctx,
+		                SSL_get_certificate(ctx->src.ssl), 0) == -1) {
+			log_err_printf("Failed to write used certificate\n");
+		}
+	}
+	if (ctx->opts->certgen_writeall) {
+		if (pxy_srccert_write_to_gendir(ctx, ctx->origcrt, 1) == -1) {
+			log_err_printf("Failed to write orig certificate\n");
+		}
+	}
+}
+
 static cert_t *
 pxy_srccert_create(pxy_conn_ctx_t *ctx)
 {
@@ -796,6 +864,19 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		}
 		cert_set_key(cert, ctx->opts->key);
 		cert_set_chain(cert, ctx->opts->chain);
+		ctx->generated_cert = 1;
+	}
+
+	if ((WANT_CONNECT_LOG(ctx) || ctx->opts->certgendir) && ctx->origcrt) {
+		ctx->origcrtfpr = ssl_x509_fingerprint(ctx->origcrt, 0);
+		if (!ctx->origcrtfpr)
+			ctx->enomem = 1;
+	}
+	if ((WANT_CONNECT_LOG(ctx) || ctx->opts->certgen_writeall) &&
+	    cert && cert->crt) {
+		ctx->usedcrtfpr = ssl_x509_fingerprint(cert->crt, 0);
+		if (!ctx->usedcrtfpr)
+			ctx->enomem = 1;
 	}
 
 	return cert;
@@ -919,6 +1000,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			return SSL_TLSEXT_ERR_NOACK;
 		}
 		cachemgr_fkcrt_set(ctx->origcrt, newcrt);
+		ctx->generated_cert = 1;
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("===> Updated forged server "
 			               "certificate:\n");
@@ -933,6 +1015,16 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 				ctx->enomem = 1;
 			}
 		}
+		if (WANT_CONNECT_LOG(ctx) || ctx->opts->certgendir) {
+			if (ctx->usedcrtfpr) {
+				free(ctx->usedcrtfpr);
+			}
+			ctx->usedcrtfpr = ssl_x509_fingerprint(newcrt, 0);
+			if (!ctx->usedcrtfpr) {
+				ctx->enomem = 1;
+			}
+		}
+
 		newsslctx = pxy_srcsslctx_create(ctx, newcrt, ctx->opts->chain,
 		                                 ctx->opts->key);
 		if (!newsslctx) {
@@ -1758,6 +1850,12 @@ connected:
 		    (!ctx->spec->http || ctx->passthrough) &&
 		    WANT_CONNECT_LOG(ctx)) {
 			pxy_log_connect_nonhttp(ctx);
+		}
+
+		/* write SSL certificates to gendir */
+		if (this->ssl && (bev == ctx->src.bev) &&
+		    ctx->opts->certgendir) {
+			pxy_srccert_write(ctx);
 		}
 
 		if (OPTS_DEBUG(ctx->opts)) {

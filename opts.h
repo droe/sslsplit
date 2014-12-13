@@ -80,7 +80,9 @@ typedef struct opts {
 #ifdef HAVE_LOCAL_PROCINFO
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
+	unsigned int certgen_writeall: 1;
 	char *ciphers;
+	char *certgendir;
 	char *tgcrtdir;
 	char *dropuser;
 	char *dropgroup;

@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZwWdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -290,6 +290,19 @@ Mac OS X.
 .TP
 .B \-V
 Display version and compiled features information and exit.
+.TP
+.B \-w \fIgendir\fP
+Write generated keys and certificates to individual files in \fIgendir\fP.
+For keys, the key identifier is used as filename, which consists of the SHA-1
+hash of the ASN.1 bit string of the public key, as referenced by the
+subjectKeyIdentifier extension in certificates.
+For certificates, the SHA-1 fingerprints of the original and the used (forged)
+certificate are combined to form the filename.
+Note that only newly generated certificates are written to disk.
+.TP
+.B \-W \fIgendir\fP
+Same as \fB-w\fP, but also write original certificates and certificates not
+newly generated, such as those loaded from \fB-t\fP.
 .TP
 .B \-Z
 Disable SSL/TLS compression on all connections.  This is useful if your
@@ -656,7 +669,7 @@ SSLsplit was written by Daniel Roethlisberger <daniel@roe.ch>.
 
 The following individuals have contributed to the codebase, in chronological
 order of their first contribution:
-Steve Wills, Landon Fuller and Wayne Jensen.
+Steve Wills, Landon Fuller, Wayne Jensen and Rory McNamara.
 .SH BUGS
 Use Github for submission of bug reports or patches:
 .LP

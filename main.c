@@ -117,6 +117,8 @@ main_usage(void)
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
+"  -w gendir   write leaf key and only generated certificates to gendir\n"
+"  -W gendir   write leaf key and all certificates to gendir\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
 "  -P          passthrough SSL connections if they cannot be split because of\n"
 "              client cert auth or no matching cert and no CA (default: drop)\n"
@@ -274,7 +276,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVh")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -615,6 +617,22 @@ main(int argc, char *argv[])
 				free(lhs);
 				free(rhs);
 				break;
+			case 'W':
+				opts->certgen_writeall = 1;
+				if (opts->certgendir)
+					free(opts->certgendir);
+				opts->certgendir = strdup(optarg);
+				if (!opts->certgendir)
+					oom_die(argv0);
+				break;
+			case 'w':
+				opts->certgen_writeall = 0;
+				if (opts->certgendir)
+					free(opts->certgendir);
+				opts->certgendir = strdup(optarg);
+				if (!opts->certgendir)
+					oom_die(argv0);
+				break;
 			}
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
@@ -745,6 +763,40 @@ main(int argc, char *argv[])
 		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("Generated RSA key for leaf certs.\n");
 		}
+	}
+
+	if (opts->certgendir) {
+		char *keyid, *keyfn;
+		int prv;
+		FILE *keyf;
+
+		keyid = ssl_key_identifier(opts->key, 0);
+		if (!keyid) {
+			fprintf(stderr, "%s: error generating key id\n", argv0);
+			exit(EXIT_FAILURE);
+		}
+
+		prv = asprintf(&keyfn, "%s/%s.key", opts->certgendir, keyid);
+		if (prv == -1) {
+			fprintf(stderr, "%s: %s (%i)\n", argv0,
+			                strerror(errno), errno);
+			exit(EXIT_FAILURE);
+		}
+
+		if (!(keyf = fopen(keyfn, "w"))) {
+			fprintf(stderr, "%s: Failed to open '%s' for writing: "
+			                "%s (%i)\n", argv0, keyfn,
+			                strerror(errno), errno);
+			exit(EXIT_FAILURE);
+		}
+		if (!PEM_write_PrivateKey(keyf, opts->key, NULL, 0, 0,
+		                                           NULL, NULL)) {
+			fprintf(stderr, "%s: Failed to write key to '%s': "
+			                "%s (%i)\n", argv0, keyfn,
+			                strerror(errno), errno);
+			exit(EXIT_FAILURE);
+		}
+		fclose(keyf);
 	}
 
 	/* usage checks after defaults */
