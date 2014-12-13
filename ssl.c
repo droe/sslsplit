@@ -822,22 +822,46 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 	const EVP_MD *md;
 	switch (EVP_PKEY_type(cakey->type)) {
 #ifndef OPENSSL_NO_RSA
-		case EVP_PKEY_RSA:
+	case EVP_PKEY_RSA:
+		switch (OBJ_obj2nid(origcrt->sig_alg->algorithm)) {
+		case NID_md5WithRSAEncryption:
+			md = EVP_md5();
+			break;
+		case NID_ripemd160WithRSA:
+			md = EVP_ripemd160();
+			break;
+		case NID_sha224WithRSAEncryption:
+			md = EVP_sha224();
+			break;
+		case NID_sha256WithRSAEncryption:
+			md = EVP_sha256();
+			break;
+		case NID_sha384WithRSAEncryption:
+			md = EVP_sha384();
+			break;
+		case NID_sha512WithRSAEncryption:
+			md = EVP_sha512();
+			break;
+		case NID_shaWithRSAEncryption:
+		case NID_sha1WithRSAEncryption:
+		default:
 			md = EVP_sha1();
 			break;
+		}
+		break;
 #endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA
-		case EVP_PKEY_DSA:
-			md = EVP_dss1();
-			break;
+	case EVP_PKEY_DSA:
+		md = EVP_dss1();
+		break;
 #endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
-		case EVP_PKEY_EC:
-			md = EVP_ecdsa();
-			break;
+	case EVP_PKEY_EC:
+		md = EVP_ecdsa();
+		break;
 #endif /* !OPENSSL_NO_ECDSA */
-		default:
-			goto errout;
+	default:
+		goto errout;
 	}
 	if (!X509_sign(crt, cakey, md))
 		goto errout;
