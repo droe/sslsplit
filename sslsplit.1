@@ -30,15 +30,15 @@ sslsplit \-\- transparent and scalable SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKwWOPMZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKwWOPMZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZwWdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
+[\fB-OPMZwWdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -195,6 +195,11 @@ SIGUSR1 will cause \fIlogfile\fP to be re-opened.
 .B \-m
 When dropping privileges using \fB-u\fP, override the target primary group
 to be set to \fIgroup\fP.
+.TP
+.B \-M luafile
+Import luafile and run the modify function on every request/response.  Input is
+a string, should return a string. Not guaranteed to contain a complete
+request/response.
 .TP
 .B \-O
 Deny all Online Certificate Status Protocol (OCSP) requests on all

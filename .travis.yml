@@ -5,4 +5,4 @@ compiler:
 script: make config && make && make test && ./sslsplit -V
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq libssl-dev libevent-dev check
+  - sudo apt-get install -qq libssl-dev libevent-dev check lua5.2 liblua5.2-dev

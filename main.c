@@ -122,6 +122,7 @@ main_usage(void)
 "  -O          deny all OCSP requests on all proxyspecs\n"
 "  -P          passthrough SSL connections if they cannot be split because of\n"
 "              client cert auth or no matching cert and no CA (default: drop)\n"
+"  -M luafile  import luafile and run modify function for every request/response\n"
 #ifndef OPENSSL_NO_DH
 "  -g pemfile  use DH group params from pemfile (default: keyfiles or auto)\n"
 #define OPT_g "g:"
@@ -276,7 +277,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
+	                    "OPM:s:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -482,6 +483,13 @@ main(int argc, char *argv[])
 					free(opts->dropgroup);
 				opts->dropgroup = strdup(optarg);
 				if (!opts->dropgroup)
+					oom_die(argv0);
+				break;
+			case 'M':
+				if (opts->luamodify)
+					free(opts->luamodify);
+				opts->luamodify = strdup(optarg);
+				if (!opts->luamodify)
 					oom_die(argv0);
 				break;
 			case 'p':
