@@ -70,7 +70,7 @@ log_err_writecb(UNUSED void *fh, const void *buf, size_t sz)
 			return fwrite(buf, sz - 1, 1, stderr);
 		case LOG_ERR_MODE_SYSLOG:
 			syslog(LOG_ERR, "%s", (const char *)buf);
-			return 0;
+			return sz;
 	}
 	return -1;
 }
@@ -226,8 +226,9 @@ log_connect_writecb(UNUSED void *fh, const void *buf, size_t sz)
 	    (write(connect_fd, buf, sz) == -1)) {
 		log_err_printf("Warning: Failed to write to connect log: %s\n",
 		               strerror(errno));
+		return -1;
 	}
-	return 0;
+	return sz;
 }
 
 static void
@@ -601,7 +602,7 @@ log_content_dir_writecb(void *fh, const void *buf, size_t sz)
 		               strerror(errno));
 		return -1;
 	}
-	return 0;
+	return sz;
 }
 
 static int
@@ -641,7 +642,7 @@ log_content_spec_writecb(void *fh, const void *buf, size_t sz)
 		               strerror(errno));
 		return -1;
 	}
-	return 0;
+	return sz;
 }
 
 static int content_file_fd = -1;
@@ -727,7 +728,7 @@ log_content_file_writecb(void *fh, const void *buf, size_t sz)
 		               strerror(errno));
 		return -1;
 	}
-	return 0;
+	return sz;
 }
 
 static logbuf_t *
@@ -777,6 +778,59 @@ log_content_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 
 out:
 	return lb;
+}
+
+
+/*
+ * Certificate writer for -w/-W options.
+ */
+static logger_t *cert_log = NULL;
+static int cert_clisock = -1; /* privsep client socket for cert logger */
+
+int
+log_cert_submit(const char *fn, X509 *crt)
+{
+	void *fh;
+	logbuf_t *lb;
+	char *pem;
+
+	if (!(fh = strdup(fn)))
+		goto errout1;
+	if (!(pem = ssl_x509_to_pem(crt)))
+		goto errout2;
+	if (!(lb = logbuf_new(pem, strlen(pem), NULL, NULL)))
+		goto errout3;
+	return logger_submit(cert_log, fh, 0, lb);
+errout3:
+	free(pem);
+errout2:
+	free(fh);
+errout1:
+	return -1;
+}
+
+static ssize_t
+log_cert_writecb(void *fh, const void *buf, size_t sz)
+{
+	char *fn = fh;
+	int fd;
+
+	if ((fd = privsep_client_certfile(cert_clisock, fn)) == -1) {
+		if (errno != EEXIST) {
+			log_err_printf("Failed to open '%s': %s (%i)\n",
+			               fn, strerror(errno), errno);
+			return -1;
+		}
+		return sz;
+	}
+	if (write(fd, buf, sz) == -1) {
+		log_err_printf("Warning: Failed to write to '%s': %s (%i)\n",
+		               fn, strerror(errno), errno);
+		close(fd);
+		return -1;
+	}
+	close(fd);
+	return sz;
 }
 
 
@@ -835,6 +889,11 @@ log_preinit(opts_t *opts)
 			goto out;
 		}
 	}
+	if (opts->certgendir) {
+		if (!(cert_log = logger_new(NULL, NULL, NULL, log_cert_writecb,
+		                            NULL)))
+			goto out;
+	}
 	if (!(err_log = logger_new(NULL, NULL, NULL, log_err_writecb, NULL)))
 		goto out;
 	return 0;
@@ -847,6 +906,9 @@ out:
 	if (connect_log) {
 		log_connect_fini();
 		logger_free(connect_log);
+	}
+	if (cert_log) {
+		logger_free(cert_log);
 	}
 	return -1;
 }
@@ -873,7 +935,7 @@ log_preinit_undo(void)
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts, int clisock)
+log_init(opts_t *opts, int clisock1, int clisock2)
 {
 	if (err_log)
 		if (logger_start(err_log) == -1)
@@ -885,11 +947,18 @@ log_init(opts_t *opts, int clisock)
 		if (logger_start(connect_log) == -1)
 			return -1;
 	if (content_log) {
-		content_clisock = clisock;
+		content_clisock = clisock1;
 		if (logger_start(content_log) == -1)
 			return -1;
 	} else {
-		privsep_client_close(clisock);
+		privsep_client_close(clisock1);
+	}
+	if (cert_log) {
+		cert_clisock = clisock2;
+		if (logger_start(cert_log) == -1)
+			return -1;
+	} else {
+		privsep_client_close(clisock2);
 	}
 	return 0;
 }
@@ -905,6 +974,8 @@ log_fini(void)
 	 * tearing down the logging infrastructure */
 	err_shortcut_logger = 1;
 
+	if (cert_log)
+		logger_leave(cert_log);
 	if (content_log)
 		logger_leave(content_log);
 	if (connect_log)
@@ -912,6 +983,8 @@ log_fini(void)
 	if (err_log)
 		logger_leave(err_log);
 
+	if (cert_log)
+		logger_join(cert_log);
 	if (content_log)
 		logger_join(content_log);
 	if (connect_log)
@@ -919,6 +992,8 @@ log_fini(void)
 	if (err_log)
 		logger_join(err_log);
 
+	if (cert_log)
+		logger_free(cert_log);
 	if (content_log)
 		logger_free(content_log);
 	if (connect_log)
@@ -931,6 +1006,8 @@ log_fini(void)
 	if (connect_log)
 		log_connect_fini();
 
+	if (cert_clisock != -1)
+		privsep_client_close(cert_clisock);
 	if (content_clisock != -1)
 		privsep_client_close(content_clisock);
 }

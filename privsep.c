@@ -64,6 +64,7 @@
 #define PRIVSEP_REQ_OPENFILE	1	/* open content log file */
 #define PRIVSEP_REQ_OPENFILE_P	2	/* open content log file w/mkpath */
 #define PRIVSEP_REQ_OPENSOCK	3	/* open socket and pass fd */
+#define PRIVSEP_REQ_CERTFILE	4	/* open cert file in certgendir */
 /* response byte */
 #define PRIVSEP_ANS_SUCCESS	0	/* success */
 #define PRIVSEP_ANS_UNK_CMD	1	/* unknown command */
@@ -236,6 +237,30 @@ privsep_server_opensock(proxyspec_t *spec)
 	return fd;
 }
 
+static int WUNRES
+privsep_server_certfile_verify(opts_t *opts, char *fn)
+{
+	if (!opts->certgendir)
+		return -1;
+	if (strstr(fn, opts->certgendir) != fn || strstr(fn, "/../"))
+		return -1;
+	return 0;
+}
+
+static int WUNRES
+privsep_server_certfile(char *fn)
+{
+	int fd;
+
+	fd = open(fn, O_WRONLY|O_CREAT|O_EXCL, DFLT_FILEMODE);
+	if (fd == -1 && errno != EEXIST) {
+		log_err_printf("Failed to open '%s': %s (%i)\n",
+		               fn, strerror(errno), errno);
+		return -1;
+	}
+	return fd;
+}
+
 /*
  * Handle a single request on a readable server socket.
  * Returns 0 on success, 1 on EOF and -1 on error.
@@ -374,6 +399,67 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 				return -1;
 			}
 			evutil_closesocket(s);
+			return 0;
+		}
+		/* not reached */
+		break;
+	}
+	case PRIVSEP_REQ_CERTFILE: {
+		char *fn;
+		int fd;
+
+		if (n < 2) {
+			ans[0] = PRIVSEP_ANS_INVALID;
+			if (sys_sendmsgfd(srvsock, ans, 1, -1) == -1) {
+				log_err_printf("Sending message failed: %s (%i"
+				               ")\n", strerror(errno), errno);
+				return -1;
+			}
+		}
+		if (!(fn = malloc(n))) {
+			ans[0] = PRIVSEP_ANS_SYS_ERR;
+			*((int*)&ans[1]) = errno;
+			if (sys_sendmsgfd(srvsock, ans, 1 + sizeof(int),
+			                  -1) == -1) {
+				log_err_printf("Sending message failed: %s (%i"
+				               ")\n", strerror(errno), errno);
+				return -1;
+			}
+			return 0;
+		}
+		memcpy(fn, req + 1, n - 1);
+		fn[n - 1] = '\0';
+		if (privsep_server_certfile_verify(opts, fn) == -1) {
+			free(fn);
+			ans[0] = PRIVSEP_ANS_DENIED;
+			if (sys_sendmsgfd(srvsock, ans, 1, -1) == -1) {
+				log_err_printf("Sending message failed: %s (%i"
+				               ")\n", strerror(errno), errno);
+				return -1;
+			}
+			return 0;
+		}
+		if ((fd = privsep_server_certfile(fn)) == -1) {
+			free(fn);
+			ans[0] = PRIVSEP_ANS_SYS_ERR;
+			*((int*)&ans[1]) = errno;
+			if (sys_sendmsgfd(srvsock, ans, 1 + sizeof(int),
+			                  -1) == -1) {
+				log_err_printf("Sending message failed: %s (%i"
+				               ")\n", strerror(errno), errno);
+				return -1;
+			}
+			return 0;
+		} else {
+			free(fn);
+			ans[0] = PRIVSEP_ANS_SUCCESS;
+			if (sys_sendmsgfd(srvsock, ans, 1, fd) == -1) {
+				close(fd);
+				log_err_printf("Sending message failed: %s (%i"
+				               ")\n", strerror(errno), errno);
+				return -1;
+			}
+			close(fd);
 			return 0;
 		}
 		/* not reached */
@@ -536,6 +622,7 @@ privsep_client_openfile(int clisock, const char *fn, int mkpath)
 	case PRIVSEP_ANS_UNK_CMD:
 	case PRIVSEP_ANS_INVALID:
 	default:
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -582,6 +669,54 @@ privsep_client_opensock(int clisock, const proxyspec_t *spec)
 	case PRIVSEP_ANS_UNK_CMD:
 	case PRIVSEP_ANS_INVALID:
 	default:
+		errno = EINVAL;
+		return -1;
+	}
+
+	return fd;
+}
+
+int
+privsep_client_certfile(int clisock, const char *fn)
+{
+	char ans[PRIVSEP_MAX_ANS_SIZE];
+	char req[1 + strlen(fn)];
+	int fd = -1;
+	ssize_t n;
+
+	req[0] = PRIVSEP_REQ_CERTFILE;
+	memcpy(req + 1, fn, sizeof(req) - 1);
+
+	if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
+		return -1;
+	}
+
+	if ((n = sys_recvmsgfd(clisock, ans, sizeof(ans), &fd)) == -1) {
+		return -1;
+	}
+
+	if (n < 1) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	switch (ans[0]) {
+	case PRIVSEP_ANS_SUCCESS:
+		break;
+	case PRIVSEP_ANS_DENIED:
+		errno = EACCES;
+		return -1;
+	case PRIVSEP_ANS_SYS_ERR:
+		if (n < (ssize_t)(1 + sizeof(int))) {
+			errno = EINVAL;
+			return -1;
+		}
+		errno = *((int*)&ans[1]);
+		return -1;
+	case PRIVSEP_ANS_UNK_CMD:
+	case PRIVSEP_ANS_INVALID:
+	default:
+		errno = EINVAL;
 		return -1;
 	}
 

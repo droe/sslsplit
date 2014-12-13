@@ -40,7 +40,6 @@
 #include "attrib.h"
 #include "proc.h"
 
-#include <sys/stat.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -737,8 +736,6 @@ pxy_srccert_write_to_gendir(pxy_conn_ctx_t *ctx, X509 *crt, int is_orig)
 {
 	char *fn;
 	int rv;
-	struct stat sb;
-	FILE *f;
 
 	if (!ctx->origcrtfpr)
 		return -1;
@@ -755,25 +752,9 @@ pxy_srccert_write_to_gendir(pxy_conn_ctx_t *ctx, X509 *crt, int is_orig)
 		ctx->enomem = 1;
 		return -1;
 	}
-	if (stat(fn, &sb) == 0) {
-		free(fn);
-		return 0;
-	}
-	if (!(f = fopen(fn, "w"))) {
-		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
-		               fn, strerror(errno), errno);
-		free(fn);
-		return -1;
-	}
-	if (!PEM_write_X509(f, crt)) {
-		log_err_printf("Failed to write certificate to '%s'\n", fn);
-		fclose(f);
-		free(fn);
-		return -1;
-	}
-	fclose(f);
+	rv = log_cert_submit(fn, crt);
 	free(fn);
-	return 0;
+	return rv;
 }
 
 static void
