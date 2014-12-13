@@ -1,16 +1,16 @@
 
-### SSLsplit feature/genstore
+### SSLsplit develop
 
 -   Add options -w and -W to write generated leaf key, original and forged
     certificates to disk (issue #67 by @psychomario).
-
-### SSLsplit develop
-
 -   Add signal SIGUSR1 to re-open long-living -l/-L log files (issue #52).
 -   Introduce privilege separation architecture with privileged parent process
     and unprivileged child process; all files are now opened with the
     privileges of the user running SSLsplit; arguments to -S/-F are no longer
     relative to the chroot() if used with the -j option.
+-   Use the same hash algorithm in signatures on forged certificates as the
+    original certificates use, instead of always using SHA-1.
+-   Minor bugfixes and improvements.
 
 ### SSLsplit 0.4.10 2014-11-28
 
