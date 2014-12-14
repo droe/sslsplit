@@ -58,6 +58,10 @@
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 
+#ifdef HAVE_LUA
+#include <lua.h>
+#endif /* HAVE_LUA */
+
 #if __APPLE__
 #undef daemon
 extern int daemon(int, int);
@@ -87,6 +91,9 @@ main_version(void)
 #else /* !HAVE_LOCAL_PROCINFO */
 	fprintf(stderr, "no\n");
 #endif /* !HAVE_LOCAL_PROCINFO */
+#ifdef HAVE_LUA
+	fprintf(stderr, "compiled against %s\n", LUA_VERSION);
+#endif /* HAVE_LUA */
 	ssl_openssl_version();
 	fprintf(stderr, "compiled against libevent %s\n", LIBEVENT_VERSION);
 	fprintf(stderr, "rtlinked against libevent %s\n", event_get_version());
