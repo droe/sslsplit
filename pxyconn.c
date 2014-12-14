@@ -1662,6 +1662,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 	}
+
 #ifdef HAVE_LUA
 	if (ctx->opts->luamodify) {
 		int success = 1;
