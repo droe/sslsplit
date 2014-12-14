@@ -1665,32 +1665,56 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 #ifdef HAVE_LUA
 	if (ctx->opts->luamodify) {
 		int success = 1;
-		int datalen = evbuffer_get_length(inbuf);
-		char *in = malloc(datalen);
-		evbuffer_remove(inbuf, in, datalen);
+		size_t inlen = evbuffer_get_length(inbuf);
+		char *in = malloc(inlen);
+		if (!in) {
+			log_err_printf("Out of memory\n");
+			success = 0;
+			goto luaout;
+		}
+		evbuffer_copyout(inbuf, in, inlen);
 		lua_State *L = luaL_newstate();
 		if (!L) {
-			log_err_printf("Error: Lua memory allocation error\n");
+			log_err_printf("Failed to allocate new lua state\n");
 			success = 0;
+			goto luaout;
 		}
 		luaL_openlibs(L);
 		if (luaL_dofile(L, ctx->opts->luamodify)) {
-			log_err_printf("Error: Lua failed opening file\n");
+			log_err_printf("Failed to do lua file\n");
 			success = 0;
+			goto luaout;
 		}
 		lua_getglobal(L, "modify");
-		lua_pushlstring(L, in, datalen);
+		lua_pushlstring(L, in, inlen);
 		free(in);
-		lua_call(L, 1, 1);
-		datalen = lua_rawlen(L, -1);
-		char *out = lua_tostring(L, -1);
-		if (!out) {
-			log_err_printf("Error: Lua failed to retrieve result\n");
+		if (lua_pcall(L, 1, 1, 0) != 0) {
+			log_err_printf("Error calling lua function 'modify': "
+			               "%s\n", lua_tostring(L, -1));
 			success = 0;
+			goto luaout;
 		}
+		if (!lua_isstring(L, -1)) {
+			log_err_printf("Function 'modify' must return a string\n");
+			success = 0;
+			goto luaout;
+		}
+		size_t outlen;
+		const char *out = lua_tolstring(L, -1, &outlen);
+		if (!out) {
+			log_err_printf("Failed to retrieve lua result\n");
+			success = 0;
+			goto luaout;
+		}
+		if (outlen != inlen) {
+			log_err_printf("Warning: lua 'modify' function "
+			               "changed data length: may result in "
+			               "browser confusion\n");
+		}
+luaout:
 		if (success) {
-			evbuffer_add(outbuf, out, datalen);
-			free(out);
+			evbuffer_add(outbuf, out, outlen);
+			evbuffer_drain(inbuf, inlen);
 		} else {
 			evbuffer_add_buffer(outbuf, inbuf);
 		}
