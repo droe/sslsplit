@@ -60,9 +60,11 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+#ifdef HAVE_LUA
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#endif /* HAVE_LUA */
 
 
 /*
@@ -1660,6 +1662,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 	}
+#ifdef HAVE_LUA
 	if (ctx->opts->luamodify) {
 		int success = 1;
 		int datalen = evbuffer_get_length(inbuf);
@@ -1692,8 +1695,11 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			evbuffer_add_buffer(outbuf, inbuf);
 		}
 	} else {
+#endif /* HAVE_LUA */
 		evbuffer_add_buffer(outbuf, inbuf);
+#ifdef HAVE_LUA
 	}
+#endif /* HAVE_LUA */
 
 	if (evbuffer_get_length(outbuf) >= OUTBUF_LIMIT) {
 		/* temporarily disable data source;

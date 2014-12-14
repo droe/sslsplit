@@ -32,7 +32,7 @@ the various NAT engines.
 
 ## Requirements
 
-SSLsplit depends on the OpenSSL and libevent 2.x libraries.
+SSLsplit depends on the OpenSSL and libevent 2.x libraries and optionally lua.
 The build depends on GNU make and a POSIX.2 environment in `PATH`.
 The optional unit tests depend on the check library.
 

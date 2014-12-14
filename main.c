@@ -122,7 +122,12 @@ main_usage(void)
 "  -O          deny all OCSP requests on all proxyspecs\n"
 "  -P          passthrough SSL connections if they cannot be split because of\n"
 "              client cert auth or no matching cert and no CA (default: drop)\n"
+#ifdef HAVE_LUA
 "  -M luafile  import luafile and run modify function for every request/response\n"
+#define OPT_M "M:"
+#else /* !HAVE_LUA */
+#define OPT_M 
+#endif /* !HAVE_LUA */
 #ifndef OPENSSL_NO_DH
 "  -g pemfile  use DH group params from pemfile (default: keyfiles or auto)\n"
 #define OPT_g "g:"
@@ -276,8 +281,9 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPM:s:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
+	while ((ch = getopt(argc, argv, OPT_M OPT_g OPT_G OPT_Z OPT_i
+	                    "k:c:C:K:t:"
+	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -485,6 +491,7 @@ main(int argc, char *argv[])
 				if (!opts->dropgroup)
 					oom_die(argv0);
 				break;
+#ifdef HAVE_LUA
 			case 'M':
 				if (opts->luamodify)
 					free(opts->luamodify);
@@ -492,6 +499,7 @@ main(int argc, char *argv[])
 				if (!opts->luamodify)
 					oom_die(argv0);
 				break;
+#endif /* HAVE_LUA */
 			case 'p':
 				if (opts->pidfile)
 					free(opts->pidfile);

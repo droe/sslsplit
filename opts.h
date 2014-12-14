@@ -91,7 +91,9 @@ typedef struct opts {
 	char *connectlog;
 	char *contentlog;
 	char *contentlog_basedir; /* static part of logspec, for privsep srv */
+#ifdef HAVE_LUA
 	char *luamodify;
+#endif /* HAVE_LUA */
 	CONST_SSL_METHOD *(*sslmethod)(void);
 	X509 *cacrt;
 	EVP_PKEY *cakey;

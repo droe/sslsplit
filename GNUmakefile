@@ -152,7 +152,6 @@ BUILD_DATE:=	$(shell date +%Y-%m-%d)
 
 # Autodetect dependencies known to pkg-config
 PKGS:=		
-PKGS+=		"lua5.2"
 ifndef OPENSSL_BASE
 PKGS+=		$(shell $(PKGCONFIG) --exists openssl && echo openssl)
 endif
@@ -162,6 +161,10 @@ PKGS+=		$(shell $(PKGCONFIG) --exists libevent_openssl \
 		&& echo libevent_openssl)
 PKGS+=		$(shell $(PKGCONFIG) --exists libevent_pthreads \
 		&& echo libevent_pthreads)
+endif
+ifndef LUA_BASE
+PKGS+=		$(shell for lua in lua lua-5.2 lua5.2; do \
+		$(PKGCONFIG) $$lua --exists && { echo $$lua; break; }; done)
 endif
 TPKGS:=		
 ifndef CHECK_BASE
@@ -201,6 +204,23 @@ $(error dependency 'libevent 2.x' not found; \
 	install it or point LIBEVENT_BASE to base path)
 endif
 endif
+ifeq (,$(filter lua%,$(PKGS)))
+LUA_PAT:=	include/lua.h
+ifdef LUA_BASE
+LUA_FIND:=	$(wildcard $(LUA_BASE)/$(LUA_PAT))
+else
+LUA_FIND:=	$(wildcard \
+		/opt/local/$(LUA_PAT) \
+		/usr/local/$(LUA_PAT) \
+		/usr/$(LUA_PAT))
+endif
+LUA_FOUND:=	$(LUA_FIND:/$(LUA_PAT)=)
+ifndef LUA_FOUND
+LUA_MISSING:=	1
+$(warning optional dependency 'lua' not found; \
+	install it or point LUA_BASE to base path if you want the lua features)
+endif
+endif
 ifeq (,$(filter check,$(TPKGS)))
 CHECK_PAT:=	include/check.h
 ifdef CHECK_BASE
@@ -233,6 +253,11 @@ endif
 ifeq (,$(filter libevent_pthreads,$(PKGS)))
 PKG_LIBS+=	-levent_pthreads
 endif
+ifdef LUA_FOUND
+PKG_CPPFLAGS+=	-I$(LUA_FOUND)/include
+PKG_LDFLAGS+=	-L$(LUA_FOUND)/lib
+PKG_LIBS+=	-llua
+endif
 ifdef CHECK_FOUND
 TPKG_CPPFLAGS+=	-I$(CHECK_FOUND)/include
 TPKG_LDFLAGS+=	-L$(CHECK_FOUND)/lib
@@ -250,6 +275,10 @@ TPKG_CFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-other $(TPKGS))
 TPKG_CPPFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-I $(TPKGS))
 TPKG_LDFLAGS+=	$(shell $(PKGCONFIG) --libs-only-L --libs-only-other $(TPKGS))
 TPKG_LIBS+=	$(shell $(PKGCONFIG) --libs-only-l $(TPKGS))
+endif
+
+ifndef LUA_MISSING
+FEATURES+=	-DHAVE_LUA
 endif
 
 CPPDEFS+=	-D_GNU_SOURCE \
