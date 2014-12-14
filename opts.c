@@ -111,6 +111,11 @@ opts_free(opts_t *opts)
 	if (opts->contentlog_basedir) {
 		free(opts->contentlog_basedir);
 	}
+#ifdef HAVE_LUA
+	if (opts->luamodify) {
+		free(opts->luamodify);
+	}
+#endif /* HAVE_LUA */
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }
