@@ -1,4 +1,9 @@
 
+### SSLsplit feature/luamodify
+
+-   Add option -M, introducing experimental support for content modification
+    in lua (issue #68 by @psychomario).
+
 ### SSLsplit develop
 
 -   Add options -w and -W to write generated leaf key, original and forged
