@@ -1,8 +1,8 @@
 
 ### SSLsplit feature/luamodify
 
--   Add option -M, introducing experimental support for content modification
-    in lua (issue #68 by @psychomario).
+-   Add option -M, introducing experimental initial support for content
+    modification in lua (pull request #68 by @psychomario, issue #51).
 
 ### SSLsplit develop
 
