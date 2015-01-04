@@ -219,9 +219,14 @@ Passthrough SSL/TLS connections which cannot be split instead of dropping them.
 Connections cannot be split if \fB-c\fP and \fB-k\fP are not given and the
 site does not match any certificate loaded using \fB-t\fP, or if the connection
 to the original server gives SSL/TLS errors.  Specifically, this happens if the
-site requests a client certificate.  Passthrough with \fB-P\fP results in
-uninterrupted service for the clients, while dropping is the more secure
-alternative if unmonitored connections must be prevented.
+site requests a client certificate.
+In these situations, passthrough with \fB-P\fP results in uninterrupted service
+for the clients, while dropping is the more secure alternative if unmonitored
+connections must be prevented.
+Passthrough mode currently does not apply to SSL/TLS errors in the connection
+from the client, since the connection from the client cannot easily be retried.
+Specifically, \fB-P\fP does not currently work for clients that do not accept
+forged certificates.
 .TP
 .B \-r \fIproto\fP
 Force SSL/TLS protocol version on both client and server side to \fIproto\fP
