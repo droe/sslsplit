@@ -47,6 +47,8 @@ char * sys_group_str(gid_t) MALLOC;
 int sys_sockaddr_parse(struct sockaddr_storage *, socklen_t *,
                        char *, char *, int, int) NONNULL(1,2,3,4) WUNRES;
 char * sys_sockaddr_str(struct sockaddr *, socklen_t) NONNULL(1) MALLOC;
+char * sys_sockaddr_str_host(struct sockaddr *, socklen_t) NONNULL(1) MALLOC;
+char * sys_sockaddr_str_serv(struct sockaddr *, socklen_t) NONNULL(1) MALLOC;
 
 int sys_isdir(const char *) NONNULL(1) WUNRES;
 int sys_mkpath(const char *, mode_t) NONNULL(1) WUNRES;

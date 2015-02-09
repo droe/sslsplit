@@ -134,7 +134,11 @@ typedef struct pxy_conn_ctx {
 
 	/* log strings from socket */
 	char *src_str;
+	char *src_host;
+	char *src_serv;
 	char *dst_str;
+	char *dst_host;
+	char *dst_serv;
 
 	/* log strings from HTTP request */
 	char *http_method;
@@ -1702,6 +1706,12 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			ctx->dst_str = sys_sockaddr_str((struct sockaddr *)
 			                                &ctx->addr,
 			                                ctx->addrlen);
+			ctx->dst_host = sys_sockaddr_str_host((struct sockaddr *)
+			                                &ctx->addr,
+			                                ctx->addrlen);
+			ctx->dst_serv = sys_sockaddr_str_serv((struct sockaddr *)
+			                                &ctx->addr,
+			                                ctx->addrlen);
 			if (!ctx->dst_str) {
 				ctx->enomem = 1;
 				pxy_conn_terminate_free(ctx);
@@ -1736,7 +1746,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			if (log_content_open(&ctx->logctx, ctx->opts,
-			                     ctx->src_str, ctx->dst_str,
+			                     ctx->src_str, ctx->src_host, ctx->src_serv,
+								 ctx->dst_str, ctx->dst_host, ctx->dst_serv,
 #ifdef HAVE_LOCAL_PROCINFO
 			                     ctx->lproc.exec_path,
 			                     ctx->lproc.user,
@@ -2169,6 +2180,8 @@ pxy_conn_setup(evutil_socket_t fd,
 	/* prepare logging, part 1 */
 	if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
 		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
+		ctx->src_host = sys_sockaddr_str_host(peeraddr, peeraddrlen);
+		ctx->src_serv = sys_sockaddr_str_serv(peeraddr, peeraddrlen);
 		if (!ctx->src_str)
 			goto memout;
 #ifdef HAVE_LOCAL_PROCINFO
