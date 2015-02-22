@@ -487,7 +487,9 @@ Assuming inbound interface \fBbge0\fP:
 .B netfilter
 Linux netfilter using the iptables REDIRECT target.
 Only supports IPv4 due to limitations in the SO_ORIGINAL_DST getsockopt(2)
-interface.
+interface. Please note that SSLsplit is only able to accept incoming
+connections if it binds to the correct IP address (e.g. 192.0.2.1) or on all
+interfaces (0.0.0.0).
 .LP
 .RS
 .nf
@@ -551,6 +553,11 @@ available on your system):
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
 .RE
+.LP
+If the Linux netfilter engine is used with the iptables REDIRECT target, it is
+important to listen to the correct IP address (e.g. 192.0.2.1) or on the
+wildcard (0.0.0.0), otherwise SSLsplit is not able to accept incoming
+connections.
 .LP
 Intercepting IMAP/IMAPS using the same settings:
 .LP
