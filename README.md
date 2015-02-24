@@ -1,5 +1,5 @@
-# SSLsplit - transparent and scalable SSL/TLS interception [![Build Status](https://travis-ci.org/droe/sslsplit.svg?branch=master)](https://travis-ci.org/droe/sslsplit)
-Copyright (C) 2009-2014, [Daniel Roethlisberger](//daniel.roe.ch/).  
+# SSLsplit - transparent SSL/TLS interception [![Build Status](https://travis-ci.org/droe/sslsplit.svg?branch=master)](https://travis-ci.org/droe/sslsplit)
+Copyright (C) 2009-2015, [Daniel Roethlisberger](//daniel.roe.ch/).  
 http://www.roe.ch/SSLsplit
 
 

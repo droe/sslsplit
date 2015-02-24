@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Removed the non-standard word "unmodified" from the 2-clause BSD license.
 -   Add options -w and -W to write generated leaf key, original and forged
     certificates to disk (issue #67 by @psychomario).
 -   Add signal SIGUSR1 to re-open long-living -l/-L log files (issue #52).

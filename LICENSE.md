@@ -2,7 +2,7 @@
 
 ## Copyright
 
-Copyright (c) 2009-2014, Daniel Roethlisberger and contributors.
+Copyright (c) 2009-2015, Daniel Roethlisberger and contributors.
 All rights reserved.
 Licensed under the 2-clause BSD license contained herein.
 
@@ -40,8 +40,7 @@ modification, are permitted provided that the following conditions
 are met:
 
 1. Redistributions of source code must retain the above copyright
-   notice unmodified, this list of conditions, and the following
-   disclaimer.
+   notice, this list of conditions, and the following disclaimer.
 
 2. Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
