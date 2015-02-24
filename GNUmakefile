@@ -44,19 +44,32 @@ DEBUG_CFLAGS?=	-g
 
 ### Mac OS X header selection
 
+# First, try to use the exact XNU version reported by the kernel.  If they
+# are not available, try to look up a suitable XNU version that we have
+# headers for based on the OS X release reported by sw_vers.  Then as a last
+# resort, fall back to the latest version of XNU that we have headers for,
+# which may or may not work, depending on if there were significant changes
+# in the DIOCNATLOOK ioctl interface to the NAT state table in the kernel.
+
 ifeq ($(shell uname),Darwin)
 ifneq ($(wildcard /usr/include/libproc.h),)
 FEATURES+=	-DHAVE_DARWIN_LIBPROC
 endif
 XNU_VERSION?=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
 OSX_VERSION?=	$(shell sw_vers -productVersion)
+XNU_METHOD=	uname
 ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 XNU_VERSION=	$(shell awk '/\# $(OSX_VERSION)$$/ {print $$2}' xnu/GNUmakefile)
+XNU_METHOD=	sw_vers
+endif
+ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
+XNU_VERSION=	$(shell awk '/^XNU_RELS/ {print $$2}' xnu/GNUmakefile|tail -1)
+XNU_METHOD=	fallback
 endif
 ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
-BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION)
+BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION):$(XNU_METHOD)
 endif
 endif
 
@@ -300,7 +313,7 @@ endif
 	@echo "Build options:  $(FEATURES)"
 ifeq ($(shell uname),Darwin)
 	@echo "OSX_VERSION:    $(OSX_VERSION)"
-	@echo "XNU_VERSION:    $(XNU_VERSION)"
+	@echo "XNU_VERSION:    $(XNU_VERSION) ($(XNU_METHOD))"
 endif
 
 $(TARGET): $(OBJS)
