@@ -519,6 +519,11 @@ interface.
          -p tcp --dport 443 \\
          -j REDIRECT --to-ports 10443\fP
 .fi
+.LP
+Note that SSLsplit is only able to accept incoming connections if it binds
+to the correct IP address (e.g. 192.0.2.1) or on all interfaces (0.0.0.0).
+REDIRECT uses the local interface address of the incoming interface as
+target IP address, or 127.0.0.1 for locally generated packets.
 .RE
 .TP
 .B tproxy
@@ -572,6 +577,11 @@ available on your system):
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
 .RE
+.LP
+If the Linux netfilter engine is used with the iptables REDIRECT target, it is
+important to listen to the correct IP address (e.g. 192.0.2.1) or on all
+interfaces (0.0.0.0), otherwise SSLsplit is not able to accept incoming
+connections.
 .LP
 Intercepting IMAP/IMAPS using the same settings:
 .LP
@@ -671,9 +681,9 @@ hostapd(8), arpspoof(8), parasite6(8), yersinia(8),
 .SH AUTHORS
 SSLsplit was written by Daniel Roethlisberger <daniel@roe.ch>.
 
-The following individuals have contributed to the codebase, in chronological
-order of their first contribution:
-Steve Wills, Landon Fuller, Wayne Jensen and Rory McNamara.
+The following individuals have contributed code or documentation, in
+chronological order of their first contribution:
+Steve Wills, Landon Fuller, Wayne Jensen, Rory McNamara and Alexander Neumann.
 .SH BUGS
 Use Github for submission of bug reports or patches:
 .LP
