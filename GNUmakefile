@@ -58,6 +58,7 @@ endif
 XNU_VERSION?=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
 OSX_VERSION?=	$(shell sw_vers -productVersion)
 XNU_METHOD=	uname
+XNU_HAVE:=	$(XNU_VERSION)
 ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 XNU_VERSION=	$(shell awk '/\# $(OSX_VERSION)$$/ {print $$2}' xnu/GNUmakefile)
 XNU_METHOD=	sw_vers
@@ -69,7 +70,7 @@ endif
 ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
 PKG_CPPFLAGS+=	-I./xnu/xnu-$(XNU_VERSION)
-BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION):$(XNU_METHOD)
+BUILD_INFO+=	OSX:$(OSX_VERSION) XNU:$(XNU_VERSION):$(XNU_METHOD):$(XNU_HAVE)
 endif
 endif
 
@@ -313,7 +314,7 @@ endif
 	@echo "Build options:  $(FEATURES)"
 ifeq ($(shell uname),Darwin)
 	@echo "OSX_VERSION:    $(OSX_VERSION)"
-	@echo "XNU_VERSION:    $(XNU_VERSION) ($(XNU_METHOD))"
+	@echo "XNU_VERSION:    $(XNU_VERSION) ($(XNU_METHOD), have $(XNU_HAVE))"
 endif
 
 $(TARGET): $(OBJS)
