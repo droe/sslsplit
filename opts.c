@@ -268,8 +268,8 @@ proxyspec_t *
 proxyspec_parse(int *argc, char **argv[], const char *natengine)
 {
 	proxyspec_t *curspec, *spec = NULL;
-	char *addr;
-	int af;
+	char *addr = NULL;
+	int af = AF_UNSPEC;
 	int state = 0;
 
 	while ((*argc)--) {
