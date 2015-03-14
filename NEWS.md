@@ -1,4 +1,10 @@
 
+### SSLsplit release
+
+-   Fix loading of certificate chains with OpenSSL 1.0.2 (issue #79).
+-   Fix build on Mac OS X 10.10.2 by improving XNU header selection.
+
+
 ### SSLsplit 0.4.10 2014-11-28
 
 -   Add option -F to log to separate files with printf-style % directives,

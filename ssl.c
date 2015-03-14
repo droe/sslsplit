@@ -861,11 +861,9 @@ errout:
  * Returns -1 on error.
  * Not thread-safe.
  *
- * By accessing (SSLCTX*)->extra_certs directly, we depend on OpenSSL
- * internals in this function.
- *
- * XXX try to reimplement this with exposed BIO/ASN.1 functionality
- *     in order to get rid of the ->extra_certs direct access.
+ * By accessing (SSLCTX*)->extra_certs directly on OpenSSL before 1.0.2, we
+ * depend on OpenSSL internals in this function.  OpenSSL 1.0.2 introduced
+ * the SSL_get0_chain_certs() API for accessing the certificate chain.
  */
 int
 ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
@@ -873,6 +871,7 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 	X509 *tmpcrt;
 	SSL_CTX *tmpctx;
 	SSL *tmpssl;
+	STACK_OF(X509) *tmpchain;
 	int rv;
 
 	if (ssl_init() == -1)
@@ -899,6 +898,14 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 			goto leave3;
 	}
 
+#if (OPENSSL_VERSION_NUMBER < 0x1000200fL)
+	tmpchain = tmpctx->extra_certs;
+#else /* OpenSSL >= 1.0.2 */
+	rv = SSL_CTX_get0_chain_certs(tmpctx, &tmpchain);
+	if (rv != 1)
+		goto leave3;
+#endif /* OpenSSL >= 1.0.2 */
+
 	if (crt) {
 		*crt = tmpcrt;
 	} else {
@@ -906,8 +913,8 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 	}
 	ssl_x509_refcount_inc(tmpcrt);
 
-	for (int i = 0; i < sk_X509_num(tmpctx->extra_certs); i++) {
-		tmpcrt = sk_X509_value(tmpctx->extra_certs, i);
+	for (int i = 0; i < sk_X509_num(tmpchain); i++) {
+		tmpcrt = sk_X509_value(tmpchain, i);
 		ssl_x509_refcount_inc(tmpcrt);
 		sk_X509_push(*chain, tmpcrt);
 	}
