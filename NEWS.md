@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Fix loading of certificate chains with OpenSSL 1.0.2 (issue #79).
 -   Removed the non-standard word "unmodified" from the 2-clause BSD license.
 -   Add options -w and -W to write generated leaf key, original and forged
     certificates to disk (issue #67 by @psychomario).
