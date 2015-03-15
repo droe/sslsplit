@@ -386,6 +386,14 @@ log_content_format_pathspec(const char *logspec,
 				elem = addrbuf;
 				elem_len = strlen(addrbuf);
 				break;
+			case 'D':
+				elem = dsthost;
+				elem_len = strlen(dsthost);
+				break;
+			case 'p':
+				elem = dstport;
+				elem_len = strlen(dstport);
+				break;
 			case 's':
 				if (snprintf(addrbuf, sizeof(addrbuf),
 				             "%s,%s", srchost, srcport) < 0) {
@@ -395,19 +403,11 @@ log_content_format_pathspec(const char *logspec,
 				elem = addrbuf;
 				elem_len = strlen(addrbuf);
 				break;
-			case 'f':
-				elem = dsthost;
-				elem_len = strlen(dsthost);
-				break;
-			case 'h':
-				elem = dstport;
-				elem_len = strlen(dstport);
-				break;
-			case 't':
+			case 'S':
 				elem = srchost;
 				elem_len = strlen(srchost);
 				break;
-			case 'v':
+			case 'q':
 				elem = srcport;
 				elem_len = strlen(srcport);
 				break;
