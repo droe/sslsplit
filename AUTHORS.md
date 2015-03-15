@@ -11,6 +11,7 @@ patches or pull requests, in chronological order of their first contribution:
 -   Wayne Jensen ([wjjensen](https://github.com/wjjensen))
 -   Rory McNamara ([psychomario](https://github.com/psychomario))
 -   Alexander Neumann ([fd0](https://github.com/fd0))
+-   Adam Jacob Muller ([AdamJacobMuller](https://github.com/AdamJacobMuller))
 
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.
