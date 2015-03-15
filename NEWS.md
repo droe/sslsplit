@@ -17,9 +17,14 @@
     relative to the chroot() if used with the -j option.
 -   Use the same hash algorithm in signatures on forged certificates as the
     original certificates use, instead of always using SHA-1.
+-   Minor bugfixes and improvements.
+
+
+### SSLsplit 0.4.11 2015-03-16
+
 -   Fix loading of certificate chains with OpenSSL 1.0.2 (issue #79).
 -   Fix build on Mac OS X 10.10.2 by improving XNU header selection.
--   Minor bugfixes and improvements.
+
 
 ### SSLsplit 0.4.10 2014-11-28
 
