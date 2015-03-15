@@ -391,10 +391,12 @@ SSLsplit current supports the following directives:
 The initial connection time as an ISO 8601 UTC timestamp.
 .TP
 .I %d
-The destination host and port, separated by a comma.
+The destination host and port, separated by a comma, IPv6 addresses using
+underscore instead of colon.
 .TP
 .I %s
-The source host and port, separated by a comma.
+The source host and port, separated by a comma, IPv6 addresses using
+underscore instead of colon.
 .TP
 .I %x
 The name of the local process.

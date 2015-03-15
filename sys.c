@@ -417,6 +417,35 @@ sys_sockaddr_str(struct sockaddr *addr, socklen_t addrlen,
 }
 
 /*
+ * Sanitizes a valid IPv4 or IPv6 address for use in a filename, i.e. removes
+ * characters that are invalid on NTFS and replaces them with more innocent
+ * characters.  The function assumes that the input is a valid IPv4 or IPv6
+ * address; it is not a generic filename sanitizer.
+ *
+ * Returns a copy of string s that must be freed by the caller.
+ *
+ * Invalid NTFS characters are < > : " / \ | ? * according to
+ * https://msdn.microsoft.com/en-gb/library/windows/desktop/aa365247.aspx
+ */
+char *
+sys_ip46str_sanitize(const char *s)
+{
+	char *copy, *p;
+
+	copy = strdup(s);
+	if (!copy)
+		return NULL;
+	p = copy;
+	while (*p) {
+		if (*p == ':')
+			*p = '_';
+		p++;
+	}
+
+	return copy;
+}
+
+/*
  * Returns 1 if path points to an existing directory node in the filesystem.
  * Returns 0 if path is NULL, does not exist, or points to a file of some kind.
  */

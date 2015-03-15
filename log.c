@@ -487,6 +487,7 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 		char timebuf[24];
 		time_t epoch;
 		struct tm *utc;
+		char *dsthost_clean, *srchost_clean;
 
 		if (time(&epoch) == -1) {
 			log_err_printf("Failed to get time\n");
@@ -503,20 +504,50 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 			               strerror(errno), errno);
 			goto errout;
 		}
-		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
-		             opts->contentlog, timebuf, srchost, srcport,
-		             dsthost, dstport) < 0) {
-			log_err_printf("Failed to format filename: %s (%i)\n",
-			               strerror(errno), errno);
+		srchost_clean = sys_ip46str_sanitize(srchost);
+		if (!srchost_clean) {
+			log_err_printf("Failed to sanitize srchost\n");
 			goto errout;
 		}
+		dsthost_clean = sys_ip46str_sanitize(dsthost);
+		if (!dsthost_clean) {
+			log_err_printf("Failed to sanitize dsthost\n");
+			free(srchost_clean);
+			goto errout;
+		}
+		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
+		             opts->contentlog, timebuf,
+		             srchost_clean, srcport,
+		             dsthost_clean, dstport) < 0) {
+			log_err_printf("Failed to format filename: %s (%i)\n",
+			               strerror(errno), errno);
+			free(srchost_clean);
+			free(dsthost_clean);
+			goto errout;
+		}
+		free(srchost_clean);
+		free(dsthost_clean);
 	} else if (opts->contentlog_isspec) {
 		/* per-connection-file content log with logspec (-F) */
+		char *dsthost_clean, *srchost_clean;
+		srchost_clean = sys_ip46str_sanitize(srchost);
+		if (!srchost_clean) {
+			log_err_printf("Failed to sanitize srchost\n");
+			goto errout;
+		}
+		dsthost_clean = sys_ip46str_sanitize(dsthost);
+		if (!dsthost_clean) {
+			log_err_printf("Failed to sanitize dsthost\n");
+			free(srchost_clean);
+			goto errout;
+		}
 		ctx->u.spec.filename = log_content_format_pathspec(
 		                                       opts->contentlog,
-		                                       srchost, srcport,
-		                                       dsthost, dstport,
+		                                       srchost_clean, srcport,
+		                                       dsthost_clean, dstport,
 		                                       exec_path, user, group);
+		free(srchost_clean);
+		free(dsthost_clean);
 		if (!ctx->u.spec.filename) {
 			goto errout;
 		}
