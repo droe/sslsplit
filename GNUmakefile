@@ -1,3 +1,32 @@
+### Variable overrides
+
+# You can change many aspects of the build behaviour without modifying this
+# make file simply by setting environment variables.
+#
+# Dependencies and features are auto-detected, but can be overridden:
+#
+# OPENSSL_BASE	Prefix of OpenSSL library and headers to build against
+# LIBEVENT_BASE	Prefix of libevent library and headers to build against
+# CHECK_BASE	Prefix of check library and headers to build against (optional)
+# PKGCONFIG	Name/path of pkg-config program to use for auto-detection
+# XNU_VERSION	Version of included XNU headers to build against (OS X only)
+# FEATURES	Enable optional or force-enable undetected features (see below)
+#
+# Filesystem locations to install to:
+#
+# PREFIX	Prefix to install under (default /usr/local)
+# DESTDIR	Destination root under which prefix is located (default /)
+# MANDIR	Subdir of PREFIX that contains man section dirs
+#
+# Standard compiler variables are respected, e.g.:
+#
+# CC		Compiler, e.g. for cross-compiling, ccache or ccc-analyzer
+# CFLAGS	Additional compiler flags, e.g. optimization flags
+# CPPFLAGS	Additional pre-processor flags
+# LDFLAGS	Additional linker flags
+# LIBS		Additional libraries to link against
+
+
 ### OpenSSL tweaking
 
 # Define to enable support for SSLv2.
@@ -50,6 +79,8 @@ DEBUG_CFLAGS?=	-g
 # resort, fall back to the latest version of XNU that we have headers for,
 # which may or may not work, depending on if there were significant changes
 # in the DIOCNATLOOK ioctl interface to the NAT state table in the kernel.
+#
+# Note that you can override the XNU headers used by defining XNU_VERSION.
 
 ifeq ($(shell uname),Darwin)
 ifneq ($(wildcard /usr/include/libproc.h),)
@@ -295,27 +326,34 @@ export OPENSSL
 export MKDIR
 export WGET
 
-all: version config $(TARGET)
-
-version:
-	@echo "$(PNAME) $(VERSION)"
-
-config:
-	@echo "via pkg-config: $(strip $(PKGS) $(TPKGS))"
+ifndef MAKE_RESTARTS
+$(info ------------------------------------------------------------------------------)
+$(info $(PNAME) $(VERSION))
+$(info ------------------------------------------------------------------------------)
+$(info Report bugs at https://github.com/droe/sslsplit/issues/new)
+$(info Before reporting bugs, make sure to try the latest develop branch first:)
+$(info % git clone -b develop https://github.com/droe/sslsplit.git)
+$(info ------------------------------------------------------------------------------)
+$(info Via pkg-config: $(strip $(PKGS) $(TPKGS)))
 ifdef OPENSSL_FOUND
-	@echo "OPENSSL_BASE:   $(strip $(OPENSSL_FOUND))"
+$(info OPENSSL_BASE:   $(strip $(OPENSSL_FOUND)))
 endif
 ifdef LIBEVENT_FOUND
-	@echo "LIBEVENT_BASE:  $(strip $(LIBEVENT_FOUND))"
+$(info LIBEVENT_BASE:  $(strip $(LIBEVENT_FOUND)))
 endif
 ifdef CHECK_FOUND
-	@echo "CHECK_BASE:     $(strip $(CHECK_FOUND))"
+$(info CHECK_BASE:     $(strip $(CHECK_FOUND)))
 endif
-	@echo "Build options:  $(FEATURES)"
+$(info Build options:  $(FEATURES))
 ifeq ($(shell uname),Darwin)
-	@echo "OSX_VERSION:    $(OSX_VERSION)"
-	@echo "XNU_VERSION:    $(XNU_VERSION) ($(XNU_METHOD), have $(XNU_HAVE))"
+$(info OSX_VERSION:    $(OSX_VERSION))
+$(info XNU_VERSION:    $(XNU_VERSION) ($(XNU_METHOD), have $(XNU_HAVE)))
 endif
+$(info uname -a:       $(shell uname -a))
+$(info ------------------------------------------------------------------------------)
+endif
+
+all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

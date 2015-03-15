@@ -15,9 +15,11 @@ information will allow faster analysis of the problem:
 -   Output of `uname -a`
 -   Exact command line arguments used to run SSLsplit
 -   The NAT redirection rules you are using, if applicable
+-   For build problems, the full output of `make`
 
-Before submitting a bug report, please make sure that running `make test` from
-a git checkout produces no failed unit tests on your system.
+Before submitting a bug report, please check whether the bug is also present
+in the `develop` branch and whether running `make test` produces failed unit
+tests on your system.
 
 
 ## Contributing patches
