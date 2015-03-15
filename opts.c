@@ -427,4 +427,49 @@ proxyspec_free(proxyspec_t *spec)
 	}
 }
 
+/*
+ * Return text representation of proxy spec for display to the user.
+ * Returned string must be freed by caller.
+ */
+char *
+proxyspec_str(proxyspec_t *spec)
+{
+	char *s;
+	char *lhbuf, *lpbuf;
+	char *cbuf = NULL;
+	if (sys_sockaddr_str((struct sockaddr *)&spec->listen_addr,
+	                     spec->listen_addrlen, &lhbuf, &lpbuf) != 0) {
+		return NULL;
+	}
+	if (spec->connect_addrlen) {
+		char *chbuf, *cpbuf;
+		if (sys_sockaddr_str((struct sockaddr *)&spec->connect_addr,
+		                     spec->connect_addrlen,
+		                     &chbuf, &cpbuf) != 0) {
+			return NULL;
+		}
+		if (asprintf(&cbuf, "[%s]:%s", chbuf, cpbuf) < 0) {
+			return NULL;
+		}
+		free(chbuf);
+		free(cpbuf);
+	}
+	if (spec->sni_port) {
+		if (asprintf(&cbuf, "sni %i", spec->sni_port) < 0) {
+			return NULL;
+		}
+	}
+	if (asprintf(&s, "[%s]:%s %s %s %s", lhbuf, lpbuf,
+	             (spec->ssl ? "ssl" : "tcp"),
+	             (spec->http ? "http" : "plain"),
+	             (spec->natengine ? spec->natengine : cbuf)) < 0) {
+		s = NULL;
+	}
+	free(lhbuf);
+	free(lpbuf);
+	if (cbuf)
+		free(cbuf);
+	return s;
+}
+
 /* vim: set noet ft=c: */

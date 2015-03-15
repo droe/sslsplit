@@ -114,6 +114,7 @@ void opts_proto_dbg_dump(opts_t *) NONNULL(1);
 
 proxyspec_t * proxyspec_parse(int *, char **[], const char *) MALLOC;
 void proxyspec_free(proxyspec_t *) NONNULL(1);
+char * proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
 
 #endif /* !OPTS_H */
 

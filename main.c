@@ -814,52 +814,13 @@ main(int argc, char *argv[])
 		opts_proto_dbg_dump(opts);
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
-			/* XXX refactor this into a proxyspec_str method */
-			char *lhbuf, *lpbuf;
-			char *cbuf = NULL;
-			if (sys_sockaddr_str((struct sockaddr *)
-			                     &spec->listen_addr,
-			                     spec->listen_addrlen,
-			                     &lhbuf, &lpbuf) != 0) {
+			char *specstr = proxyspec_str(spec);
+			if (!specstr) {
 				fprintf(stderr, "%s: out of memory\n", argv0);
 				exit(EXIT_FAILURE);
 			}
-			if (spec->connect_addrlen) {
-				char *chbuf, *cpbuf;
-				if (sys_sockaddr_str((struct sockaddr *)
-				                     &spec->connect_addr,
-				                     spec->connect_addrlen,
-				                     &chbuf, &cpbuf) != 0) {
-					fprintf(stderr, "%s: out of memory\n",
-					                argv0);
-					exit(EXIT_FAILURE);
-				}
-				if (asprintf(&cbuf, "[%s]:%s",
-				             chbuf, cpbuf) < 0) {
-					fprintf(stderr, "%s: out of memory\n",
-					                argv0);
-					exit(EXIT_FAILURE);
-				}
-				free(chbuf);
-				free(cpbuf);
-			}
-			if (spec->sni_port) {
-				if (asprintf(&cbuf, "sni %i",
-				             spec->sni_port) < 0) {
-					fprintf(stderr, "%s: out of memory\n",
-					                argv0);
-					exit(EXIT_FAILURE);
-				}
-			}
-			log_dbg_printf("- [%s]:%s %s %s %s\n", lhbuf, lpbuf,
-			               (spec->ssl ? "ssl" : "tcp"),
-			               (spec->http ? "http" : "plain"),
-			               (spec->natengine ? spec->natengine
-			                                : cbuf));
-			free(lhbuf);
-			free(lpbuf);
-			if (cbuf)
-				free(cbuf);
+			log_dbg_printf("- %s\n", specstr);
+			free(specstr);
 		}
 		if (opts->cacrt) {
 			char *subj = ssl_x509_subject(opts->cacrt);
