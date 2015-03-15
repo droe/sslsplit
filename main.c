@@ -154,7 +154,11 @@ main_usage(void)
 "  -F pathspec content log: full data to sep files with %% subst (excl. -L/-S):\n"
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
 "              %%d - destination host and port\n"
+"              %%f - destination host\n"
+"              %%h - destination port\n"
 "              %%s - source host and port\n"
+"              %%t - source host\n"
+"              %%v - source port\n"
 #ifdef HAVE_LOCAL_PROCINFO
 "              %%x - base name of local process        (requires -i)\n"
 "              %%X - full path to local process        (requires -i)\n"

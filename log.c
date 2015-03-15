@@ -395,6 +395,22 @@ log_content_format_pathspec(const char *logspec,
 				elem = addrbuf;
 				elem_len = strlen(addrbuf);
 				break;
+			case 'f':
+				elem = dsthost;
+				elem_len = strlen(dsthost);
+				break;
+			case 'h':
+				elem = dstport;
+				elem_len = strlen(dstport);
+				break;
+			case 't':
+				elem = srchost;
+				elem_len = strlen(srchost);
+				break;
+			case 'v':
+				elem = srcport;
+				elem_len = strlen(srcport);
+				break;
 			case 'x':
 				if (exec_path) {
 					char *match = exec_path;
