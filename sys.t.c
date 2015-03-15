@@ -205,6 +205,43 @@ START_TEST(sys_group_str_01)
 }
 END_TEST
 
+START_TEST(sys_ip46str_sanitize_01)
+{
+	char *clean;
+
+	clean = sys_ip46str_sanitize("2a01:7c8:aab0:1fb::1");
+	fail_unless(!!clean, "Sanitized string is NULL");
+	fail_unless(!strcmp(clean, "2a01_7c8_aab0_1fb__1"),
+	            "Unexpected result");
+	free(clean);
+}
+END_TEST
+
+START_TEST(sys_ip46str_sanitize_02)
+{
+	char *clean;
+
+	clean = sys_ip46str_sanitize("127.0.0.1");
+	fail_unless(!!clean, "Sanitized string is NULL");
+	fail_unless(!strcmp(clean, "127.0.0.1"),
+	            "Unexpected result");
+	free(clean);
+}
+END_TEST
+
+START_TEST(sys_ip46str_sanitize_03)
+{
+	char *clean;
+
+	clean = sys_ip46str_sanitize("fe80::5626:96ff:e4a7:f583%en0");
+	fail_unless(!!clean, "Sanitized string is NULL");
+	fail_unless(!strcmp(clean, "fe80__5626_96ff_e4a7_f583_en0"),
+	            "Unexpected result");
+	free(clean);
+}
+END_TEST
+
+
 Suite *
 sys_suite(void)
 {
@@ -245,6 +282,12 @@ sys_suite(void)
 
 	tc = tcase_create("sys_group_str");
 	tcase_add_test(tc, sys_group_str_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sys_ip46str_sanitize");
+	tcase_add_test(tc, sys_ip46str_sanitize_01);
+	tcase_add_test(tc, sys_ip46str_sanitize_02);
+	tcase_add_test(tc, sys_ip46str_sanitize_03);
 	suite_add_tcase(s, tc);
 
 	return s;

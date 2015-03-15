@@ -437,8 +437,12 @@ sys_ip46str_sanitize(const char *s)
 		return NULL;
 	p = copy;
 	while (*p) {
-		if (*p == ':')
+		switch (*p) {
+		case ':':
+		case '%':
 			*p = '_';
+			break;
+		}
 		p++;
 	}
 
