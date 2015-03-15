@@ -133,8 +133,10 @@ typedef struct pxy_conn_ctx {
 	char *sni;
 
 	/* log strings from socket */
-	char *src_str;
-	char *dst_str;
+	char *srchost_str;
+	char *srcport_str;
+	char *dsthost_str;
+	char *dstport_str;
 
 	/* log strings from HTTP request */
 	char *http_method;
@@ -221,11 +223,17 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 #endif /* DEBUG_PROXY */
 	pxy_thrmgr_detach(ctx->thrmgr, ctx->thridx);
-	if (ctx->src_str) {
-		free(ctx->src_str);
+	if (ctx->srchost_str) {
+		free(ctx->srchost_str);
 	}
-	if (ctx->dst_str) {
-		free(ctx->dst_str);
+	if (ctx->srcport_str) {
+		free(ctx->srcport_str);
+	}
+	if (ctx->dsthost_str) {
+		free(ctx->dsthost_str);
+	}
+	if (ctx->dstport_str) {
+		free(ctx->dstport_str);
 	}
 	if (ctx->http_method) {
 		free(ctx->http_method);
@@ -358,20 +366,22 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 #endif /* HAVE_LOCAL_PROCINFO */
 
 	if (!ctx->spec->ssl || ctx->passthrough) {
-		rv = asprintf(&msg, "%s %s %s"
+		rv = asprintf(&msg, "%s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
 		              "\n",
 		              ctx->passthrough ? "passthrough" : "tcp",
-		              STRORDASH(ctx->src_str),
-		              STRORDASH(ctx->dst_str)
+		              STRORDASH(ctx->srchost_str),
+		              STRORDASH(ctx->srcport_str),
+		              STRORDASH(ctx->dsthost_str),
+		              STRORDASH(ctx->dstport_str)
 #ifdef HAVE_LOCAL_PROCINFO
 		              , lpi
 #endif /* HAVE_LOCAL_PROCINFO */
 		             );
 	} else {
-		rv = asprintf(&msg, "ssl %s %s "
+		rv = asprintf(&msg, "ssl %s %s %s %s "
 		              "sni:%s names:%s "
 		              "sproto:%s:%s dproto:%s:%s "
 		              "origcrt:%s usedcrt:%s"
@@ -379,8 +389,10 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
 		              "\n",
-		              STRORDASH(ctx->src_str),
-		              STRORDASH(ctx->dst_str),
+		              STRORDASH(ctx->srchost_str),
+		              STRORDASH(ctx->srcport_str),
+		              STRORDASH(ctx->dsthost_str),
+		              STRORDASH(ctx->dstport_str),
 		              STRORDASH(ctx->sni),
 		              STRORDASH(ctx->ssl_names),
 		              SSL_get_version(ctx->src.ssl),
@@ -450,13 +462,15 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #endif /* HAVE_LOCAL_PROCINFO */
 
 	if (!ctx->spec->ssl) {
-		rv = asprintf(&msg, "http %s %s %s %s %s %s %s"
+		rv = asprintf(&msg, "http %s %s %s %s %s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
 		              "%s\n",
-		              STRORDASH(ctx->src_str),
-		              STRORDASH(ctx->dst_str),
+		              STRORDASH(ctx->srchost_str),
+		              STRORDASH(ctx->srcport_str),
+		              STRORDASH(ctx->dsthost_str),
+		              STRORDASH(ctx->dstport_str),
 		              STRORDASH(ctx->http_host),
 		              STRORDASH(ctx->http_method),
 		              STRORDASH(ctx->http_uri),
@@ -467,7 +481,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 #endif /* HAVE_LOCAL_PROCINFO */
 		              ctx->ocsp_denied ? " ocsp:denied" : "");
 	} else {
-		rv = asprintf(&msg, "https %s %s %s %s %s %s %s "
+		rv = asprintf(&msg, "https %s %s %s %s %s %s %s %s %s "
 		              "sni:%s names:%s "
 		              "sproto:%s:%s dproto:%s:%s "
 		              "origcrt:%s usedcrt:%s"
@@ -475,8 +489,10 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
 		              "%s\n",
-		              STRORDASH(ctx->src_str),
-		              STRORDASH(ctx->dst_str),
+		              STRORDASH(ctx->srchost_str),
+		              STRORDASH(ctx->srcport_str),
+		              STRORDASH(ctx->dsthost_str),
+		              STRORDASH(ctx->dstport_str),
 		              STRORDASH(ctx->http_host),
 		              STRORDASH(ctx->http_method),
 		              STRORDASH(ctx->http_uri),
@@ -1771,10 +1787,10 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 
 		/* prepare logging, part 2 */
 		if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
-			ctx->dst_str = sys_sockaddr_str((struct sockaddr *)
-			                                &ctx->addr,
-			                                ctx->addrlen);
-			if (!ctx->dst_str) {
+			if (sys_sockaddr_str((struct sockaddr *)
+			                     &ctx->addr, ctx->addrlen,
+			                     &ctx->dsthost_str,
+			                     &ctx->dstport_str) != 0) {
 				ctx->enomem = 1;
 				pxy_conn_terminate_free(ctx);
 				return;
@@ -1808,7 +1824,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			if (log_content_open(&ctx->logctx, ctx->opts,
-			                     ctx->src_str, ctx->dst_str,
+			                     ctx->srchost_str, ctx->srcport_str,
+			                     ctx->dsthost_str, ctx->dstport_str,
 #ifdef HAVE_LOCAL_PROCINFO
 			                     ctx->lproc.exec_path,
 			                     ctx->lproc.user,
@@ -1841,11 +1858,16 @@ connected:
 		if (OPTS_DEBUG(ctx->opts)) {
 			if (this->ssl) {
 				/* for SSL, we get two connect events */
-				log_dbg_printf("SSL connected %s %s %s %s\n",
+				log_dbg_printf("SSL connected %s [%s]:%s"
+				               " %s %s\n",
 				               bev == ctx->dst.bev ?
 				               "to" : "from",
 				               bev == ctx->dst.bev ?
-				               ctx->dst_str : ctx->src_str,
+				               ctx->dsthost_str :
+				               ctx->srchost_str,
+				               bev == ctx->dst.bev ?
+				               ctx->dstport_str :
+				               ctx->srcport_str,
 				               SSL_get_version(this->ssl),
 				               SSL_get_cipher(this->ssl));
 			} else {
@@ -1854,10 +1876,12 @@ connected:
 				 * beginning; mirror SSL debug output anyway
 				 * in order not to confuse anyone who might be
 				 * looking closely at the output */
-				log_dbg_printf("TCP connected to %s\n",
-				               ctx->dst_str);
-				log_dbg_printf("TCP connected from %s\n",
-				               ctx->src_str);
+				log_dbg_printf("TCP connected to [%s]:%s\n",
+				               ctx->dsthost_str,
+				               ctx->dstport_str);
+				log_dbg_printf("TCP connected from [%s]:%s\n",
+				               ctx->srchost_str,
+				               ctx->srcport_str);
 			}
 		}
 
@@ -2004,12 +2028,12 @@ connected:
 leave:
 	/* we only get a single disconnect event here for both connections */
 	if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("%s disconnected to %s\n",
+		log_dbg_printf("%s disconnected to [%s]:%s\n",
 		               this->ssl ? "SSL" : "TCP",
-		               ctx->dst_str);
-		log_dbg_printf("%s disconnected from %s\n",
+		               ctx->dsthost_str, ctx->dstport_str);
+		log_dbg_printf("%s disconnected from [%s]:%s\n",
 		               this->ssl ? "SSL" : "TCP",
-		               ctx->src_str);
+		               ctx->srchost_str, ctx->srcport_str);
 	}
 
 	this->closed = 1;
@@ -2055,11 +2079,15 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 	}
 
 	if (OPTS_DEBUG(ctx->opts)) {
-		char *ip = sys_sockaddr_str((struct sockaddr *)&ctx->addr,
-		                            ctx->addrlen);
-		log_dbg_printf("Connecting to %s\n", ip);
-		if (ip)
-			free(ip);
+		char *host, *port;
+		if (sys_sockaddr_str((struct sockaddr *)&ctx->addr,
+		                     ctx->addrlen, &host, &port) != 0) {
+			log_dbg_printf("Connecting to [?]:?\n");
+		} else {
+			log_dbg_printf("Connecting to [%s]:%s\n", host, port);
+			free(host);
+			free(port);
+		}
 	}
 
 	/* initiate connection */
@@ -2246,8 +2274,9 @@ pxy_conn_setup(evutil_socket_t fd,
 
 	/* prepare logging, part 1 */
 	if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
-		ctx->src_str = sys_sockaddr_str(peeraddr, peeraddrlen);
-		if (!ctx->src_str)
+		if (sys_sockaddr_str(peeraddr, peeraddrlen,
+		                     &ctx->srchost_str,
+		                     &ctx->srcport_str) != 0)
 			goto memout;
 #ifdef HAVE_LOCAL_PROCINFO
 		if (ctx->opts->lprocinfo) {

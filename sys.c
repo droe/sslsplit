@@ -375,33 +375,45 @@ sys_sockaddr_parse(struct sockaddr_storage *addr, socklen_t *addrlen,
 }
 
 /*
- * Converts an IPv4/IPv6 sockaddr into a printable string representation.
- * Returns an allocated buffer which must be freed by caller, or NULL on error.
+ * Converts an IPv4/IPv6 sockaddr into printable string representations of the
+ * host and the service (port) part.  Writes allocated buffers to *host and
+ * *serv which must both be freed by the caller.  Neither *host nor *port are
+ * freed by this function before newly allocating.
+ * Returns 0 on success, -1 otherwise.  When -1 is returned, pointers in *host
+ * and *serv are invalid and must not be used nor freed by the caller.
  */
-char *
-sys_sockaddr_str(struct sockaddr *addr, socklen_t addrlen)
+int
+sys_sockaddr_str(struct sockaddr *addr, socklen_t addrlen,
+                 char **host, char **serv)
 {
-	char host[INET6_ADDRSTRLEN], serv[6];
-	char *buf;
+	char tmphost[INET6_ADDRSTRLEN];
 	int rv;
-	size_t bufsz;
+	size_t hostsz;
 
-	bufsz = sizeof(host) + sizeof(serv) + 3;
-	buf = malloc(bufsz);
-	if (!buf) {
+	*serv = malloc(6); /* max decimal digits of short plus terminator */
+	if (!*serv) {
 		log_err_printf("Cannot allocate memory\n");
-		return NULL;
+		return -1;
 	}
-	rv = getnameinfo(addr, addrlen, host, sizeof(host), serv, sizeof(serv),
+	rv = getnameinfo(addr, addrlen,
+	                 tmphost, sizeof(tmphost),
+	                 *serv, 6,
 	                 NI_NUMERICHOST | NI_NUMERICSERV);
 	if (rv != 0) {
 		log_err_printf("Cannot get nameinfo for socket address: %s\n",
 		               gai_strerror(rv));
-		free(buf);
-		return NULL;
+		free(*serv);
+		return -1;
 	}
-	snprintf(buf, bufsz, "[%s]:%s", host, serv);
-	return buf;
+	hostsz = strlen(tmphost) + 1; /* including terminator */
+	*host = malloc(hostsz);
+	if (!*host) {
+		log_err_printf("Cannot allocate memory\n");
+		free(*serv);
+		return -1;
+	}
+	memcpy(*host, tmphost, hostsz);
+	return 0;
 }
 
 /*
@@ -727,12 +739,34 @@ sys_dump_fds(void)
 			case AF_INET:
 			case AF_INET6: {
 				if (lrv == 0) {
-					laddrstr = sys_sockaddr_str((struct sockaddr *)&lss, lsslen);
+					char *host, *port;
+					if (sys_sockaddr_str(
+					        (struct sockaddr *)&lss,
+					        lsslen,
+					        &host, &port) != 0) {
+						laddrstr = strdup("?");
+					} else {
+						asprintf(&laddrstr, "[%s]:%s",
+						         host, port);
+						free(host);
+						free(port);
+					}
 				} else {
 					laddrstr = strdup("n/a");
 				}
 				if (frv == 0) {
-					faddrstr = sys_sockaddr_str((struct sockaddr *)&fss, fsslen);
+					char *host, *port;
+					if (sys_sockaddr_str(
+					        (struct sockaddr *)&fss,
+					        fsslen,
+					        &host, &port) != 0) {
+						faddrstr = strdup("?");
+					} else {
+						asprintf(&faddrstr, "[%s]:%s",
+						         host, port);
+						free(host);
+						free(port);
+					}
 				} else {
 					faddrstr = strdup("n/a");
 				}

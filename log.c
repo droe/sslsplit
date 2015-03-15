@@ -335,7 +335,9 @@ log_content_split_pathspec(const char *path, char **lhs, char **rhs)
  */
 #define PATH_BUF_INC	1024
 static char * MALLOC NONNULL(1,2,3)
-log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
+log_content_format_pathspec(const char *logspec,
+                            char *srchost, char *srcport,
+                            char *dsthost, char *dstport,
                             char *exec_path, char *user, char *group)
 {
 	/* set up buffer to hold our generated file path */
@@ -357,6 +359,7 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 
 		const char iso8601[] =  "%Y%m%dT%H%M%SZ";
 		char timebuf[24]; /* sized for ISO 8601 format */
+		char addrbuf[INET6_ADDRSTRLEN + 8]; /* [host]:port */
 
 		/* parse the format string and generate the next path element */
 		switch (*p) {
@@ -375,12 +378,22 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 				elem_len = 1;
 				break;
 			case 'd':
-				elem = dstaddr;
-				elem_len = strlen(dstaddr);
+				if (snprintf(addrbuf, sizeof(addrbuf),
+				             "%s,%s", dsthost, dstport) < 0) {
+					addrbuf[0] = '?';
+					addrbuf[1] = '\0';
+				}
+				elem = addrbuf;
+				elem_len = strlen(addrbuf);
 				break;
 			case 's':
-				elem = srcaddr;
-				elem_len = strlen(srcaddr);
+				if (snprintf(addrbuf, sizeof(addrbuf),
+				             "%s,%s", srchost, srcport) < 0) {
+					addrbuf[0] = '?';
+					addrbuf[1] = '\0';
+				}
+				elem = addrbuf;
+				elem_len = strlen(addrbuf);
 				break;
 			case 'x':
 				if (exec_path) {
@@ -456,7 +469,8 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 
 int
 log_content_open(log_content_ctx_t **pctx, opts_t *opts,
-                 char *srcaddr, char *dstaddr,
+                 char *srchost, char *srcport,
+                 char *dsthost, char *dstport,
                  char *exec_path, char *user, char *group)
 {
 	log_content_ctx_t *ctx;
@@ -489,8 +503,9 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 			               strerror(errno), errno);
 			goto errout;
 		}
-		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s-%s.log",
-		             opts->contentlog, timebuf, srcaddr, dstaddr) < 0) {
+		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
+		             opts->contentlog, timebuf, srchost, srcport,
+		             dsthost, dstport) < 0) {
 			log_err_printf("Failed to format filename: %s (%i)\n",
 			               strerror(errno), errno);
 			goto errout;
@@ -499,19 +514,20 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 		/* per-connection-file content log with logspec (-F) */
 		ctx->u.spec.filename = log_content_format_pathspec(
 		                                       opts->contentlog,
-		                                       srcaddr, dstaddr,
+		                                       srchost, srcport,
+		                                       dsthost, dstport,
 		                                       exec_path, user, group);
 		if (!ctx->u.spec.filename) {
 			goto errout;
 		}
 	} else {
 		/* single-file content log (-L) */
-		if (asprintf(&ctx->u.file.header_req, "%s -> %s",
-		             srcaddr, dstaddr) < 0) {
+		if (asprintf(&ctx->u.file.header_req, "[%s]:%s -> [%s]:%s",
+		             srchost, srcport, dsthost, dstport) < 0) {
 			goto errout;
 		}
-		if (asprintf(&ctx->u.file.header_resp, "%s -> %s",
-		             dstaddr, srcaddr) < 0) {
+		if (asprintf(&ctx->u.file.header_resp, "[%s]:%s -> [%s]:%s",
+		             dsthost, dstport, srchost, srcport) < 0) {
 			free(ctx->u.file.header_req);
 			goto errout;
 		}

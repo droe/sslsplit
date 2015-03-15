@@ -153,8 +153,8 @@ main_usage(void)
 "  -S logdir   content log: full data to separate files in dir (excludes -L/-F)\n"
 "  -F pathspec content log: full data to sep files with %% subst (excl. -L/-S):\n"
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
-"              %%d - dest address:port\n"
-"              %%s - source address:port\n"
+"              %%d - destination host and port\n"
+"              %%s - source host and port\n"
 #ifdef HAVE_LOCAL_PROCINFO
 "              %%x - base name of local process        (requires -i)\n"
 "              %%X - full path to local process        (requires -i)\n"
@@ -810,14 +810,34 @@ main(int argc, char *argv[])
 		opts_proto_dbg_dump(opts);
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
-			char *lbuf, *cbuf = NULL;
-			lbuf = sys_sockaddr_str((struct sockaddr *)
-			                        &spec->listen_addr,
-			                        spec->listen_addrlen);
+			/* XXX refactor this into a proxyspec_str method */
+			char *lhbuf, *lpbuf;
+			char *cbuf = NULL;
+			if (sys_sockaddr_str((struct sockaddr *)
+			                     &spec->listen_addr,
+			                     spec->listen_addrlen,
+			                     &lhbuf, &lpbuf) != 0) {
+				fprintf(stderr, "%s: out of memory\n", argv0);
+				exit(EXIT_FAILURE);
+			}
 			if (spec->connect_addrlen) {
-				cbuf = sys_sockaddr_str((struct sockaddr *)
-				                        &spec->connect_addr,
-				                        spec->connect_addrlen);
+				char *chbuf, *cpbuf;
+				if (sys_sockaddr_str((struct sockaddr *)
+				                     &spec->connect_addr,
+				                     spec->connect_addrlen,
+				                     &chbuf, &cpbuf) != 0) {
+					fprintf(stderr, "%s: out of memory\n",
+					                argv0);
+					exit(EXIT_FAILURE);
+				}
+				if (asprintf(&cbuf, "[%s]:%s",
+				             chbuf, cpbuf) < 0) {
+					fprintf(stderr, "%s: out of memory\n",
+					                argv0);
+					exit(EXIT_FAILURE);
+				}
+				free(chbuf);
+				free(cpbuf);
 			}
 			if (spec->sni_port) {
 				if (asprintf(&cbuf, "sni %i",
@@ -827,13 +847,13 @@ main(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 			}
-			log_dbg_printf("- %s %s %s %s\n", lbuf,
+			log_dbg_printf("- [%s]:%s %s %s %s\n", lhbuf, lpbuf,
 			               (spec->ssl ? "ssl" : "tcp"),
 			               (spec->http ? "http" : "plain"),
 			               (spec->natengine ? spec->natengine
 			                                : cbuf));
-			if (lbuf)
-				free(lbuf);
+			free(lhbuf);
+			free(lpbuf);
 			if (cbuf)
 				free(cbuf);
 		}
