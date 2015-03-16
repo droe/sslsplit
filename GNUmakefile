@@ -12,11 +12,13 @@
 # XNU_VERSION	Version of included XNU headers to build against (OS X only)
 # FEATURES	Enable optional or force-enable undetected features (see below)
 #
-# Filesystem locations to install to:
+# Where and how to install to:
 #
 # PREFIX	Prefix to install under (default /usr/local)
 # DESTDIR	Destination root under which prefix is located (default /)
 # MANDIR	Subdir of PREFIX that contains man section dirs
+# INSTALLUID	UID to use for installed files
+# INSTALLGID	GID to use for installed files
 #
 # Standard compiler variables are respected, e.g.:
 #
@@ -135,6 +137,15 @@ endif
 
 PREFIX?=	/usr/local
 MANDIR?=	share/man
+
+INSTALLUID?=	0
+INSTALLGID?=	0
+BINUID?=	$(INSTALLUID)
+BINGID?=	$(INSTALLGID)
+BINMODE?=	0755
+MANUID?=	$(INSTALLUID)
+MANGID?=	$(INSTALLGID)
+MANMODE?=	0644
 
 OPENSSL?=	openssl
 PKGCONFIG?=	pkg-config
@@ -389,8 +400,10 @@ install: $(TARGET)
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
-	$(INSTALL) -o 0 -g 0 -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
-	$(INSTALL) -o 0 -g 0 -m 0644 $(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
+	$(INSTALL) -o $(BINUID) -g $(BINGID) -m $(BINMODE) \
+		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -o $(MANUID) -g $(MANGID) -m $(MANMODE) \
+		$(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
 
 deinstall:
 	$(RM) -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/$(TARGET).1
