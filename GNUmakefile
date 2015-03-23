@@ -9,6 +9,7 @@
 # LIBEVENT_BASE	Prefix of libevent library and headers to build against
 # CHECK_BASE	Prefix of check library and headers to build against (optional)
 # PKGCONFIG	Name/path of pkg-config program to use for auto-detection
+# PCFLAGS	Additional pkg-config flags
 # XNU_VERSION	Version of included XNU headers to build against (OS X only)
 # FEATURES	Enable optional or force-enable undetected features (see below)
 #
@@ -27,6 +28,9 @@
 # CPPFLAGS	Additional pre-processor flags
 # LDFLAGS	Additional linker flags
 # LIBS		Additional libraries to link against
+#
+# You can e.g. create a statically linked binary by running:
+# % PCFLAGS='--static' CFLAGS='-static' LDFLAGS='-static' make
 
 
 ### OpenSSL tweaking
@@ -209,18 +213,21 @@ BUILD_DATE:=	$(shell date +%Y-%m-%d)
 # Autodetect dependencies known to pkg-config
 PKGS:=		
 ifndef OPENSSL_BASE
-PKGS+=		$(shell $(PKGCONFIG) --exists openssl && echo openssl)
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists openssl \
+		&& echo openssl)
 endif
 ifndef LIBEVENT_BASE
-PKGS+=		$(shell $(PKGCONFIG) --exists libevent && echo libevent)
-PKGS+=		$(shell $(PKGCONFIG) --exists libevent_openssl \
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent \
+		&& echo libevent)
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_openssl \
 		&& echo libevent_openssl)
-PKGS+=		$(shell $(PKGCONFIG) --exists libevent_pthreads \
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_pthreads \
 		&& echo libevent_pthreads)
 endif
 TPKGS:=		
 ifndef CHECK_BASE
-TPKGS+=		$(shell $(PKGCONFIG) --exists check && echo check)
+TPKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists check \
+		&& echo check)
 endif
 
 # Autodetect dependencies not known to pkg-config
@@ -295,16 +302,18 @@ TPKG_LIBS+=	-lcheck
 endif
 
 ifneq (,$(strip $(PKGS)))
-PKG_CFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-other $(PKGS))
-PKG_CPPFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-I $(PKGS))
-PKG_LDFLAGS+=	$(shell $(PKGCONFIG) --libs-only-L --libs-only-other $(PKGS))
-PKG_LIBS+=	$(shell $(PKGCONFIG) --libs-only-l $(PKGS))
+PKG_CFLAGS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --cflags-only-other $(PKGS))
+PKG_CPPFLAGS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --cflags-only-I $(PKGS))
+PKG_LDFLAGS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --libs-only-L \
+		--libs-only-other $(PKGS))
+PKG_LIBS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --libs-only-l $(PKGS))
 endif
 ifneq (,$(strip $(TPKGS)))
-TPKG_CFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-other $(TPKGS))
-TPKG_CPPFLAGS+=	$(shell $(PKGCONFIG) --cflags-only-I $(TPKGS))
-TPKG_LDFLAGS+=	$(shell $(PKGCONFIG) --libs-only-L --libs-only-other $(TPKGS))
-TPKG_LIBS+=	$(shell $(PKGCONFIG) --libs-only-l $(TPKGS))
+TPKG_CFLAGS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --cflags-only-other $(TPKGS))
+TPKG_CPPFLAGS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --cflags-only-I $(TPKGS))
+TPKG_LDFLAGS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --libs-only-L \
+		--libs-only-other $(TPKGS))
+TPKG_LIBS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --libs-only-l $(TPKGS))
 endif
 
 CPPDEFS+=	-D_GNU_SOURCE \
