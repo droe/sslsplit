@@ -624,7 +624,8 @@ compression and selecting only fast block cipher cipher suites and using a
 precomputed private key \fBleaf.key\fP for the forged certificates
 (most significant speed increase is gained by choosing fast algorithms and
 small keysizes for the CA and leaf private keys; check \fBopenssl speed\fP for
-algorithm performance on your system):
+algorithm performance on your system and note that clients may not support all
+algorithms and key sizes):
 .LP
 .HS
 .nf
@@ -664,8 +665,8 @@ subjectKeyIdentifier    = hash
 authorityKeyIdentifier  = keyid:always,issuer:always
 \fBEOF\fP
 
-\fBopenssl genrsa -out ca.key 1024\fP
-\fBopenssl req -new -nodes -x509 -sha1 -out ca.crt -key ca.key \\
+\fBopenssl genrsa -out ca.key 2048\fP
+\fBopenssl req -new -nodes -x509 -sha256 -out ca.crt -key ca.key \\
         -config x509v3ca.cnf -extensions v3_ca \\
         -subj '/O=SSLsplit Root CA/CN=SSLsplit Root CA/' \\
         -set_serial 0 -days 3650\fP
