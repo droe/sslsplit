@@ -51,7 +51,7 @@ dsa.key: dsa.param
 	$(OPENSSL) gendsa -out $@ $<
 
 rsa.key:
-	$(OPENSSL) genrsa -out $@ 1024
+	$(OPENSSL) genrsa -out $@ 2048
 
 pwd.key: rsa.key
 	echo $(PASSWORD) | $(OPENSSL) rsa -in $< -out $@ -aes128 -passout stdin
@@ -66,7 +66,7 @@ ec.key:
 		-set_serial 0 -days $(CA_DAYS)
 
 server.key:
-	$(OPENSSL) genrsa -out $@ 1024
+	$(OPENSSL) genrsa -out $@ 2048
 
 server.crt: server.key $(CONFIG)
 	$(OPENSSL) req -new -nodes -x509 $(DIGEST) -out $@ -key $< \
@@ -82,7 +82,7 @@ targets: targets/daniel.roe.ch.pem targets/wildcard.roe.ch.pem
 
 targets/daniel.roe.ch.pem: rsa.crt
 	$(MKDIR) -p targets
-	$(OPENSSL) genrsa -out targets/daniel.roe.ch.key 1024
+	$(OPENSSL) genrsa -out targets/daniel.roe.ch.key 2048
 	$(OPENSSL) req -new $(DIGEST) -subj '/C=CH/CN=daniel.roe.ch/' \
 		-key targets/daniel.roe.ch.key \
 		-out targets/daniel.roe.ch.csr
@@ -97,7 +97,7 @@ targets/daniel.roe.ch.pem: rsa.crt
 
 targets/wildcard.roe.ch.pem: rsa.crt
 	$(MKDIR) -p targets
-	$(OPENSSL) genrsa -out targets/wildcard.roe.ch.key 1024
+	$(OPENSSL) genrsa -out targets/wildcard.roe.ch.key 2048
 	$(OPENSSL) req -new $(DIGEST) -subj '/C=CH/CN=*.roe.ch/' \
 		-key targets/wildcard.roe.ch.key \
 		-out targets/wildcard.roe.ch.csr

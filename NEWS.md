@@ -17,6 +17,8 @@
     relative to the chroot() if used with the -j option.
 -   Use the same hash algorithm in signatures on forged certificates as the
     original certificates use, instead of always using SHA-1.
+-   Removed all references to SHA-1 and small key RSA root CA keys from
+    documentation, examples and unit testing (issue #83).
 -   Minor bugfixes and improvements.
 
 
