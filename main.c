@@ -756,6 +756,14 @@ main(int argc, char *argv[])
 #endif /* __APPLE__ */
 	}
 	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
+		/*
+		 * While browsers still generally accept it, use a leaf key
+		 * size of 1024 bit for leaf keys.  When browsers start to
+		 * sunset 1024 bit RSA in leaf keys, we will need to make this
+		 * value bigger, and/or configurable.  Until then, users who
+		 * want a different size can always use their own pre-generated
+		 * leaf key instead of generating one.
+		 */
 		opts->key = ssl_key_genrsa(1024);
 		if (!opts->key) {
 			fprintf(stderr, "%s: error generating RSA key:\n",
