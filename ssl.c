@@ -421,10 +421,10 @@ ssl_fini(void)
 }
 
 /*
- * Format SHA1 hash into newly allocated string, with or without colons.
+ * Format raw SHA1 hash into newly allocated string, with or without colons.
  */
 char *
-ssl_sha1_to_str(unsigned char *sha1, int colons)
+ssl_sha1_to_str(unsigned char *rawhash, int colons)
 {
 	char *str;
 	int rv;
@@ -434,11 +434,11 @@ ssl_sha1_to_str(unsigned char *sha1, int colons)
 	              "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X" :
 	              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
 	              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-	              sha1[ 0], sha1[ 1], sha1[ 2], sha1[ 3],
-	              sha1[ 4], sha1[ 5], sha1[ 6], sha1[ 7],
-	              sha1[ 8], sha1[ 9], sha1[10], sha1[11],
-	              sha1[12], sha1[13], sha1[14], sha1[15],
-	              sha1[16], sha1[17], sha1[18], sha1[19]);
+	              rawhash[ 0], rawhash[ 1], rawhash[ 2], rawhash[ 3],
+	              rawhash[ 4], rawhash[ 5], rawhash[ 6], rawhash[ 7],
+	              rawhash[ 8], rawhash[ 9], rawhash[10], rawhash[11],
+	              rawhash[12], rawhash[13], rawhash[14], rawhash[15],
+	              rawhash[16], rawhash[17], rawhash[18], rawhash[19]);
 	if (rv == -1)
 		return NULL;
 	return str;
