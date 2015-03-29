@@ -273,13 +273,15 @@ the filename only.
 .TP
 .B \-t \fIcertdir\fP
 Use private key, certificate and certificate chain from PEM files in
-\fIcertdir\fP for sites matching the respective common names, instead of
-using certificates forged on-the-fly.  A single PEM file must contain a
-single private key, a single certificate and optionally intermediate and
-root CA certificates to use as certificate chain.
+\fIcertdir\fP for connections to hostnames matching the respective
+certificates, instead of using certificates forged on-the-fly.
+A single PEM file must contain a single private key, a single certificate and
+optionally intermediate and root CA certificates to use as certificate chain.
+When using \fB-t\fP, SSLsplit will first attempt to use a matching certificate
+loaded from \fIcertdir\fP.
 If \fB-c\fP and \fB-k\fP are also given, certificates will be forged
-on-the-fly for sites matching none of the certificates loaded from
-\fIcertdir\fP.
+on-the-fly for sites matching none of the common names in the certificates
+loaded from \fIcertdir\fP.
 Otherwise, connections matching no certificate will be dropped, or if
 \fB-P\fP is given, passed through without splitting SSL/TLS.
 .TP
