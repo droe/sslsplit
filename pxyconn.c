@@ -1520,7 +1520,7 @@ pxy_conn_terminate_free(pxy_conn_ctx_t *ctx)
 }
 
 /*
- * Callback for read events on the up- and downstram connection bufferevents.
+ * Callback for read events on the up- and downstream connection bufferevents.
  * Called when there is data ready in the input evbuffer.
  */
 static void
