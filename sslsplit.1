@@ -332,6 +332,9 @@ SNI DNS lookup):
 .br
 \fBtcp\fP   \fIlistenaddr port\fP
 [\fInat-engine\fP|\fIfwdaddr port\fP]
+.br
+\fBgenericstarttls\fP \fIlistenaddr port\fP
+[\fInat-engine\fP|\fIfwdaddr port\fP]
 .ad
 .TP
 \fBhttps\fP
@@ -350,6 +353,11 @@ the removal of HPKP, HSTS and Alternate Protocol response headers.
 Plain TCP connection without SSL/TLS and without any lower level protocol
 decoding; decrypted connection content is treated as opaque stream of bytes
 and not modified.
+.TP
+\fBgenericstarttls\fP
+Plain TCP connection until an SSL client hello appears in the byte stream;
+then starts SSL/TLS interception.
+
 .TP
 .I listenaddr port
 IPv4 or IPv6 address and port or service name to listen on.  This is the

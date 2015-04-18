@@ -1902,6 +1902,88 @@ out:
 	DBG_printf("%zd bytes unparsed\n", n);
 	return servername;
 }
+
+int
+ssl_tls_clienthello_identify(const unsigned char *buf, ssize_t *sz)
+{
+#ifdef DEBUG_SNI_PARSER
+#define DBG_printf(...) log_dbg_printf("SNI Parser: " __VA_ARGS__)
+#else /* !DEBUG_SNI_PARSER */
+#define DBG_printf(...) 
+#endif /* !DEBUG_SNI_PARSER */
+	const unsigned char *p = buf;
+	ssize_t n = *sz;
+
+	DBG_printf("buffer length %zd\n", n);
+
+	if (n < 1) {
+		*sz = -1;
+		goto out2;
+	}
+	DBG_printf("byte 0: %02x\n", *p);
+	/* first byte 0x80, third byte 0x01 is SSLv2 clientHello;
+	 * first byte 0x22, second byte 0x03 is SSLv3/TLSv1.x clientHello */
+	if (*p != 22) /* record type: handshake protocol */
+		goto out2;
+	p++; n--;
+
+	if (n < 2) {
+		*sz = -1;
+		goto out2;
+	}
+	DBG_printf("version: %02x %02x\n", p[0], p[1]);
+	if (p[0] != 3)
+		goto out2;
+	p += 2; n -= 2;
+
+	if (n < 2) {
+		*sz = -1;
+		goto out2;
+	}
+	DBG_printf("length: %02x %02x\n", p[0], p[1]);
+#ifdef DEBUG_SNI_PARSER
+	ssize_t recordlen = p[1] + (p[0] << 8);
+	DBG_printf("recordlen=%zd\n", recordlen);
+#endif /* DEBUG_SNI_PARSER */
+	p += 2; n -= 2;
+
+	if (n < 1) {
+		*sz = -1;
+		goto out2;
+	}
+	DBG_printf("message type: %i\n", *p);
+	if (*p != 1) /* message type: ClientHello */
+		goto out2;
+	p++; n--;
+
+	if (n < 3) {
+		*sz = -1;
+		goto out2;
+	}
+	DBG_printf("message len: %02x %02x %02x\n", p[0], p[1], p[2]);
+	ssize_t msglen = p[2] + (p[1] << 8) + (p[0] << 16);
+	DBG_printf("msglen=%zd\n", msglen);
+	if (msglen < 4)
+		goto out2;
+	p += 3; n -= 3;
+
+	if (n < msglen) {
+		*sz = -1;
+		goto out2;
+	}
+	n = msglen; /* only parse first message */
+
+	if (n < 2)
+		goto out2;
+	DBG_printf("clienthello version %02x %02x\n", p[0], p[1]);
+	if (p[0] != 3)
+		goto out2;
+	p += 2; n -= 2;
+	return 1;
+out2:
+	DBG_printf("%zd bytes unparsed\n", n);
+	return 0;
+}
 #endif /* !OPENSSL_NO_TLSEXT */
 
 /* vim: set noet ft=c: */

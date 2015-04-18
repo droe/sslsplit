@@ -167,6 +167,8 @@ int ssl_is_ocspreq(const unsigned char *, size_t) NONNULL(1) WUNRES;
 #ifndef OPENSSL_NO_TLSEXT
 char * ssl_tls_clienthello_parse_sni(const unsigned char *, ssize_t *)
        NONNULL(1,2) MALLOC;
+int ssl_tls_clienthello_identify(const unsigned char *, ssize_t *)
+       NONNULL(1,2);
 #endif /* !OPENSSL_NO_TLSEXT */
 int ssl_dnsname_match(const char *, size_t, const char *, size_t)
     NONNULL(1,3) WUNRES;
