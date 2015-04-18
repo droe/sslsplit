@@ -556,7 +556,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 	if (sess) {
 		log_dbg_print_free(ssl_session_to_str(sess));
 	} else {
-		log_dbg_print("(null)\n");
+		log_dbg_printf("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
 #ifdef WITH_SSLV2
@@ -587,7 +587,7 @@ pxy_ossl_sessremove_cb(UNUSED SSL_CTX *sslctx, SSL_SESSION *sess)
 	if (sess) {
 		log_dbg_print_free(ssl_session_to_str(sess));
 	} else {
-		log_dbg_print("(null)\n");
+		log_dbg_printf("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
 	if (sess) {
