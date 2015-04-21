@@ -1902,6 +1902,7 @@ out:
 	DBG_printf("%zd bytes unparsed\n", n);
 	return servername;
 }
+#endif /* !OPENSSL_NO_TLSEXT */
 
 int
 ssl_tls_clienthello_identify(const unsigned char *buf, ssize_t *sz)
@@ -1984,6 +1985,5 @@ out2:
 	DBG_printf("%zd bytes unparsed\n", n);
 	return 0;
 }
-#endif /* !OPENSSL_NO_TLSEXT */
 
 /* vim: set noet ft=c: */
