@@ -281,7 +281,7 @@ proxy_new(opts_t *opts, int clisock)
 
 	/* create a dnsbase here purely for being able to test parsing
 	 * resolv.conf while we can still alert the user about it. */
-	dnsbase = evdns_base_new(ctx->evbase, 1);
+	dnsbase = evdns_base_new(ctx->evbase, 0);
 	if (!dnsbase) {
 		log_err_printf("Error creating dns event base\n");
 		goto leave1b;
