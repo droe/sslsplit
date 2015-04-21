@@ -123,7 +123,7 @@ opts_has_ssl_spec(opts_t *opts)
 	proxyspec_t *p = opts->spec;
 
 	while (p) {
-		if (p->ssl)
+		if (p->ssl || p->tlspeek)
 			return 1;
 		p = p->next;
 	}
@@ -284,18 +284,27 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 				if (!strcmp(**argv, "tcp")) {
 					spec->ssl = 0;
 					spec->http = 0;
+					spec->tlspeek = 0;
 				} else
 				if (!strcmp(**argv, "ssl")) {
 					spec->ssl = 1;
 					spec->http = 0;
+					spec->tlspeek = 0;
 				} else
 				if (!strcmp(**argv, "http")) {
 					spec->ssl = 0;
 					spec->http = 1;
+					spec->tlspeek = 0;
 				} else
 				if (!strcmp(**argv, "https")) {
 					spec->ssl = 1;
 					spec->http = 1;
+					spec->tlspeek = 0;
+				} else
+				if (!strcmp(**argv, "genericstarttls")) {
+					spec->ssl = 0;
+					spec->http = 0;
+					spec->tlspeek = 1;
 				} else {
 					fprintf(stderr, "Unknown connection "
 					                "type '%s'\n", **argv);
@@ -459,9 +468,10 @@ proxyspec_str(proxyspec_t *spec)
 			return NULL;
 		}
 	}
-	if (asprintf(&s, "[%s]:%s %s %s %s", lhbuf, lpbuf,
+	if (asprintf(&s, "[%s]:%s %s %s %s %s", lhbuf, lpbuf,
 	             (spec->ssl ? "ssl" : "tcp"),
 	             (spec->http ? "http" : "plain"),
+	             (spec->tlspeek ? "peeking" : ""),
 	             (spec->natengine ? spec->natengine : cbuf)) < 0) {
 		s = NULL;
 	}
