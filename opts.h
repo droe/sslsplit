@@ -39,7 +39,7 @@
 typedef struct proxyspec {
 	unsigned int ssl : 1;
 	unsigned int http : 1;
-	unsigned int tlspeek: 1;
+	unsigned int upgrade: 1;
 	struct sockaddr_storage listen_addr;
 	socklen_t listen_addrlen;
 	/* connect_addr and connect_addrlen are set: static mode;

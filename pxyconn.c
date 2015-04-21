@@ -200,7 +200,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	memset(ctx, 0, sizeof(pxy_conn_ctx_t));
 	ctx->spec = spec;
 	ctx->opts = opts;
-	ctx->looking_for_client_hello = spec->tlspeek;
+	ctx->looking_for_client_hello = spec->upgrade;
 	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("looking status is %d\n", ctx->looking_for_client_hello);
 	}

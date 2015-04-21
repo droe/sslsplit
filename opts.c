@@ -115,7 +115,9 @@ opts_free(opts_t *opts)
 }
 
 /*
- * Return 1 if opts_t contains a proxyspec with ssl, 0 otherwise.
+ * Return 1 if opts_t contains a proxyspec that (eventually) uses SSL/TLS,
+ * 0 otherwise.  When 0, it is safe to assume that no SSL/TLS operations
+ * will take place with this configuration.
  */
 int
 opts_has_ssl_spec(opts_t *opts)
@@ -123,7 +125,7 @@ opts_has_ssl_spec(opts_t *opts)
 	proxyspec_t *p = opts->spec;
 
 	while (p) {
-		if (p->ssl || p->tlspeek)
+		if (p->ssl || p->upgrade)
 			return 1;
 		p = p->next;
 	}
@@ -284,27 +286,27 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 				if (!strcmp(**argv, "tcp")) {
 					spec->ssl = 0;
 					spec->http = 0;
-					spec->tlspeek = 0;
+					spec->upgrade = 0;
 				} else
 				if (!strcmp(**argv, "ssl")) {
 					spec->ssl = 1;
 					spec->http = 0;
-					spec->tlspeek = 0;
+					spec->upgrade = 0;
 				} else
 				if (!strcmp(**argv, "http")) {
 					spec->ssl = 0;
 					spec->http = 1;
-					spec->tlspeek = 0;
+					spec->upgrade = 0;
 				} else
 				if (!strcmp(**argv, "https")) {
 					spec->ssl = 1;
 					spec->http = 1;
-					spec->tlspeek = 0;
+					spec->upgrade = 0;
 				} else
-				if (!strcmp(**argv, "genericstarttls")) {
+				if (!strcmp(**argv, "autossl")) {
 					spec->ssl = 0;
 					spec->http = 0;
-					spec->tlspeek = 1;
+					spec->upgrade = 1;
 				} else {
 					fprintf(stderr, "Unknown connection "
 					                "type '%s'\n", **argv);
@@ -468,10 +470,10 @@ proxyspec_str(proxyspec_t *spec)
 			return NULL;
 		}
 	}
-	if (asprintf(&s, "[%s]:%s %s %s %s %s", lhbuf, lpbuf,
+	if (asprintf(&s, "[%s]:%s %s%s%s %s", lhbuf, lpbuf,
 	             (spec->ssl ? "ssl" : "tcp"),
-	             (spec->http ? "http" : "plain"),
-	             (spec->tlspeek ? "peeking" : ""),
+	             (spec->upgrade ? "|upgrade" : ""),
+	             (spec->http ? "|http" : ""),
 	             (spec->natengine ? spec->natengine : cbuf)) < 0) {
 		s = NULL;
 	}
