@@ -156,6 +156,7 @@ PKGCONFIG?=	pkg-config
 
 BASENAME?=	basename
 CAT?=		cat
+CUT?=		cut
 GREP?=		grep
 INSTALL?=	install
 MKDIR?=		mkdir
@@ -201,7 +202,9 @@ ifndef GITDIR
 VERSION:=	$(shell $(BASENAME) $(PWD)|\
 			$(GREP) $(TARGET)-|\
 			$(SED) 's/.*$(TARGET)-\(.*\)/\1/g')
-BUILD_INFO+=	V:DIR
+NEWSSHA:=	$(shell $(OPENSSL) dgst -sha1 -r NEWS.md |\
+			$(CUT) -c -7)
+BUILD_INFO+=	V:DIR N:$(NEWSSHA)
 else
 VERSION:=	$(shell $(GIT) describe --tags --dirty --always)
 BUILD_INFO+=	V:GIT
