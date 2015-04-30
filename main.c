@@ -696,6 +696,11 @@ main(int argc, char *argv[])
 		spec->natsocket = nat_getsocketcb(spec->natengine);
 	}
 	if (opts_has_ssl_spec(opts)) {
+		if (ssl_init() == -1) {
+			fprintf(stderr, "%s: failed to initialize OpenSSL.\n",
+			                argv0);
+			exit(EXIT_FAILURE);
+		}
 		if ((opts->cacrt || !opts->tgcrtdir) && !opts->cakey) {
 			fprintf(stderr, "%s: no CA key specified (-k).\n",
 			                argv0);
