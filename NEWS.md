@@ -19,6 +19,7 @@
     original certificates use, instead of always using SHA-1.
 -   Removed all references to SHA-1 and small key RSA root CA keys from
     documentation, examples and unit testing (issue #83).
+-   Fix passthrough mode with -t and an empty directory (issue #92).
 -   Minor bugfixes and improvements.
 
 
