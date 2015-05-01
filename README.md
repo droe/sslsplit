@@ -36,8 +36,8 @@ normally prevent MitM attacks or make them more difficult.  SSLsplit can deny
 OCSP requests in a generic way.  For HTTP and HTTPS connections, SSLsplit
 removes response headers for HPKP in order to prevent public key pinning, for
 HSTS to allow the user to accept untrusted certificates, and Alternate
-Protocols to prevent switching to QUIC/SPDY.  For HTTP, compression is disabled
-to make the logs more readable.
+Protocols to prevent switching to QUIC/SPDY.  HTTP compression, encodings and
+keep-alive are disabled to make the logs more readable.
 
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.

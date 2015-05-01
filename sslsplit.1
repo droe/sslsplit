@@ -85,7 +85,8 @@ For HTTP and HTTPS connections, SSLsplit removes response headers
 for HPKP in order to prevent public key pinning,
 for HSTS to allow the user to accept untrusted certificates,
 and Alternate Protocols to prevent switching to QUIC/SPDY.
-For HTTP, compression is disabled to make the logs more readable.
+HTTP compression, encodings and keep-alive are disabled to make the logs more
+readable.
 .LP
 SSLsplit does not automagically redirect any network traffic.  To actually
 implement an attack, you also need to redirect the traffic to the system
