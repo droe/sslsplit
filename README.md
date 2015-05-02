@@ -47,6 +47,7 @@ the various NAT engines.
 
 SSLsplit depends on the OpenSSL and libevent 2.x libraries.
 The build depends on GNU make and a POSIX.2 environment in `PATH`.
+If available, pkg-config is used to locate and configure the dependencies.
 The optional unit tests depend on the check library.
 
 SSLsplit currently supports the following operating systems and NAT mechanisms:
