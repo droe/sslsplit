@@ -66,6 +66,8 @@ linked against; for optimal results, use a recent release.
 
 ## Installation
 
+With OpenSSL, libevent 2.x, pkg-config and check available, run:
+
     make
     make test       # optional unit tests
     make install    # optional install
