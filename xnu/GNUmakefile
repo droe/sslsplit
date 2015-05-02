@@ -10,6 +10,10 @@ XNU_FILES?=	APPLE_LICENSE \
 		libkern/libkern/tree.h bsd/net/radix.h bsd/net/pfvar.h
 
 # All the xnu releases which contain bsd/net/pfvar.h
+# Commented out are releases where the xnu version is known but the
+# corresponding source code has not been published by Apple yet.
+# If there were no API or ABI changes to the pf ioctl interface,
+# falling back to the latest published version should work fine.
 XNU_RELS+=	1456.1.26	# 10.6
 XNU_RELS+=	1456.1.26	# 10.6.1
 XNU_RELS+=	1486.2.11	# 10.6.2
@@ -39,6 +43,8 @@ XNU_RELS+=	2422.110.17	# 10.9.4
 XNU_RELS+=	2422.115.4	# 10.9.5
 XNU_RELS+=	2782.1.97	# 10.10
 XNU_RELS+=	2782.1.97	# 10.10.1
+#XNU_RELS+=	2782.10.72	# 10.10.2
+#XNU_RELS+=	2782.20.48	# 10.10.3
 
 all: fetch
 
