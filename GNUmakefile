@@ -65,8 +65,8 @@ DEBUG_CFLAGS?=	-g
 # Define to add SSL session cache debugging; dump all sessions in debug mode.
 #FEATURES+=	-DDEBUG_SESSION_CACHE
 
-# Define to add debugging of parsing the SNI from the SSL ClientHello.
-#FEATURES+=	-DDEBUG_SNI_PARSER
+# Define to add debugging of sslsplit's own ClientHello message parser.
+#FEATURES+=	-DDEBUG_CLIENTHELLO_PARSER
 
 # Define to add thread debugging; dump thread state when choosing a thread.
 #FEATURES+=	-DDEBUG_THREAD

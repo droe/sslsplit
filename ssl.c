@@ -103,9 +103,11 @@ ssl_openssl_version(void)
 	                SSLeay_version(SSLEAY_VERSION),
 	                SSLeay());
 #ifndef OPENSSL_NO_TLSEXT
-	fprintf(stderr, "TLS Server Name Indication (SNI) supported\n");
+	fprintf(stderr, "OpenSSL has support for TLS extensions\n"
+	                "TLS Server Name Indication (SNI) supported\n");
 #else /* OPENSSL_NO_TLSEXT */
-	fprintf(stderr, "TLS Server Name Indication (SNI) not supported\n");
+	fprintf(stderr, "OpenSSL has no support for TLS extensions\n"
+	                "TLS Server Name Indication (SNI) not supported\n");
 #endif /* OPENSSL_NO_TLSEXT */
 #ifdef OPENSSL_THREADS
 #ifndef OPENSSL_NO_THREADID
@@ -1669,25 +1671,43 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
 	return 1;
 }
 
-#ifndef OPENSSL_NO_TLSEXT
 /*
- * Ugly hack to manually parse the SNI TLS extension from a clientHello buf.
- * This is needed because of limitations in the OpenSSL SNI API which only
- * allows to read the indicated server name at the time when we have to
- * provide the server certificate.  It is not possible to asynchroniously
- * read the indicated server name, wait for some event to happen, and then
- * later to provide the server certificate to use and continue the handshake.
+ * Ugly hack to manually parse a clientHello message from a memory buffer.
+ * This is needed in order to be able to support SNI and STARTTLS.
  *
- * This function takes a buffer containing (part of) a clientHello message as
- * seen on the network.
+ * The OpenSSL SNI API only allows to read the indicated server name at the
+ * time when we have to provide the server certificate.  OpenSSL does not
+ * allow to asynchroniously read the indicated server name, wait for some
+ * unrelated event to happen, and then later to provide the server certificate
+ * to use and continue the handshake.  Therefore we resort to parsing the
+ * server name from the ClientHello manually before OpenSSL gets to work on it.
  *
- * If server name extension was found and parsed, returns server name buffer
- * that must be free'd by the caller.
- * If parsing failed for inconsistency reasons or if SNI TLS extension was
- * not present in the clientHello, returns NULL.
- * If not enough data was provided in buf, returns NULL and *sz is set to -1
- * to indicate that a call to ssl_tls_clienthello_parse_sni() with more data
- * in buf might succeed.
+ * For STARTTLS support in autossl mode, we need to peek into the buffer of
+ * received octets and decide whether we have something that resembles a
+ * (possibly incomplete) ClientHello message, so we can upgrade the connection
+ * to SSL automatically.
+ *
+ * This function takes a buffer containing (part of) a ClientHello message as
+ * seen on the network as input.
+ *
+ * Returns:
+ *  1  if buf does not contain a complete ClientHello message;
+ *     *clienthello may point to the start of a truncated ClientHello message,
+ *     indicating that the caller should retry later with more bytes available
+ *  0  if buf contains a complete ClientHello message;
+ *     *clienthello will point to the start of the complete ClientHello message
+ *
+ * If a servername pointer was supplied by the caller, and a server name
+ * extension was found and parsed, the server name is returned in *servername
+ * as a newly allocated string that must be freed by the caller.  This may
+ * only occur for a return value of 0.
+ *
+ * If search is non-zero, then the buffer will be searched for a ClientHello
+ * message beginning at offsets >= 0, whereas if search is zero, only
+ * ClientHello messages starting at offset 0 will be considered.
+ *
+ * Note that this code currently only supports SSL 3.0 and TLS 1.0-1.2 and that
+ * it expects the ClientHello message to be unfragmented in a single record.
  *
  * References:
  * RFC 2246: The TLS Protocol Version 1.0
@@ -1697,155 +1717,206 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
  * RFC 5246: The Transport Layer Security (TLS) Protocol Version 1.2
  * RFC 6066: Transport Layer Security (TLS) Extensions: Extension Definitions
  */
-char *
-ssl_tls_clienthello_parse_sni(const unsigned char *buf, ssize_t *sz)
+int
+ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
+                          const unsigned char **clienthello, char **servername)
 {
-#ifdef DEBUG_SNI_PARSER
-#define DBG_printf(...) log_dbg_printf("SNI Parser: " __VA_ARGS__)
-#else /* !DEBUG_SNI_PARSER */
+#ifdef DEBUG_CLIENTHELLO_PARSER
+#define DBG_printf(...) log_dbg_printf("ClientHello parser: " __VA_ARGS__)
+/*#define DBG_printf(...) fprintf(stderr, "ClientHello parser: " __VA_ARGS__)*/
+#else /* !DEBUG_CLIENTHELLO_PARSER */
 #define DBG_printf(...) 
-#endif /* !DEBUG_SNI_PARSER */
+#endif /* !DEBUG_CLIENTHELLO_PARSER */
 	const unsigned char *p = buf;
-	ssize_t n = *sz;
-	char *servername = NULL;
+	ssize_t n = sz;
+	char *sn = NULL;
 
-	DBG_printf("buffer length %zd\n", n);
+	*clienthello = NULL;
 
-	if (n < 1) {
-		*sz = -1;
-		goto out;
-	}
-	DBG_printf("byte 0: %02x\n", *p);
-	/* first byte 0x80, third byte 0x01 is SSLv2 clientHello;
-	 * first byte 0x22, second byte 0x03 is SSLv3/TLSv1.x clientHello */
-	if (*p != 22) /* record type: handshake protocol */
-		goto out;
-	p++; n--;
+	DBG_printf("parsing buffer of sz %zd\n", sz);
 
-	if (n < 2) {
-		*sz = -1;
-		goto out;
-	}
-	DBG_printf("version: %02x %02x\n", p[0], p[1]);
-	if (p[0] != 3)
-		goto out;
-	p += 2; n -= 2;
+	do {
+		if (*clienthello) {
+			/*
+			 * Rewind after skipping an invalid ClientHello by
+			 * restarting the search one byte after the beginning
+			 * of the last candidate
+			 */
+			p = (*clienthello) + 1;
+			n = sz - (p - buf);
+			if (sn) {
+				free(sn);
+				sn = NULL;
+			}
+		}
 
-	if (n < 2) {
-		*sz = -1;
-		goto out;
-	}
-	DBG_printf("length: %02x %02x\n", p[0], p[1]);
-#ifdef DEBUG_SNI_PARSER
-	ssize_t recordlen = p[1] + (p[0] << 8);
-	DBG_printf("recordlen=%zd\n", recordlen);
-#endif /* DEBUG_SNI_PARSER */
-	p += 2; n -= 2;
+		if (search) {
+			/* Search for the beginning of a potential ClientHello */
+			while ((n > 0) && (*p != 22)) {
+				p++; n--;
+			}
+			if (n <= 0) {
+				/* Search completed without a match; reset
+				 * clienthello to NULL to indicate to the
+				 * caller that this buffer does not need to be
+				 * retried */
+				DBG_printf("===> No match: rv 1, *clienthello NULL\n");
+				*clienthello = NULL;
+				return 1;
+			}
+		}
+		*clienthello = p;
+		DBG_printf("candidate at offset %td\n", p - buf);
 
-	if (n < 1) {
-		*sz = -1;
-		goto out;
-	}
-	DBG_printf("message type: %i\n", *p);
-	if (*p != 1) /* message type: ClientHello */
-		goto out;
-	p++; n--;
+		DBG_printf("byte 0: %02x\n", *p);
+		/* +0 0x80 +2 0x01 SSLv2 clientHello;
+		 * +0 0x22 +1 0x03 SSLv3/TLSv1.x clientHello */
+		if (*p != 22) { /* record type: handshake protocol */
+			/* this can only happen if search is 0 */
+			DBG_printf("===> No match: rv 1, *clienthello NULL\n");
+			*clienthello = NULL;
+			return 1;
+		}
+		p++; n--;
 
-	if (n < 3) {
-		*sz = -1;
-		goto out;
-	}
-	DBG_printf("message len: %02x %02x %02x\n", p[0], p[1], p[2]);
-	ssize_t msglen = p[2] + (p[1] << 8) + (p[0] << 16);
-	DBG_printf("msglen=%zd\n", msglen);
-	if (msglen < 4)
-		goto out;
-	p += 3; n -= 3;
+		if (n < 2) {
+			DBG_printf("===> Truncated: rv 1, *clienthello set\n");
+			return 1;
+		}
+		DBG_printf("version: %02x %02x\n", p[0], p[1]);
+		/* This supports up to TLS 1.2 (0x03 0x03) and will need to be
+		 * updated for TLS 1.3 once that is standardized and still
+		 * compatible with this parser; remember to also update the
+		 * inner version check below */
+		if (p[0] != 0x03 && p[1] > 0x03)
+			continue;
+		p += 2; n -= 2;
 
-	if (n < msglen) {
-		*sz = -1;
-		goto out;
-	}
-	n = msglen; /* only parse first message */
+		if (n < 2) {
+			DBG_printf("===> Truncated: rv 1, *clienthello set\n");
+			return 1;
+		}
+		DBG_printf("length: %02x %02x\n", p[0], p[1]);
+		ssize_t recordlen = p[1] + (p[0] << 8);
+		DBG_printf("recordlen=%zd\n", recordlen);
+		p += 2; n -= 2;
+		if (recordlen < 36) /* arbitrary size too small for a c-h */
+			continue;
+		if (n < recordlen) {
+			DBG_printf("n < recordlen: n=%zd\n", n);
+			DBG_printf("===> Truncated: rv 1, *clienthello set\n");
+			return 1;
+		}
 
-	if (n < 2)
-		goto out;
-	DBG_printf("clienthello version %02x %02x\n", p[0], p[1]);
-	if (p[0] != 3)
-		goto out;
-	p += 2; n -= 2;
+		/* from here we give up on a candidate if there is not enough
+		 * data available in the buffer, because we already checked the
+		 * availability of the whole record. */
 
-	if (n < 32)
-		goto out;
-	DBG_printf("clienthello random %02x %02x %02x %02x ...\n",
-	           p[0], p[1], p[2], p[3]);
-	DBG_printf("compare localtime: %08x\n", (unsigned int)time(NULL));
-	p += 32; n -= 32;
+		if (n < 1)
+			continue;
+		DBG_printf("message type: %i\n", *p);
+		if (*p != 0x01) /* message type: ClientHello */
+			continue;
+		p++; n--;
 
-	if (n < 1)
-		goto out;
-	DBG_printf("clienthello sidlen %02x\n", *p);
-	ssize_t sidlen = *p; /* session id length, 0..32 */
-	p += 1; n -= 1;
-	if (n < sidlen)
-		goto out;
-	p += sidlen; n -= sidlen;
+		if (n < 3)
+			continue;
+		DBG_printf("message len: %02x %02x %02x\n", p[0], p[1], p[2]);
+		ssize_t msglen = p[2] + (p[1] << 8) + (p[0] << 16);
+		DBG_printf("msglen=%zd\n", msglen);
+		p += 3; n -= 3;
+		if (msglen < 32) /* arbitrary size too small for a c-h */
+			continue;
+		if (msglen != recordlen - 4) {
+			DBG_printf("msglen != recordlen - 4\n");
+			continue;
+		}
+		if (n < msglen)
+			continue;
+		n = msglen; /* only parse first message */
 
-	if (n < 2)
-		goto out;
-	DBG_printf("clienthello cipher suites length %02x %02x\n", p[0], p[1]);
-	ssize_t suiteslen = p[1] + (p[0] << 8);
-	p += 2; n -= 2;
-	if (n < suiteslen) {
-		DBG_printf("n < suiteslen (%zd, %zd)\n", n, suiteslen);
-		goto out;
-	}
-	p += suiteslen;
-	n -= suiteslen;
+		if (n < 2)
+			continue;
+		DBG_printf("clienthello version %02x %02x\n", p[0], p[1]);
+		/* inner version check, see outer one above */
+		if (p[0] != 0x03 || p[1] > 0x03)
+			continue;
+		p += 2; n -= 2;
 
-	if (n < 1)
-		goto out;
-	DBG_printf("clienthello compress methods length %02x\n", *p);
-	ssize_t compslen = *p;
-	p++; n--;
-	if (n < compslen)
-		goto out;
-	p += compslen;
-	n -= compslen;
-
-	/* begin of extensions */
-
-	if (n < 2)
-		goto out;
-	DBG_printf("tlsexts length %02x %02x\n", p[0], p[1]);
-	ssize_t tlsextslen = p[1] + (p[0] << 8);
-	DBG_printf("tlsextslen %zd\n", tlsextslen);
-	p += 2;
-	n -= 2;
-
-	if (n < tlsextslen)
-		goto out;
-	n = tlsextslen; /* only parse extensions, ignore trailing bits */
-
-	while (n > 0) {
-		if (n < 4)
-			goto out;
-		DBG_printf("tlsext type %02x %02x len %02x %02x\n",
+		if (n < 32)
+			continue;
+		DBG_printf("clienthello random %02x %02x %02x %02x ...\n",
 		           p[0], p[1], p[2], p[3]);
-		unsigned short exttype = p[1] + (p[0] << 8);
-		ssize_t extlen = p[3] + (p[2] << 8);
-		p += 4;
-		n -= 4;
-		if (n < extlen)
-			goto out;
-		switch (exttype) {
-			case 0:
-			{
+		DBG_printf("compare localtime: %08x\n",
+		           (unsigned int)time(NULL));
+		p += 32; n -= 32;
+
+		if (n < 1)
+			continue;
+		DBG_printf("clienthello sidlen %02x\n", *p);
+		ssize_t sidlen = *p; /* session id length, 0..32 */
+		p += 1; n -= 1;
+		if (n < sidlen)
+			continue;
+		p += sidlen; n -= sidlen;
+
+		if (n < 2)
+			continue;
+		DBG_printf("clienthello cipher suites length %02x %02x\n",
+		           p[0], p[1]);
+		ssize_t suiteslen = p[1] + (p[0] << 8);
+		p += 2; n -= 2;
+		if (n < suiteslen)
+			continue;
+		p += suiteslen;
+		n -= suiteslen;
+
+		if (n < 1)
+			continue;
+		DBG_printf("clienthello compress methods length %02x\n", *p);
+		ssize_t compslen = *p;
+		p++; n--;
+		if (n < compslen)
+			continue;
+		p += compslen;
+		n -= compslen;
+
+		/* begin of extensions */
+
+		if (n == 0) {
+			/* valid ClientHello without extensions */
+			DBG_printf("===> Match: rv 0, *clienthello set\n");
+			if (servername)
+				*servername = NULL;
+			return 0;
+		}
+		if (n < 2)
+			continue;
+		DBG_printf("tlsexts length %02x %02x\n", p[0], p[1]);
+		ssize_t tlsextslen = p[1] + (p[0] << 8);
+		DBG_printf("tlsextslen %zd\n", tlsextslen);
+		p += 2; n -= 2;
+		if (n < tlsextslen)
+			continue;
+		n = tlsextslen; /* only parse exts, ignore trailing bits */
+
+		while (n > 0) {
+			if (n < 4)
+				goto continue_search;
+			DBG_printf("tlsext type %02x %02x len %02x %02x\n",
+			           p[0], p[1], p[2], p[3]);
+			unsigned short exttype = p[1] + (p[0] << 8);
+			ssize_t extlen = p[3] + (p[2] << 8);
+			p += 4; n -= 4;
+			if (n < extlen)
+				goto continue_search;
+			switch (exttype) {
+			case 0: {
 				ssize_t extn = extlen;
 				const unsigned char *extp = p;
 
 				if (extn < 2)
-					goto out;
+					goto continue_search;
 				DBG_printf("list length %02x %02x\n",
 				           extp[0], extp[1]);
 				ssize_t namelistlen = extp[1] + (extp[0] << 8);
@@ -1854,11 +1925,11 @@ ssl_tls_clienthello_parse_sni(const unsigned char *buf, ssize_t *sz)
 				extn -= 2;
 
 				if (namelistlen != extn)
-					goto out;
+					goto continue_search;
 
 				while (extn > 0) {
 					if (extn < 3)
-						goto out;
+						goto continue_search;
 					DBG_printf("ServerName type %02x"
 					           " len %02x %02x\n",
 					           extp[0], extp[1], extp[2]);
@@ -1867,17 +1938,23 @@ ssl_tls_clienthello_parse_sni(const unsigned char *buf, ssize_t *sz)
 					extp += 3;
 					extn -= 3;
 					if (snlen > extn)
-						goto out;
+						goto continue_search;
 					if (snlen > TLSEXT_MAXLEN_host_name)
-						goto out;
-					if (sntype == 0) {
-						servername = malloc(snlen + 1);
-						memcpy(servername, extp, snlen);
-						servername[snlen] = '\0';
+						goto continue_search;
+					/*
+					 * We copy the first name only.
+					 * RFC 6066: "The ServerNameList MUST
+					 * NOT contain more than one name of
+					 * the same name_type."
+					 */
+					if (servername &&
+					    sntype == 0 && sn == NULL) {
+						sn = malloc(snlen + 1);
+						memcpy(sn, extp, snlen);
+						sn[snlen] = '\0';
 						/* deliberately not checking
 						 * for malformed hostnames
 						 * containing invalid chars */
-						goto out;
 					}
 					extp += snlen;
 					extn -= snlen;
@@ -1887,103 +1964,36 @@ ssl_tls_clienthello_parse_sni(const unsigned char *buf, ssize_t *sz)
 			default:
 				DBG_printf("skipped\n");
 				break;
+			}
+			p += extlen;
+			n -= extlen;
+		} /* while have more extensions */
+
+#ifdef DEBUG_CLIENTHELLO_PARSER
+		if (n > 0) {
+			DBG_printf("unparsed next bytes %02x %02x %02x %02x\n",
+			           p[0], p[1], p[2], p[3]);
 		}
-		p += extlen;
-		n -= extlen;
+#endif /* DEBUG_CLIENTHELLO_PARSER */
+		DBG_printf("%zd bytes unparsed\n", n);
+
+		/* Valid ClientHello with or without server name */
+		DBG_printf("===> Match: rv 0, *clienthello set\n");
+		if (servername)
+			*servername = sn;
+		return 0;
+continue_search:
+	;
+	} while (search && n > 0);
+
+	/* No valid ClientHello messages found, not even a truncated one */
+	DBG_printf("===> No match: rv 1, *clienthello NULL\n");
+	*clienthello = NULL;
+	if (sn) {
+		free(sn);
+		sn = NULL;
 	}
-
-#ifdef DEBUG_SNI_PARSER
-	if (n > 0) {
-		DBG_printf("unparsed next bytes %02x %02x %02x %02x\n",
-		           p[0], p[1], p[2], p[3]);
-	}
-#endif /* DEBUG_SNI_PARSER */
-out:
-	DBG_printf("%zd bytes unparsed\n", n);
-	return servername;
-}
-#endif /* !OPENSSL_NO_TLSEXT */
-
-int
-ssl_tls_clienthello_identify(const unsigned char *buf, ssize_t *sz)
-{
-#ifdef DEBUG_SNI_PARSER
-#define DBG_printf(...) log_dbg_printf("SNI Parser: " __VA_ARGS__)
-#else /* !DEBUG_SNI_PARSER */
-#define DBG_printf(...) 
-#endif /* !DEBUG_SNI_PARSER */
-	const unsigned char *p = buf;
-	ssize_t n = *sz;
-
-	DBG_printf("buffer length %zd\n", n);
-
-	if (n < 1) {
-		*sz = -1;
-		goto out2;
-	}
-	DBG_printf("byte 0: %02x\n", *p);
-	/* first byte 0x80, third byte 0x01 is SSLv2 clientHello;
-	 * first byte 0x22, second byte 0x03 is SSLv3/TLSv1.x clientHello */
-	if (*p != 22) /* record type: handshake protocol */
-		goto out2;
-	p++; n--;
-
-	if (n < 2) {
-		*sz = -1;
-		goto out2;
-	}
-	DBG_printf("version: %02x %02x\n", p[0], p[1]);
-	if (p[0] != 3)
-		goto out2;
-	p += 2; n -= 2;
-
-	if (n < 2) {
-		*sz = -1;
-		goto out2;
-	}
-	DBG_printf("length: %02x %02x\n", p[0], p[1]);
-#ifdef DEBUG_SNI_PARSER
-	ssize_t recordlen = p[1] + (p[0] << 8);
-	DBG_printf("recordlen=%zd\n", recordlen);
-#endif /* DEBUG_SNI_PARSER */
-	p += 2; n -= 2;
-
-	if (n < 1) {
-		*sz = -1;
-		goto out2;
-	}
-	DBG_printf("message type: %i\n", *p);
-	if (*p != 1) /* message type: ClientHello */
-		goto out2;
-	p++; n--;
-
-	if (n < 3) {
-		*sz = -1;
-		goto out2;
-	}
-	DBG_printf("message len: %02x %02x %02x\n", p[0], p[1], p[2]);
-	ssize_t msglen = p[2] + (p[1] << 8) + (p[0] << 16);
-	DBG_printf("msglen=%zd\n", msglen);
-	if (msglen < 4)
-		goto out2;
-	p += 3; n -= 3;
-
-	if (n < msglen) {
-		*sz = -1;
-		goto out2;
-	}
-	n = msglen; /* only parse first message */
-
-	if (n < 2)
-		goto out2;
-	DBG_printf("clienthello version %02x %02x\n", p[0], p[1]);
-	if (p[0] != 3)
-		goto out2;
-	p += 2; n -= 2;
 	return 1;
-out2:
-	DBG_printf("%zd bytes unparsed\n", n);
-	return 0;
 }
 
 /* vim: set noet ft=c: */

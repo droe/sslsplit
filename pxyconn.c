@@ -1516,13 +1516,14 @@ pxy_conn_check_and_upgrade(pxy_conn_ctx_t *ctx)
 {
 	struct evbuffer *inbuf;
 	struct evbuffer_iovec vec_out[1];
+	const unsigned char *chello;
 	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Checking for a client hello\n");
 	}
 	/* peek the buffer */
 	inbuf = bufferevent_get_input(ctx->src.bev);
-	if(evbuffer_peek(inbuf, 1024, 0, vec_out, 1)) {
-		if(ssl_tls_clienthello_identify(vec_out->iov_base, &(vec_out->iov_len))) {
+	if (evbuffer_peek(inbuf, 1024, 0, vec_out, 1)) {
+		if (ssl_tls_clienthello_parse(vec_out[0].iov_base, vec_out[0].iov_len, 0, &chello, &ctx->sni) == 0) {
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Found a clienthello in midstream\n");
 			}
@@ -2208,10 +2209,12 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 	pxy_conn_ctx_t *ctx = arg;
 
 #ifndef OPENSSL_NO_TLSEXT
-	/* for SSL, peek clientHello and parse SNI from it */
+	/* for SSL, peek ClientHello and parse SNI from it */
 	if (ctx->spec->ssl && !ctx->passthrough /*&& ctx->ev*/) {
 		unsigned char buf[1024];
 		ssize_t n;
+		const unsigned char *chello;
+		int rv;
 
 		n = recv(fd, buf, sizeof(buf), MSG_PEEK);
 		if (n == -1) {
@@ -2228,15 +2231,23 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 			return;
 		}
 
-		ctx->sni = ssl_tls_clienthello_parse_sni(buf, &n);
+		rv = ssl_tls_clienthello_parse(buf, n, 0, &chello, &ctx->sni);
+		if ((rv == 1) && !chello) {
+			log_err_printf("Peeking did not yield a (truncated) "
+			               "ClientHello message, "
+			               "aborting connection\n");
+			evutil_closesocket(fd);
+			pxy_conn_ctx_free(ctx);
+			return;
+		}
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("SNI peek: [%s] [%s]\n",
 			               ctx->sni ? ctx->sni : "n/a",
-			               (!ctx->sni && (n == -1)) ?
+			               ((rv == 1) && chello) ?
 			               "incomplete" : "complete");
 		}
-		if (!ctx->sni && (n == -1) && (ctx->sni_peek_retries++ < 50)) {
-			/* ssl_tls_clienthello_parse_sni indicates that we
+		if ((rv == 1) && chello && (ctx->sni_peek_retries++ < 50)) {
+			/* ssl_tls_clienthello_parse indicates that we
 			 * should retry later when we have more data, and we
 			 * haven't reached the maximum retry count yet.
 			 * Reschedule this event as timeout-only event in
