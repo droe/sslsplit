@@ -102,6 +102,18 @@ ssl_openssl_version(void)
 	fprintf(stderr, "rtlinked against %s (%lx)\n",
 	                SSLeay_version(SSLEAY_VERSION),
 	                SSLeay());
+	if ((OPENSSL_VERSION_NUMBER ^ SSLeay()) & 0xfffff000L) {
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+		fprintf(stderr, "WARNING: OpenSSL version mismatch may "
+		                "lead to crashes or other problems!\n");
+		fprintf(stderr, "If there are multiple versions of "
+		                "OpenSSL available, make sure to use\n");
+		fprintf(stderr, "the same version of the library at "
+		                "runtime as well as for compiling against.\n");
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+	}
 #ifndef OPENSSL_NO_TLSEXT
 	fprintf(stderr, "TLS Server Name Indication (SNI) supported\n");
 #else /* OPENSSL_NO_TLSEXT */
