@@ -332,6 +332,7 @@ pxy_debug_crt(X509 *crt)
 	} else {
 		log_dbg_printf("Fingerprint: %s\n", fpr);
 	}
+	free(fpr);
 
 #ifdef DEBUG_CERTIFICATE
 	/* dump certificate */
