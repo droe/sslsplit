@@ -331,8 +331,8 @@ pxy_debug_crt(X509 *crt)
 		log_err_printf("Warning: Error generating X509 fingerprint\n");
 	} else {
 		log_dbg_printf("Fingerprint: %s\n", fpr);
+		free(fpr);
 	}
-	free(fpr);
 
 #ifdef DEBUG_CERTIFICATE
 	/* dump certificate */
