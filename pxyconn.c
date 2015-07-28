@@ -1528,7 +1528,7 @@ pxy_conn_check_and_upgrade(pxy_conn_ctx_t *ctx)
 				log_dbg_printf("Found a clienthello in midstream\n");
 			}
 			ctx->dst.ssl = pxy_dstssl_create(ctx);
-			if(!ctx->dst.ssl) {
+			if (!ctx->dst.ssl) {
 				log_err_printf("Error creating SSL for upgrade\n");
 				return 0;
 			}
