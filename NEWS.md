@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Fix build with OpenSSL versions that had SSLv3 support removed.
 -   Warn when an OpenSSL version mismatch is detected (issue #88).
 -   Added separate src/dst host and port format specifiers %S, %p, %D and %q
     to -F (pull req #74 by @AdamJacobMuller).
