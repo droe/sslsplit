@@ -36,10 +36,10 @@
 ### OpenSSL tweaking
 
 # Define to enable support for SSLv2.
-# Default since 0.4.9 is to disable SSLv2 entirely, since there are servers
-# that are not compatible with SSLv2 Client Hello messages.  If you build in
-# SSLv2 support, you can disable it at runtime using -R ssl2 to get the same
-# result as not building in SSLv2 support at all.
+# Default since 0.4.9 is to disable SSLv2 entirely even if OpenSSL supports it,
+# since there are servers that are not compatible with SSLv2 Client Hello
+# messages.  If you build in SSLv2 support, you can disable it at runtime using
+# -R ssl2 to get the same result as not building in SSLv2 support at all.
 #FEATURES+=	-DWITH_SSLV2
 
 # Define to make SSLsplit set a session id context in server mode.

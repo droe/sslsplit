@@ -80,31 +80,58 @@
 X509 * ssl_ssl_cert_get(SSL *);
 #endif /* OpenSSL 0.9.8y or 1.0.0k or 1.0.1e */
 
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
-#define SSL2_S "ssl2 "
-#else /* !(SSL_OP_NO_SSLv2 && WITH_SSLV2) */
-#define SSL2_S ""
-#endif /* !(SSL_OP_NO_SSLv2 && WITH_SSLV2) */
-#ifdef SSL_OP_NO_SSLv3
-#define SSL3_S "ssl3 "
-#else /* !SSL_OP_NO_SSLv3 */
-#define SSL3_S ""
-#endif /* !SSL_OP_NO_SSLv3 */
+/*
+ * SSL_OP_NO_* is used as an indication that OpenSSL is sufficiently recent
+ * to have the respective protocol implemented.
+ *
+ * OPENSSL_NO_SSL2 indicates the complete removal of SSL 2.0 support.
+ *
+ * OPENSSL_NO_SSL3 indicates that no SSL 3.0 connections will be made by
+ * default, but support is still present, unless OPENSSL_NO_SSL3_METHOD is
+ * also defined.
+ */
+#if defined(SSL_OP_NO_SSLv2) && !defined(OPENSSL_NO_SSL2) && \
+    defined(WITH_SSLV2)
+#define HAVE_SSLV2
+#endif /* SSL_OP_NO_SSLv2 && !OPENSSL_NO_SSL2 && WITH_SSLV2 */
+#if defined(SSL_OP_NO_SSLv3) && !defined(OPENSSL_NO_SSL3_METHOD)
+#define HAVE_SSLV3
+#endif /* SSL_OP_NO_SSLv2 && !OPENSSL_NO_SSL3_METHOD */
 #ifdef SSL_OP_NO_TLSv1
-#define TLS10_S "tls10 "
-#else /* !SSL_OP_NO_TLSv1 */
-#define TLS10_S ""
-#endif /* !SSL_OP_NO_TLSv1 */
+#define HAVE_TLSV10
+#endif /* SSL_OP_NO_TLSv1 */
 #ifdef SSL_OP_NO_TLSv1_1
-#define TLS11_S "tls11 "
-#else /* !SSL_OP_NO_TLSv1_1 */
-#define TLS11_S ""
-#endif /* !SSL_OP_NO_TLSv1_1 */
+#define HAVE_TLSV11
+#endif /* SSL_OP_NO_TLSv1_1 */
 #ifdef SSL_OP_NO_TLSv1_2
+#define HAVE_TLSV12
+#endif /* SSL_OP_NO_TLSv1_2 */
+
+#ifdef HAVE_SSLV2
+#define SSL2_S "ssl2 "
+#else /* !HAVE_SSLV2 */
+#define SSL2_S ""
+#endif /* !HAVE_SSLV2 */
+#ifdef HAVE_SSLV3
+#define SSL3_S "ssl3 "
+#else /* !HAVE_SSLV3 */
+#define SSL3_S ""
+#endif /* !HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
+#define TLS10_S "tls10 "
+#else /* !HAVE_TLSV10 */
+#define TLS10_S ""
+#endif /* !HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
+#define TLS11_S "tls11 "
+#else /* !HAVE_TLSV11 */
+#define TLS11_S ""
+#endif /* !HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
 #define TLS12_S "tls12 "
-#else /* !SSL_OP_NO_TLSv1_2 */
+#else /* !HAVE_TLSV12 */
 #define TLS12_S ""
-#endif /* !SSL_OP_NO_TLSv1_2 */
+#endif /* !HAVE_TLSV12 */
 #define SSL_PROTO_SUPPORT_S SSL2_S SSL3_S TLS10_S TLS11_S TLS12_S
 
 void ssl_openssl_version(void);

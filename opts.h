@@ -57,21 +57,21 @@ typedef struct opts {
 	unsigned int debug : 1;
 	unsigned int detach : 1;
 	unsigned int sslcomp : 1;
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+#ifdef HAVE_SSLV2
 	unsigned int no_ssl2 : 1;
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
+#endif /* HAVE_SSLV2 */
+#ifdef HAVE_SSLV3
 	unsigned int no_ssl3 : 1;
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
 	unsigned int no_tls10 : 1;
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
 	unsigned int no_tls11 : 1;
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
 	unsigned int no_tls12 : 1;
-#endif /* SSL_OP_NO_TLSv1_2 */
+#endif /* HAVE_TLSV12 */
 	unsigned int passthrough : 1;
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlog_isdir : 1;

@@ -543,11 +543,11 @@ out:
  * the refcount decrementing.  In other words, return 0 if we did not
  * keep a pointer to the object (which we never do here).
  */
-#ifdef WITH_SSLV2
+#ifdef HAVE_SSLV2
 #define MAYBE_UNUSED 
-#else /* !WITH_SSLV2 */
+#else /* !HAVE_SSLV2 */
 #define MAYBE_UNUSED UNUSED
-#endif /* !WITH_SSLV2 */
+#endif /* !HAVE_SSLV2 */
 static int
 pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 #undef MAYBE_UNUSED
@@ -560,7 +560,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		log_dbg_printf("(null)\n");
 	}
 #endif /* DEBUG_SESSION_CACHE */
-#ifdef WITH_SSLV2
+#ifdef HAVE_SSLV2
 	/* Session resumption seems to fail for SSLv2 with protocol
 	 * parsing errors, so we disable caching for SSLv2. */
 	if (SSL_version(ssl) == SSL2_VERSION) {
@@ -568,7 +568,7 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 		               "client.\n");
 		return 0;
 	}
-#endif /* WITH_SSLV2 */
+#endif /* HAVE_SSLV2 */
 	if (sess) {
 		cachemgr_ssess_set(sess);
 	}
@@ -622,16 +622,11 @@ pxy_ossl_sessget_cb(UNUSED SSL *ssl, unsigned char *id, int idlen, int *copy)
 }
 
 /*
- * Create and set up a new SSL_CTX instance for terminating SSL.
- * Set up all the necessary callbacks, the certificate, the cert chain and key.
+ * Set SSL_CTX options that are the same for incoming and outgoing SSL_CTX.
  */
-static SSL_CTX *
-pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
-                     EVP_PKEY *key)
+static void
+pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 {
-	SSL_CTX *sslctx = SSL_CTX_new(ctx->opts->sslmethod());
-	if (!sslctx)
-		return NULL;
 	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
 #ifdef SSL_OP_TLS_ROLLBACK_BUG
 	SSL_CTX_set_options(sslctx, SSL_OP_TLS_ROLLBACK_BUG);
@@ -645,16 +640,11 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 #ifdef SSL_OP_NO_TICKET
 	SSL_CTX_set_options(sslctx, SSL_OP_NO_TICKET);
 #endif /* SSL_OP_NO_TICKET */
-#ifdef SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
-	SSL_CTX_set_options(sslctx,
-	                    SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-#endif /* SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION */
-#ifdef SSL_OP_NO_COMPRESSION
-	if (!ctx->opts->sslcomp) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
-	}
-#endif /* SSL_OP_NO_COMPRESSION */
 
+	/*
+	 * Do not use HAVE_SSLV2 because we need to set SSL_OP_NO_SSLv2 if it
+	 * is available and WITH_SSLV2 was not used.
+	 */
 #ifdef SSL_OP_NO_SSLv2
 #ifdef WITH_SSLV2
 	if (ctx->opts->no_ssl2) {
@@ -664,28 +654,50 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 	}
 #endif /* WITH_SSLV2 */
 #endif /* !SSL_OP_NO_SSLv2 */
-#ifdef SSL_OP_NO_SSLv3
+#ifdef HAVE_SSLV3
 	if (ctx->opts->no_ssl3) {
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
 	}
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
 	if (ctx->opts->no_tls10) {
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
 	}
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
 	if (ctx->opts->no_tls11) {
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_1);
 	}
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
 	if (ctx->opts->no_tls12) {
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
 	}
-#endif /* SSL_OP_NO_TLSv1_2 */
+#endif /* HAVE_TLSV12 */
+
+#ifdef SSL_OP_NO_COMPRESSION
+	if (!ctx->opts->sslcomp) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
+	}
+#endif /* SSL_OP_NO_COMPRESSION */
 
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
+}
+
+/*
+ * Create and set up a new SSL_CTX instance for terminating SSL.
+ * Set up all the necessary callbacks, the certificate, the cert chain and key.
+ */
+static SSL_CTX *
+pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
+                     EVP_PKEY *key)
+{
+	SSL_CTX *sslctx = SSL_CTX_new(ctx->opts->sslmethod());
+	if (!sslctx)
+		return NULL;
+
+	pxy_sslctx_setoptions(sslctx, ctx);
+
 	SSL_CTX_sess_set_new_cb(sslctx, pxy_ossl_sessnew_cb);
 	SSL_CTX_sess_set_remove_cb(sslctx, pxy_ossl_sessremove_cb);
 	SSL_CTX_sess_set_get_cb(sslctx, pxy_ossl_sessget_cb);
@@ -1058,56 +1070,8 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		return NULL;
 	}
 
-	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
-#ifdef SSL_OP_TLS_ROLLBACK_BUG
-	SSL_CTX_set_options(sslctx, SSL_OP_TLS_ROLLBACK_BUG);
-#endif /* SSL_OP_TLS_ROLLBACK_BUG */
-#ifdef SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
-	SSL_CTX_set_options(sslctx, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
-#endif /* SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION */
-#ifdef SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
-	SSL_CTX_set_options(sslctx, SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS);
-#endif /* SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS */
-#ifdef SSL_OP_NO_TICKET
-	SSL_CTX_set_options(sslctx, SSL_OP_NO_TICKET);
-#endif /* SSL_OP_NO_TICKET */
-#ifdef SSL_OP_NO_COMPRESSION
-	if (!ctx->opts->sslcomp) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_COMPRESSION);
-	}
-#endif /* SSL_OP_NO_COMPRESSION */
+	pxy_sslctx_setoptions(sslctx, ctx);
 
-#ifdef SSL_OP_NO_SSLv2
-#ifdef WITH_SSLV2
-	if (ctx->opts->no_ssl2) {
-#endif /* WITH_SSLV2 */
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#ifdef WITH_SSLV2
-	}
-#endif /* WITH_SSLV2 */
-#endif /* !SSL_OP_NO_SSLv2 */
-#ifdef SSL_OP_NO_SSLv3
-	if (ctx->opts->no_ssl3) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
-	}
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
-	if (ctx->opts->no_tls10) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
-	}
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
-	if (ctx->opts->no_tls11) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_1);
-	}
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
-	if (ctx->opts->no_tls12) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
-	}
-#endif /* SSL_OP_NO_TLSv1_2 */
-
-	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 
 	ssl = SSL_new(sslctx);

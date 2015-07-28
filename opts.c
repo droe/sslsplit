@@ -143,31 +143,31 @@ opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
 		exit(EXIT_FAILURE);
 	}
 
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+#ifdef HAVE_SSLV2
 	if (!strcmp(optarg, "ssl2")) {
 		opts->sslmethod = SSLv2_method;
 	} else
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
+#endif /* HAVE_SSLV2 */
+#ifdef HAVE_SSLV3
 	if (!strcmp(optarg, "ssl3")) {
 		opts->sslmethod = SSLv3_method;
 	} else
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
 	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
 		opts->sslmethod = TLSv1_method;
 	} else
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
 	if (!strcmp(optarg, "tls11")) {
 		opts->sslmethod = TLSv1_1_method;
 	} else
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
 	if (!strcmp(optarg, "tls12")) {
 		opts->sslmethod = TLSv1_2_method;
 	} else
-#endif /* SSL_OP_NO_TLSv1_2 */
+#endif /* HAVE_TLSV12 */
 	{
 		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
 		                argv0, optarg);
@@ -182,31 +182,31 @@ opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
 void
 opts_proto_disable(opts_t *opts, const char *optarg, const char *argv0)
 {
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+#ifdef HAVE_SSLV2
 	if (!strcmp(optarg, "ssl2")) {
 		opts->no_ssl2 = 1;
 	} else
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
+#endif /* HAVE_SSLV2 */
+#ifdef HAVE_SSLV3
 	if (!strcmp(optarg, "ssl3")) {
 		opts->no_ssl3 = 1;
 	} else
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
 	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
 		opts->no_tls10 = 1;
 	} else
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
 	if (!strcmp(optarg, "tls11")) {
 		opts->no_tls11 = 1;
 	} else
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
 	if (!strcmp(optarg, "tls12")) {
 		opts->no_tls12 = 1;
 	} else
-#endif /* SSL_OP_NO_TLSv1_2 */
+#endif /* HAVE_TLSV12 */
 	{
 		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
 		                argv0, optarg);
@@ -221,41 +221,41 @@ void
 opts_proto_dbg_dump(opts_t *opts)
 {
 	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+#ifdef HAVE_SSLV2
 	               (opts->sslmethod == SSLv2_method) ? "nossl2" :
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
+#endif /* HAVE_SSLV2 */
+#ifdef HAVE_SSLV3
 	               (opts->sslmethod == SSLv3_method) ? "ssl3" :
-#endif /* SSL_OP_NO_SSLv3 */
-#ifdef SSL_OP_NO_TLSv1
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
 	               (opts->sslmethod == TLSv1_method) ? "tls10" :
-#endif /* SSL_OP_NO_TLSv1 */
-#ifdef SSL_OP_NO_TLSv1_1
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
 	               (opts->sslmethod == TLSv1_1_method) ? "tls11" :
-#endif /* SSL_OP_NO_TLSv1_1 */
-#ifdef SSL_OP_NO_TLSv1_2
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
 	               (opts->sslmethod == TLSv1_2_method) ? "tls12" :
-#endif /* SSL_OP_NO_TLSv1_2 */
+#endif /* HAVE_TLSV12 */
 	               "negotiate",
-#if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
+#ifdef HAVE_SSLV2
 	               opts->no_ssl2 ? " -ssl2" :
-#endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
+#endif /* HAVE_SSLV2 */
 	               "",
-#ifdef SSL_OP_NO_SSLv3
+#ifdef HAVE_SSLV3
 	               opts->no_ssl3 ? " -ssl3" :
-#endif /* SSL_OP_NO_SSLv3 */
+#endif /* HAVE_SSLV3 */
 	               "",
-#ifdef SSL_OP_NO_TLSv1
+#ifdef HAVE_TLSV10
 	               opts->no_tls10 ? " -tls10" :
-#endif /* SSL_OP_NO_TLSv1 */
+#endif /* HAVE_TLSV10 */
 	               "",
-#ifdef SSL_OP_NO_TLSv1_1
+#ifdef HAVE_TLSV11
 	               opts->no_tls11 ? " -tls11" :
-#endif /* SSL_OP_NO_TLSv1_1 */
+#endif /* HAVE_TLSV11 */
 	               "",
-#ifdef SSL_OP_NO_TLSv1_2
+#ifdef HAVE_TLSV12
 	               opts->no_tls12 ? " -tls12" :
-#endif /* SSL_OP_NO_TLSv1_2 */
+#endif /* HAVE_TLSV12 */
 	               "");
 }
 
