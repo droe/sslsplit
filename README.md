@@ -61,7 +61,8 @@ Support for local process information (`-i`) is currently available on Mac OS X
 and FreeBSD.
 
 SSL/TLS features and compatibility greatly depend on the version of OpenSSL
-linked against; for optimal results, use a recent release.
+linked against; for optimal results, use a recent release of OpenSSL proper.
+OpenSSL forks like LibreSSL and BoringSSL may or may not work.
 
 
 ## Installation

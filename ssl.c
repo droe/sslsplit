@@ -114,6 +114,14 @@ ssl_openssl_version(void)
 		fprintf(stderr, "---------------------------------------"
 		                "---------------------------------------\n");
 	}
+#ifdef LIBRESSL_VERSION_NUMBER
+	fprintf(stderr, "LibreSSL detected: %s (%lx)\n",
+	                LIBRESSL_VERSION_TEXT,
+	                (long unsigned int)LIBRESSL_VERSION_NUMBER);
+#endif /* LIBRESSL_VERSION_NUMBER */
+#ifdef OPENSSL_IS_BORINGSSL
+	fprintf(stderr, "BoringSSL detected\n")
+#endif /* OPENSSL_IS_BORINGSSL */
 #ifndef OPENSSL_NO_TLSEXT
 	fprintf(stderr, "TLS Server Name Indication (SNI) supported\n");
 #else /* OPENSSL_NO_TLSEXT */
