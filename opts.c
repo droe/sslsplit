@@ -132,6 +132,23 @@ opts_has_ssl_spec(opts_t *opts)
 }
 
 /*
+ * Return 1 if opts_t contains a proxyspec with dns, 0 otherwise.
+ */
+int
+opts_has_dns_spec(opts_t *opts)
+{
+	proxyspec_t *p = opts->spec;
+
+	while (p) {
+		if (p->dns)
+			return 1;
+		p = p->next;
+	}
+
+	return 0;
+}
+
+/*
  * Parse SSL proto string in optarg and look up the corresponding SSL method.
  * Calls exit() on failure.
  */
@@ -398,6 +415,7 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 					                **argv);
 					exit(EXIT_FAILURE);
 				}
+				spec->dns = 1;
 				state = 0;
 				break;
 		}

@@ -39,6 +39,7 @@
 typedef struct proxyspec {
 	unsigned int ssl : 1;
 	unsigned int http : 1;
+	unsigned int dns : 1;		/* set if spec needs DNS lookups */
 	struct sockaddr_storage listen_addr;
 	socklen_t listen_addrlen;
 	/* connect_addr and connect_addrlen are set: static mode;
@@ -107,6 +108,7 @@ typedef struct opts {
 opts_t *opts_new(void) MALLOC;
 void opts_free(opts_t *) NONNULL(1);
 int opts_has_ssl_spec(opts_t *) NONNULL(1) WUNRES;
+int opts_has_dns_spec(opts_t *) NONNULL(1) WUNRES;
 void opts_proto_force(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_proto_disable(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_proto_dbg_dump(opts_t *) NONNULL(1);

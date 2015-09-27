@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Only initialize DNS subsystems when DNS lookups are actually needed by the
+    loaded proxy specifications (related to issue #104).
 -   Fix build with LibreSSL that lacks recent OpenSSL API additions.
 -   Fix build with OpenSSL versions that had SSLv3 support removed.
 -   Warn when an OpenSSL version mismatch is detected (issue #88).
