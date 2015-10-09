@@ -5,8 +5,8 @@
 # This script reads the log from standard input and parses it.
 # Standard input can point to a file or a named pipe.
 
-# Copyright (c) 2015, Maciej Kotowicz <mak@lokalhost.pl>
-# Copyright (c) 2015, Daniel Roethlisberger <daniel@roe.ch>
+# Copyright (C) 2015, Maciej Kotowicz <mak@lokalhost.pl>
+# Copyright (C) 2015, Daniel Roethlisberger <daniel@roe.ch>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

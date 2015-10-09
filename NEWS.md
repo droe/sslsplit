@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Add contributed -L log parsing scripts to extra/, including conversion to
+    PCAP using emulated IP and TCP headers (contributed by @mak, issue #27).
 -   Only initialize DNS subsystems when DNS lookups are actually needed by the
     loaded proxy specifications (related to issue #104).
 -   Fix build with LibreSSL that lacks recent OpenSSL API additions.

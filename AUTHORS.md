@@ -13,6 +13,7 @@ patches or pull requests, in chronological order of their first contribution:
 -   Alexander Neumann ([fd0](https://github.com/fd0))
 -   Adam Jacob Muller ([AdamJacobMuller](https://github.com/AdamJacobMuller))
 -   Richard Poole ([RichardPoole42](https://github.com/RichardPoole42))
+-   Maciej Kotowicz ([mak](https://github.com/mak))
 
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.
