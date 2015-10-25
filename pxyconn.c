@@ -1664,15 +1664,17 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 	}
 #endif /* DEBUG_PROXY */
 
-	struct evbuffer *outbuf = bufferevent_get_output(bev);
-	if (evbuffer_get_length(outbuf) > 0) {
+	if (!(bufferevent_get_enabled(other->bev) & EV_READ)) {
 		/* data source temporarily disabled;
 		 * re-enable and reset watermark to 0. */
 		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
 		if (!other->closed) {
 			bufferevent_enable(other->bev, EV_READ);
 		}
-	} else if (other->closed) {
+	}
+
+	struct evbuffer *outbuf = bufferevent_get_output(bev);
+	if (evbuffer_get_length(outbuf) == 0 && other->closed) {
 		/* finished writing and other end is closed;
 		 * close this end too and clean up memory */
 		bufferevent_free_and_close_fd(bev, ctx);

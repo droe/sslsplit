@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Fix EV_READ event re-enable bug that could lead to stalled connections
+    after throttling one direction (issue #109).
 -   Add contributed -L log parsing scripts to extra/, including conversion to
     PCAP using emulated IP and TCP headers (contributed by @mak, issue #27).
 -   Only initialize DNS subsystems when DNS lookups are actually needed by the
