@@ -1664,7 +1664,7 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 	}
 #endif /* DEBUG_PROXY */
 
-	if (!(bufferevent_get_enabled(other->bev) & EV_READ)) {
+	if (other->bev && !(bufferevent_get_enabled(other->bev) & EV_READ)) {
 		/* data source temporarily disabled;
 		 * re-enable and reset watermark to 0. */
 		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
