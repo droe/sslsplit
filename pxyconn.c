@@ -1452,6 +1452,7 @@ deny:
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
 	}
 	bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
+	ctx->dst.bev = NULL;
 	ctx->dst.closed = 1;
 	evbuffer_add_printf(outbuf, ocspresp);
 	ctx->ocsp_denied = 1;
@@ -1477,9 +1478,11 @@ pxy_conn_terminate_free(pxy_conn_ctx_t *ctx)
 	               ctx->enomem ? " (out of memory)" : "");
 	if (ctx->dst.bev && !ctx->dst.closed) {
 		bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
+		ctx->dst.bev = NULL;
 	}
 	if (ctx->src.bev && !ctx->src.closed) {
 		bufferevent_free_and_close_fd(ctx->src.bev, ctx);
+		ctx->src.bev = NULL;
 	}
 	pxy_conn_ctx_free(ctx);
 }
@@ -1664,21 +1667,22 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 	}
 #endif /* DEBUG_PROXY */
 
+	if (other->closed) {
+		struct evbuffer *outbuf = bufferevent_get_output(bev);
+		if (evbuffer_get_length(outbuf) == 0) {
+			/* finished writing and other end is closed;
+			 * close this end too and clean up memory */
+			bufferevent_free_and_close_fd(bev, ctx);
+			pxy_conn_ctx_free(ctx);
+		}
+		return;
+	}
+
 	if (other->bev && !(bufferevent_get_enabled(other->bev) & EV_READ)) {
 		/* data source temporarily disabled;
 		 * re-enable and reset watermark to 0. */
 		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
-		if (!other->closed) {
-			bufferevent_enable(other->bev, EV_READ);
-		}
-	}
-
-	struct evbuffer *outbuf = bufferevent_get_output(bev);
-	if (evbuffer_get_length(outbuf) == 0 && other->closed) {
-		/* finished writing and other end is closed;
-		 * close this end too and clean up memory */
-		bufferevent_free_and_close_fd(bev, ctx);
-		pxy_conn_ctx_free(ctx);
+		bufferevent_enable(other->bev, EV_READ);
 	}
 }
 
@@ -1961,6 +1965,7 @@ connected:
 			outbuf = bufferevent_get_output(other->bev);
 			if (evbuffer_get_length(outbuf) == 0) {
 				bufferevent_free_and_close_fd(other->bev, ctx);
+				other->bev = NULL;
 				other->closed = 1;
 			}
 		}
@@ -1982,6 +1987,7 @@ connected:
 				if (evbuffer_get_length(outbuf) == 0) {
 					bufferevent_free_and_close_fd(
 							other->bev, ctx);
+					other->bev = NULL;
 					other->closed = 1;
 				}
 			}
@@ -2005,6 +2011,7 @@ leave:
 
 	this->closed = 1;
 	bufferevent_free_and_close_fd(bev, ctx);
+	this->bev = NULL;
 	if (other->closed) {
 		pxy_conn_ctx_free(ctx);
 	}
