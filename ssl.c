@@ -822,7 +822,7 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 	switch (EVP_PKEY_type(cakey->type)) {
 #ifndef OPENSSL_NO_RSA
 		case EVP_PKEY_RSA:
-			md = EVP_sha1();
+			md = EVP_sha256();
 			break;
 #endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA

@@ -61,9 +61,6 @@ typedef struct opts {
 #if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
 	unsigned int no_ssl2 : 1;
 #endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
-	unsigned int no_ssl3 : 1;
-#endif /* SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 	unsigned int no_tls10 : 1;
 #endif /* SSL_OP_NO_TLSv1 */

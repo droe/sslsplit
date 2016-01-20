@@ -641,11 +641,6 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 	}
 #endif /* WITH_SSLV2 */
 #endif /* !SSL_OP_NO_SSLv2 */
-#ifdef SSL_OP_NO_SSLv3
-	if (ctx->opts->no_ssl3) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
-	}
-#endif /* SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 	if (ctx->opts->no_tls10) {
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);
@@ -997,11 +992,6 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	}
 #endif /* WITH_SSLV2 */
 #endif /* !SSL_OP_NO_SSLv2 */
-#ifdef SSL_OP_NO_SSLv3
-	if (ctx->opts->no_ssl3) {
-		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv3);
-	}
-#endif /* SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 	if (ctx->opts->no_tls10) {
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1);

@@ -86,11 +86,6 @@ X509 * ssl_ssl_cert_get(SSL *);
 #else /* !(SSL_OP_NO_SSLv2 && WITH_SSLV2) */
 #define SSL2_S ""
 #endif /* !(SSL_OP_NO_SSLv2 && WITH_SSLV2) */
-#ifdef SSL_OP_NO_SSLv3
-#define SSL3_S "ssl3 "
-#else /* !SSL_OP_NO_SSLv3 */
-#define SSL3_S ""
-#endif /* !SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 #define TLS10_S "tls10 "
 #else /* !SSL_OP_NO_TLSv1 */
@@ -106,7 +101,7 @@ X509 * ssl_ssl_cert_get(SSL *);
 #else /* !SSL_OP_NO_TLSv1_2 */
 #define TLS12_S ""
 #endif /* !SSL_OP_NO_TLSv1_2 */
-#define SSL_PROTO_SUPPORT_S SSL2_S SSL3_S TLS10_S TLS11_S TLS12_S
+#define SSL_PROTO_SUPPORT_S TLS10_S TLS11_S TLS12_S
 
 void ssl_openssl_version(void);
 int ssl_init(void) WUNRES;
