@@ -143,11 +143,6 @@ opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
 		opts->sslmethod = SSLv2_method;
 	} else
 #endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
-	if (!strcmp(optarg, "ssl3")) {
-		opts->sslmethod = SSLv3_method;
-	} else
-#endif /* SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
 		opts->sslmethod = TLSv1_method;
@@ -182,11 +177,6 @@ opts_proto_disable(opts_t *opts, const char *optarg, const char *argv0)
 		opts->no_ssl2 = 1;
 	} else
 #endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
-	if (!strcmp(optarg, "ssl3")) {
-		opts->no_ssl3 = 1;
-	} else
-#endif /* SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
 		opts->no_tls10 = 1;
@@ -219,9 +209,6 @@ opts_proto_dbg_dump(opts_t *opts)
 #if defined(SSL_OP_NO_SSLv2) && defined(WITH_SSLV2)
 	               (opts->sslmethod == SSLv2_method) ? "nossl2" :
 #endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
-#ifdef SSL_OP_NO_SSLv3
-	               (opts->sslmethod == SSLv3_method) ? "ssl3" :
-#endif /* SSL_OP_NO_SSLv3 */
 #ifdef SSL_OP_NO_TLSv1
 	               (opts->sslmethod == TLSv1_method) ? "tls10" :
 #endif /* SSL_OP_NO_TLSv1 */
@@ -236,9 +223,6 @@ opts_proto_dbg_dump(opts_t *opts)
 	               opts->no_ssl2 ? " -ssl2" :
 #endif /* SSL_OP_NO_SSLv2 && WITH_SSLV2 */
 	               "",
-#ifdef SSL_OP_NO_SSLv3
-	               opts->no_ssl3 ? " -ssl3" :
-#endif /* SSL_OP_NO_SSLv3 */
 	               "",
 #ifdef SSL_OP_NO_TLSv1
 	               opts->no_tls10 ? " -tls10" :
