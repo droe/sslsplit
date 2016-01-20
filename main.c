@@ -638,7 +638,7 @@ main(int argc, char *argv[])
 #endif /* __APPLE__ */
 	}
 	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
-		opts->key = ssl_key_genrsa(1024);
+		opts->key = ssl_key_genrsa(2048);
 		if (!opts->key) {
 			fprintf(stderr, "%s: error generating RSA key:\n",
 			                argv0);

@@ -31,6 +31,7 @@
 #include "logger.h"
 #include "sys.h"
 #include "attrib.h"
+#include "replace.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -282,6 +283,7 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 	/* set up buffer to hold our generated file path */
 	size_t path_buflen = PATH_BUF_INC;
 	char *path_buf = malloc(path_buflen);
+	char *cleaned_addr;
 	if (path_buf == NULL) {
 		log_err_printf("failed to allocate path buffer\n");
 		return NULL;
@@ -316,12 +318,14 @@ log_content_format_pathspec(const char *logspec, char *srcaddr, char *dstaddr,
 				elem_len = 1;
 				break;
 			case 'd':
-				elem = dstaddr;
-				elem_len = strlen(dstaddr);
+				cleaned_addr = replace_str2(dstaddr, ":", ".");
+				elem = cleaned_addr;
+				elem_len = strlen(cleaned_addr);
 				break;
 			case 's':
-				elem = srcaddr;
-				elem_len = strlen(srcaddr);
+				cleaned_addr = replace_str2(srcaddr, ":", ".");
+                                elem = cleaned_addr;
+				elem_len = strlen(cleaned_addr);
 				break;
 			case 'x':
 				if (exec_path) {
