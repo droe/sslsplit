@@ -910,14 +910,12 @@ main(int argc, char *argv[])
 	if (opts->pidfile)
 		close(pidfd);
 
-#if 0
 	/* Initialize proxy before dropping privs */
 	proxy_ctx_t *proxy = proxy_new(opts, clisock[0]);
 	if (!proxy) {
 		log_err_printf("Failed to initialize proxy.\n");
 		exit(EXIT_FAILURE);
 	}
-#endif
 
 	/* Drop privs, chroot */
 	if (sys_privdrop(opts->dropuser, opts->dropgroup,
@@ -944,18 +942,8 @@ main(int argc, char *argv[])
 	}
 	rv = EXIT_SUCCESS;
 
-#if 1
-	proxy_ctx_t *proxy = proxy_new(opts, clisock[0]);
-	if (!proxy) {
-		log_err_printf("Failed to initialize proxy.\n");
-		goto out_proxy_new_failed;
-	}
-#endif
 	proxy_run(proxy);
 	proxy_free(proxy);
-#if 1
-out_proxy_new_failed:
-#endif
 	nat_fini();
 out_nat_failed:
 	cachemgr_fini();

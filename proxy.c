@@ -372,11 +372,9 @@ leave0:
 void
 proxy_run(proxy_ctx_t *ctx)
 {
-#if 0
 	if (ctx->opts->detach) {
 		event_reinit(ctx->evbase);
 	}
-#endif
 #ifndef PURIFY
 	if (OPTS_DEBUG(ctx->opts)) {
 		event_base_dump_events(ctx->evbase, stderr);
