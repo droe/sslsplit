@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Fix SSL sessions to actually time out (patch by @eunsoopark, issue #115).
 -   Add XNU headers for OS X 10.11 El Capitan (issue #116).
 -   Fix EV_READ event re-enable bug that could lead to stalled connections
     after throttling one direction (issue #109).

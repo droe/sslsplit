@@ -1666,9 +1666,9 @@ ssl_session_is_valid(SSL_SESSION *sess)
 	if ((curtime < 0) || ((time_t)curtime != curtimet))
 		return 0;
 	timeout = SSL_SESSION_get_timeout(sess);
-	if (curtime > LONG_MAX - timeout)
+	if (curtime < timeout)
 		return 0;
-	return (SSL_SESSION_get_time(sess) < curtime + timeout);
+	return (SSL_SESSION_get_time(sess) > curtime - timeout);
 }
 
 /*
