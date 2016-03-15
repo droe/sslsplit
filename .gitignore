@@ -2,6 +2,7 @@
 /*.dSYM
 /sslsplit
 /sslsplit.test
+/extra/*.pyc
 /extra/pki/dh*.param
 /extra/pki/dsa.pem
 /extra/pki/dsa.crt

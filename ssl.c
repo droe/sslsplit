@@ -102,6 +102,26 @@ ssl_openssl_version(void)
 	fprintf(stderr, "rtlinked against %s (%lx)\n",
 	                SSLeay_version(SSLEAY_VERSION),
 	                SSLeay());
+	if ((OPENSSL_VERSION_NUMBER ^ SSLeay()) & 0xfffff000L) {
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+		fprintf(stderr, "WARNING: OpenSSL version mismatch may "
+		                "lead to crashes or other problems!\n");
+		fprintf(stderr, "If there are multiple versions of "
+		                "OpenSSL available, make sure to use\n");
+		fprintf(stderr, "the same version of the library at "
+		                "runtime as well as for compiling against.\n");
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+	}
+#ifdef LIBRESSL_VERSION_NUMBER
+	fprintf(stderr, "LibreSSL detected: %s (%lx)\n",
+	                LIBRESSL_VERSION_TEXT,
+	                (long unsigned int)LIBRESSL_VERSION_NUMBER);
+#endif /* LIBRESSL_VERSION_NUMBER */
+#ifdef OPENSSL_IS_BORINGSSL
+	fprintf(stderr, "BoringSSL detected\n")
+#endif /* OPENSSL_IS_BORINGSSL */
 #ifndef OPENSSL_NO_TLSEXT
 	fprintf(stderr, "OpenSSL has support for TLS extensions\n"
 	                "TLS Server Name Indication (SNI) supported\n");
@@ -948,7 +968,7 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 			goto leave3;
 	}
 
-#if (OPENSSL_VERSION_NUMBER < 0x1000200fL)
+#if (OPENSSL_VERSION_NUMBER < 0x1000200fL) || defined(LIBRESSL_VERSION_NUMBER)
 	tmpchain = tmpctx->extra_certs;
 #else /* OpenSSL >= 1.0.2 */
 	rv = SSL_CTX_get0_chain_certs(tmpctx, &tmpchain);
@@ -1648,9 +1668,9 @@ ssl_session_is_valid(SSL_SESSION *sess)
 	if ((curtime < 0) || ((time_t)curtime != curtimet))
 		return 0;
 	timeout = SSL_SESSION_get_timeout(sess);
-	if (curtime > LONG_MAX - timeout)
+	if (curtime < timeout)
 		return 0;
-	return (SSL_SESSION_get_time(sess) < curtime + timeout);
+	return (SSL_SESSION_get_time(sess) > curtime - timeout);
 }
 
 /*

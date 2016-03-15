@@ -667,6 +667,14 @@ END_TEST
 
 START_TEST(ssl_features_01)
 {
+	long vdiff = ((OPENSSL_VERSION_NUMBER ^ SSLeay()) & 0xfffff000L);
+
+	fail_unless(!vdiff, "OpenSSL version mismatch at runtime");
+}
+END_TEST
+
+START_TEST(ssl_features_02)
+{
 	int have_threads = 0;
 #ifdef OPENSSL_THREADS
 	have_threads = 1;
@@ -759,6 +767,7 @@ ssl_suite(void)
 
 	tc = tcase_create("ssl_features");
 	tcase_add_test(tc, ssl_features_01);
+	tcase_add_test(tc, ssl_features_02);
 	suite_add_tcase(s, tc);
 
 	return s;

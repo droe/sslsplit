@@ -52,6 +52,7 @@ typedef struct pxy_thr_ctx {
 
 struct pxy_thrmgr_ctx {
 	int num_thr;
+	opts_t *opts;
 	pxy_thr_ctx_t **thr;
 	pthread_mutex_t mutex;
 };
@@ -94,7 +95,7 @@ pxy_thrmgr_thr(void *arg)
  * This gets called before forking to background.
  */
 pxy_thrmgr_ctx_t *
-pxy_thrmgr_new(UNUSED opts_t *opts)
+pxy_thrmgr_new(opts_t *opts)
 {
 	pxy_thrmgr_ctx_t *ctx;
 
@@ -102,6 +103,7 @@ pxy_thrmgr_new(UNUSED opts_t *opts)
 		return NULL;
 	memset(ctx, 0, sizeof(pxy_thrmgr_ctx_t));
 
+	ctx->opts = opts;
 	ctx->num_thr = 2 * sys_get_cpu_cores();
 	return ctx;
 }
@@ -115,10 +117,12 @@ pxy_thrmgr_new(UNUSED opts_t *opts)
 int
 pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 {
-	int idx = -1;
+	int idx = -1, dns = 0;
 
 	if (!ctx)
 		return -1;
+
+	dns = opts_has_dns_spec(ctx->opts);
 
 	pthread_mutex_init(&ctx->mutex, NULL);
 
@@ -139,11 +143,15 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 			log_dbg_printf("Failed to create evbase %d\n", idx);
 			goto leave;
 		}
-		ctx->thr[idx]->dnsbase = evdns_base_new(
-		                         ctx->thr[idx]->evbase, 1);
-		if (!ctx->thr[idx]->dnsbase) {
-			log_dbg_printf("Failed to create dnsbase %d\n", idx);
-			goto leave;
+		if (dns) {
+			/* only create dns base if we actually need it later */
+			ctx->thr[idx]->dnsbase = evdns_base_new(
+			                         ctx->thr[idx]->evbase, 1);
+			if (!ctx->thr[idx]->dnsbase) {
+				log_dbg_printf("Failed to create dnsbase %d\n",
+				               idx);
+				goto leave;
+			}
 		}
 		ctx->thr[idx]->load = 0;
 		ctx->thr[idx]->running = 0;

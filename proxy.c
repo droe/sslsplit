@@ -279,26 +279,29 @@ proxy_new(opts_t *opts, int clisock)
 		goto leave1;
 	}
 
-	/* create a dnsbase here purely for being able to test parsing
-	 * resolv.conf while we can still alert the user about it. */
-	dnsbase = evdns_base_new(ctx->evbase, 0);
-	if (!dnsbase) {
-		log_err_printf("Error creating dns event base\n");
-		goto leave1b;
-	}
-	rc = evdns_base_resolv_conf_parse(dnsbase, DNS_OPTIONS_ALL,
-	                                  "/etc/resolv.conf");
-	evdns_base_free(dnsbase, 0);
-	if (rc != 0) {
-		log_err_printf("evdns cannot parse resolv.conf: %s (%d)\n",
-		               rc == 1 ? "failed to open file" :
-		               rc == 2 ? "failed to stat file" :
-		               rc == 3 ? "file too large" :
-		               rc == 4 ? "out of memory" :
-		               rc == 5 ? "short read from file" :
-		               rc == 6 ? "no nameservers listed in file" :
-		               "unknown error", rc);
-		goto leave1b;
+	if (opts_has_dns_spec(opts)) {
+		/* create a dnsbase here purely for being able to test parsing
+		 * resolv.conf while we can still alert the user about it. */
+		dnsbase = evdns_base_new(ctx->evbase, 0);
+		if (!dnsbase) {
+			log_err_printf("Error creating dns event base\n");
+			goto leave1b;
+		}
+		rc = evdns_base_resolv_conf_parse(dnsbase, DNS_OPTIONS_ALL,
+		                                  "/etc/resolv.conf");
+		evdns_base_free(dnsbase, 0);
+		if (rc != 0) {
+			log_err_printf("evdns cannot parse resolv.conf: "
+			               "%s (%d)\n",
+			               rc == 1 ? "failed to open file" :
+			               rc == 2 ? "failed to stat file" :
+			               rc == 3 ? "file too large" :
+			               rc == 4 ? "out of memory" :
+			               rc == 5 ? "short read from file" :
+			               rc == 6 ? "no nameservers in file" :
+			               "unknown error", rc);
+			goto leave1b;
+		}
 	}
 
 	if (OPTS_DEBUG(opts)) {
@@ -369,11 +372,9 @@ leave0:
 void
 proxy_run(proxy_ctx_t *ctx)
 {
-#if 0
 	if (ctx->opts->detach) {
 		event_reinit(ctx->evbase);
 	}
-#endif
 #ifndef PURIFY
 	if (OPTS_DEBUG(ctx->opts)) {
 		event_base_dump_events(ctx->evbase, stderr);

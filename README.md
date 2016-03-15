@@ -6,25 +6,38 @@ http://www.roe.ch/SSLsplit
 ## Overview
 
 SSLsplit is a tool for man-in-the-middle attacks against SSL/TLS encrypted
-network connections.  Connections are transparently intercepted through a
-network address translation engine and redirected to SSLsplit.  SSLsplit
-terminates SSL/TLS and initiates a new SSL/TLS connection to the original
-destination address, while logging all data transmitted.  SSLsplit is intended
-to be useful for network forensics and penetration testing.
+network connections.  It is intended to be useful for network forensics,
+application security analysis and penetration testing.
+
+SSLsplit is designed to transparently terminate connections that are redirected
+to it using a network address translation engine.  SSLsplit then terminates
+SSL/TLS and initiates a new SSL/TLS connection to the original destination
+address, while logging all data transmitted.  Besides NAT based operation,
+SSLsplit also supports static destinations and using the server name indicated
+by SNI as upstream destination.  SSLsplit is purely a transparent proxy and
+cannot act as a HTTP or SOCKS proxy configured in a browser.
 
 SSLsplit supports plain TCP, plain SSL, HTTP and HTTPS connections over both
-IPv4 and IPv6.  For SSL and HTTPS connections, SSLsplit generates and signs
-forged X509v3 certificates on-the-fly, based on the original server certificate
-subject DN and subjectAltName extension.  SSLsplit fully supports Server Name
-Indication (SNI) and is able to work with RSA, DSA and ECDSA keys and DHE and
-ECDHE cipher suites.  Depending on the version of OpenSSL, SSLsplit supports
-SSL 3.0, TLS 1.0, TLS 1.1 and TLS 1.2, and optionally SSL 2.0 as well.
-SSLsplit can also use existing certificates of which the private key is
-available, instead of generating forged ones.  SSLsplit supports NULL-prefix CN
-certificates and can deny OCSP requests in a generic way.  For HTTP and HTTPS
-connections, SSLsplit removes response headers for HPKP in order to prevent
-public key pinning, for HSTS to allow the user to accept untrusted
-certificates, and Alternate Protocols to prevent switching to QUIC/SPDY.
+IPv4 and IPv6.  SSLsplit fully supports Server Name Indication (SNI) and is
+able to work with RSA, DSA and ECDSA keys and DHE and ECDHE cipher suites.
+Depending on the version of OpenSSL built against, SSLsplit supports SSL 3.0,
+TLS 1.0, TLS 1.1 and TLS 1.2, and optionally SSL 2.0 as well.
+
+For SSL and HTTPS connections, SSLsplit generates and signs forged X509v3
+certificates on-the-fly, mimicking the original server certificate's subject
+DN, subjectAltName extension and other  characteristics.  SSLsplit has the
+ability to use existing certificates of which the private key is available,
+instead of generating forged ones.  SSLsplit supports NULL-prefix CN
+certificates but otherwise does not implement exploits against specific
+certificate verification vulnerabilities in SSL/TLS stacks.
+
+SSLsplit implements a number of defences against mechanisms which would
+normally prevent MitM attacks or make them more difficult.  SSLsplit can deny
+OCSP requests in a generic way.  For HTTP and HTTPS connections, SSLsplit
+removes response headers for HPKP in order to prevent public key pinning, for
+HSTS to allow the user to accept untrusted certificates, and Alternate
+Protocols to prevent switching to QUIC/SPDY.  HTTP compression, encodings and
+keep-alive are disabled to make the logs more readable.
 
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.
@@ -34,6 +47,7 @@ the various NAT engines.
 
 SSLsplit depends on the OpenSSL and libevent 2.x libraries.
 The build depends on GNU make and a POSIX.2 environment in `PATH`.
+If available, pkg-config is used to locate and configure the dependencies.
 The optional unit tests depend on the check library.
 
 SSLsplit currently supports the following operating systems and NAT mechanisms:
@@ -47,10 +61,13 @@ Support for local process information (`-i`) is currently available on Mac OS X
 and FreeBSD.
 
 SSL/TLS features and compatibility greatly depend on the version of OpenSSL
-linked against; for optimal results, use the latest 1.0.1 series release.
+linked against; for optimal results, use a recent release of OpenSSL proper.
+OpenSSL forks like LibreSSL and BoringSSL may or may not work.
 
 
 ## Installation
+
+With OpenSSL, libevent 2.x, pkg-config and check available, run:
 
     make
     make test       # optional unit tests

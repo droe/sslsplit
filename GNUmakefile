@@ -36,10 +36,10 @@
 ### OpenSSL tweaking
 
 # Define to enable support for SSLv2.
-# Default since 0.4.9 is to disable SSLv2 entirely, since there are servers
-# that are not compatible with SSLv2 Client Hello messages.  If you build in
-# SSLv2 support, you can disable it at runtime using -R ssl2 to get the same
-# result as not building in SSLv2 support at all.
+# Default since 0.4.9 is to disable SSLv2 entirely even if OpenSSL supports it,
+# since there are servers that are not compatible with SSLv2 Client Hello
+# messages.  If you build in SSLv2 support, you can disable it at runtime using
+# -R ssl2 to get the same result as not building in SSLv2 support at all.
 #FEATURES+=	-DWITH_SSLV2
 
 # Define to make SSLsplit set a session id context in server mode.
@@ -83,7 +83,7 @@ DEBUG_CFLAGS?=	-g
 # are not available, try to look up a suitable XNU version that we have
 # headers for based on the OS X release reported by sw_vers.  Then as a last
 # resort, fall back to the latest version of XNU that we have headers for,
-# which may or may not work, depending on if there were significant changes
+# which may or may not work, depending on if there were API or ABI changes
 # in the DIOCNATLOOK ioctl interface to the NAT state table in the kernel.
 #
 # Note that you can override the XNU headers used by defining XNU_VERSION.
@@ -97,7 +97,7 @@ OSX_VERSION?=	$(shell sw_vers -productVersion)
 XNU_METHOD=	uname
 XNU_HAVE:=	$(XNU_VERSION)
 ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
-XNU_VERSION=	$(shell awk '/\# $(OSX_VERSION)$$/ {print $$2}' xnu/GNUmakefile)
+XNU_VERSION=	$(shell awk '/^XNU_RELS.*\# $(OSX_VERSION)$$/ {print $$2}' xnu/GNUmakefile)
 XNU_METHOD=	sw_vers
 endif
 ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
@@ -156,6 +156,7 @@ PKGCONFIG?=	pkg-config
 
 BASENAME?=	basename
 CAT?=		cat
+CUT?=		cut
 GREP?=		grep
 INSTALL?=	install
 MKDIR?=		mkdir
@@ -201,7 +202,9 @@ ifndef GITDIR
 VERSION:=	$(shell $(BASENAME) $(PWD)|\
 			$(GREP) $(TARGET)-|\
 			$(SED) 's/.*$(TARGET)-\(.*\)/\1/g')
-BUILD_INFO+=	V:DIR
+NEWSSHA:=	$(shell $(OPENSSL) dgst -sha1 -r NEWS.md |\
+			$(CUT) -c -7)
+BUILD_INFO+=	V:DIR N:$(NEWSSHA)
 else
 VERSION:=	$(shell $(GIT) describe --tags --dirty --always)
 BUILD_INFO+=	V:GIT
@@ -241,7 +244,8 @@ OPENSSL_FIND:=	$(wildcard \
 		/usr/local/$(OPENSSL_PAT) \
 		/usr/$(OPENSSL_PAT))
 endif
-OPENSSL_FOUND:=	$(OPENSSL_FIND:/$(OPENSSL_PAT)=)
+OPENSSL_AVAIL:=	$(OPENSSL_FIND:/$(OPENSSL_PAT)=)
+OPENSSL_FOUND:=	$(word 1,$(OPENSSL_AVAIL))
 ifndef OPENSSL_FOUND
 $(error dependency 'OpenSSL' not found; \
 	install it or point OPENSSL_BASE to base path)
@@ -257,7 +261,8 @@ LIBEVENT_FIND:=	$(wildcard \
 		/usr/local/$(LIBEVENT_PAT) \
 		/usr/$(LIBEVENT_PAT))
 endif
-LIBEVENT_FOUND:=$(LIBEVENT_FIND:/$(LIBEVENT_PAT)=)
+LIBEVENT_AVAIL:=$(LIBEVENT_FIND:/$(LIBEVENT_PAT)=)
+LIBEVENT_FOUND:=$(word 1,$(LIBEVENT_AVAIL))
 ifndef LIBEVENT_FOUND
 $(error dependency 'libevent 2.x' not found; \
 	install it or point LIBEVENT_BASE to base path)
@@ -273,7 +278,8 @@ CHECK_FIND:=	$(wildcard \
 		/usr/local/$(CHECK_PAT) \
 		/usr/$(CHECK_PAT))
 endif
-CHECK_FOUND:=	$(CHECK_FIND:/$(CHECK_PAT)=)
+CHECK_AVAIL:=	$(CHECK_FIND:/$(CHECK_PAT)=)
+CHECK_FOUND:=	$(word 1,$(CHECK_AVAIL))
 ifndef CHECK_FOUND
 CHECK_MISSING:=	1
 endif
