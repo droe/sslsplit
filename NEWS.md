@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Enable full-strength DHE and ECDHE by default, even for non-RSA leaf keys,
+    in order to avoid weak cipher warnings from browsers (issue #119).
 -   Fix SSL sessions to actually time out (patch by @eunsoopark, issue #115).
 -   Add XNU headers for OS X 10.11 El Capitan (issue #116).
 -   Fix EV_READ event re-enable bug that could lead to stalled connections
