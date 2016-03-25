@@ -397,6 +397,9 @@ endif
 %.o: %.c $(HDRS) GNUmakefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
+travis: TCPPFLAGS+=-DTRAVIS
+travis: test
+
 test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n root||echo 0)\""
 test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n root||echo 0)\""
 test: $(TARGET).test
