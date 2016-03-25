@@ -435,14 +435,14 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 void
 proxyspec_free(proxyspec_t *spec)
 {
-	while (spec) {
+	do {
 		proxyspec_t *next = spec->next;
 		if (spec->natengine)
 			free(spec->natengine);
 		memset(spec, 0, sizeof(proxyspec_t));
 		free(spec);
 		spec = next;
-	}
+	} while (spec);
 }
 
 /*
