@@ -140,24 +140,14 @@ Use Diffie-Hellman group parameters from \fIpemfile\fP for Ephemereal
 Diffie-Hellman (EDH/DHE) cipher suites.  If \fB-g\fP is not given, SSLsplit
 first tries to load DH parameters from the PEM files given by \fB-K\fP,
 \fB-k\fP or \fB-c\fP.  If no DH parameters are found in the key files, built-in
-512 or 1024 bit group parameters are automatically used iff a non-RSA private
-key is given with \fB-K\fP.
-This is because DSA/DSS private keys can by themselves only be used for signing
-and thus require DH to exchange an SSL/TLS session key.
-If \fB-g\fP is given, the parameters from the given \fIpemfile\fP will always
-be used, even with RSA private keys (within the cipher suites available in
-OpenSSL).
+group parameters are automatically used.
 The \fB-g\fP option is only available if SSLsplit was built against a version
 of OpenSSL which supports Diffie-Hellman cipher suites.
 .TP
 .B \-G \fIcurve\fP
-Use the named \fIcurve\fP for Ephemereal Elliptic Curve Diffie-Hellman (EECDH)
-cipher suites.  If \fB-G\fP is not given, a default curve (\fBsecp160r2\fP) is
-used automatically iff a non-RSA private key is given with \fB-K\fP.
-This is because ECDSA/ECDSS private keys can by themselves only be used for
-signing and thus require ECDH to exchange an SSL/TLS session key.
-If \fB-G\fP is given, the named \fIcurve\fP will always be used, even with RSA
-private keys (within the cipher suites available in OpenSSL).
+Use the named \fIcurve\fP for Ephemereal Elliptic Curve Diffie-Hellman (ECDHE)
+cipher suites.  If \fB-G\fP is not given, a default curve (\fBprime256v1\fP) is
+used automatically.
 The \fB-G\fP option is only available if SSLsplit was built against a version
 of OpenSSL which supports Elliptic Curve Diffie-Hellman cipher suites.
 .TP

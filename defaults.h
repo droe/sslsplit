@@ -60,7 +60,7 @@
 /*
  * Default elliptic curve for EC cipher suites.
  */
-#define DFLT_CURVE "secp160r2"
+#define DFLT_CURVE "prime256v1"
 
 #endif /* !DEFAULTS_H */
 

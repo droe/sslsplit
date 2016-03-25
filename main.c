@@ -151,7 +151,7 @@ main_usage(void)
 #define OPT_g 
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
-"  -G curve    use ECDH named curve (default: " DFLT_CURVE " for non-RSA leafkey)\n"
+"  -G curve    use ECDH named curve (default: " DFLT_CURVE ")\n"
 #define OPT_G "G:"
 #else /* OPENSSL_NO_ECDH */
 #define OPT_G 

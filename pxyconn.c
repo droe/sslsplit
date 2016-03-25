@@ -714,7 +714,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 #ifndef OPENSSL_NO_DH
 	if (ctx->opts->dh) {
 		SSL_CTX_set_tmp_dh(sslctx, ctx->opts->dh);
-	} else if (EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
+	} else {
 		SSL_CTX_set_tmp_dh_callback(sslctx, ssl_tmp_dh_callback);
 	}
 #endif /* !OPENSSL_NO_DH */
@@ -723,7 +723,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		EC_KEY *ecdh = ssl_ec_by_name(ctx->opts->ecdhcurve);
 		SSL_CTX_set_tmp_ecdh(sslctx, ecdh);
 		EC_KEY_free(ecdh);
-	} else if (EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
+	} else {
 		EC_KEY *ecdh = ssl_ec_by_name(NULL);
 		SSL_CTX_set_tmp_ecdh(sslctx, ecdh);
 		EC_KEY_free(ecdh);
