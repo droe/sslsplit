@@ -950,7 +950,7 @@ main(int argc, char *argv[])
 	ssl_reinit();
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
-	if (log_init(opts, clisock[1], clisock[2]) == -1) {
+	if (log_init(opts, proxy, clisock[1], clisock[2]) == -1) {
 		fprintf(stderr, "%s: failed to init log facility: %s\n",
 		                argv0, strerror(errno));
 		goto out_log_failed;
