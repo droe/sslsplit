@@ -626,16 +626,17 @@ instead of querying a NAT engine:
 .RE
 .LP
 The original example, but using SSL options optimized for speed by disabling
-compression and selecting only fast block cipher cipher suites and using a
-precomputed private key \fBleaf.key\fP for the forged certificates
-(most significant speed increase is gained by choosing fast algorithms and
-small keysizes for the CA and leaf private keys; check \fBopenssl speed\fP for
-algorithm performance on your system and note that clients may not support all
-algorithms and key sizes):
+compression and selecting only fast cipher cipher suites and using a
+precomputed private key \fBleaf.key\fP for the forged certificates.  Most
+significant speed increase is gained by choosing fast algorithms and small
+keysizes for the CA and leaf private keys.  Check \fBopenssl speed\fP for
+algorithm performance on your system.  Note that clients may not support all
+algorithms and key sizes.  Also, some clients warn their users about cipher
+suites they consider weak.
 .LP
 .HS
 .nf
-\fBsslsplit -Z -s NULL:RC4:AES128 -K leaf.key \\
+\fBsslsplit -Z -s NULL:RC4:AES128:-DHE -K leaf.key \\
          -k ca.key -c ca.crt -l connect.log -L /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
