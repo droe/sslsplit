@@ -217,8 +217,12 @@ pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
 			pthread_join(ctx->thr[idx]->thr, NULL);
 		}
 		for (int idx = 0; idx < ctx->num_thr; idx++) {
-			evdns_base_free(ctx->thr[idx]->dnsbase, 0);
-			event_base_free(ctx->thr[idx]->evbase);
+			if (ctx->thr[idx]->dnsbase) {
+				evdns_base_free(ctx->thr[idx]->dnsbase, 0);
+			}
+			if (ctx->thr[idx]->evbase) {
+				event_base_free(ctx->thr[idx]->evbase);
+			}
 			free(ctx->thr[idx]);
 		}
 		free(ctx->thr);
