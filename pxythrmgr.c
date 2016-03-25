@@ -119,9 +119,6 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 {
 	int idx = -1, dns = 0;
 
-	if (!ctx)
-		return -1;
-
 	dns = opts_has_dns_spec(ctx->opts);
 
 	pthread_mutex_init(&ctx->mutex, NULL);
@@ -210,8 +207,6 @@ leave:
 void
 pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
 {
-	if (!ctx)
-		return;
 	pthread_mutex_destroy(&ctx->mutex);
 	if (ctx->thr) {
 		for (int idx = 0; idx < ctx->num_thr; idx++) {
