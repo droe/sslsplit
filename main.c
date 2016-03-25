@@ -70,6 +70,29 @@ static void
 main_version(void)
 {
 	fprintf(stderr, "%s %s (built %s)\n", PNAME, version, build_date);
+	if (strlen(version) < 5) {
+		/*
+		 * Note to package maintainers:  If you break the version
+		 * string in your build, it will be impossible to provide
+		 * proper upstream support to the users of the package,
+		 * because it will be difficult or impossible to identify
+		 * the exact codebase that is being used by the user
+		 * reporting a bug.  The version string is provided through
+		 * different means depending on whether the code is a git
+		 * checkout, a tarball downloaded from GitHub or a release.
+		 * See GNUmakefile for the gory details.
+		 */
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+		fprintf(stderr, "WARNING: Something is wrong with the "
+		                "version compiled into sslsplit!\n");
+		fprintf(stderr, "The version should contain a release "
+		                "number and/or a git commit reference.\n");
+		fprintf(stderr, "If using a package, please report a bug "
+		                "to the distro package maintainer.\n");
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+	}
 	fprintf(stderr, "Copyright (c) 2009-2016, "
 	                "Daniel Roethlisberger <daniel@roe.ch>\n");
 	fprintf(stderr, "http://www.roe.ch/SSLsplit\n");
