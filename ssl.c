@@ -1743,7 +1743,6 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 {
 #ifdef DEBUG_CLIENTHELLO_PARSER
 #define DBG_printf(...) log_dbg_printf("ClientHello parser: " __VA_ARGS__)
-/*#define DBG_printf(...) fprintf(stderr, "ClientHello parser: " __VA_ARGS__)*/
 #else /* !DEBUG_CLIENTHELLO_PARSER */
 #define DBG_printf(...) 
 #endif /* !DEBUG_CLIENTHELLO_PARSER */
