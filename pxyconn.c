@@ -128,8 +128,8 @@ typedef struct pxy_conn_ctx {
 	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
 	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
-	unsigned int looking_for_client_hello : 1; /* 1 if waiting for hello */
-	unsigned int pending_ssl_upgrade : 1; /* 1 if ssl upgrade in progress */
+	unsigned int clienthello_search : 1;       /* 1 if waiting for hello */
+	unsigned int clienthello_found : 1;      /* 1 if conn upgrade to SSL */
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
@@ -200,7 +200,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	memset(ctx, 0, sizeof(pxy_conn_ctx_t));
 	ctx->spec = spec;
 	ctx->opts = opts;
-	ctx->looking_for_client_hello = spec->upgrade;
+	ctx->clienthello_search = spec->upgrade;
 	ctx->fd = fd;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
@@ -369,7 +369,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
-	if (!ctx->spec->ssl || ctx->passthrough) {
+	if (!ctx->src.ssl) {
 		rv = asprintf(&msg, "%s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
@@ -385,7 +385,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 #endif /* HAVE_LOCAL_PROCINFO */
 		             );
 	} else {
-		rv = asprintf(&msg, "ssl %s %s %s %s "
+		rv = asprintf(&msg, "%s %s %s %s %s "
 		              "sni:%s names:%s "
 		              "sproto:%s:%s dproto:%s:%s "
 		              "origcrt:%s usedcrt:%s"
@@ -393,6 +393,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
 		              "\n",
+		              ctx->clienthello_found ? "upgrade" : "ssl",
 		              STRORDASH(ctx->srchost_str),
 		              STRORDASH(ctx->srcport_str),
 		              STRORDASH(ctx->dsthost_str),
@@ -1538,8 +1539,8 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 				log_err_printf("Replaced dst bufferevent, new "
 				               "one is %p\n", ctx->dst.bev);
 			}
-			ctx->looking_for_client_hello = 0;
-			ctx->pending_ssl_upgrade = 1;
+			ctx->clienthello_search = 0;
+			ctx->clienthello_found = 1;
 			return 1;
 		} else {
 			if (OPTS_DEBUG(ctx->opts)) {
@@ -1592,8 +1593,8 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		exit(EXIT_FAILURE);
 	}
 
-	if(ctx->looking_for_client_hello) {
-		if(pxy_conn_autossl_peek_and_upgrade(ctx)) {
+	if (ctx->clienthello_search) {
+		if (pxy_conn_autossl_peek_and_upgrade(ctx)) {
 			return;
 		}
 	}
@@ -1809,7 +1810,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		ctx->connected = 1;
 
 		/* wrap client-side socket in an eventbuffer */
-		if ((ctx->spec->ssl || ctx->pending_ssl_upgrade) &&
+		if ((ctx->spec->ssl || ctx->clienthello_found) &&
 		    !ctx->passthrough) {
 			ctx->src.ssl = pxy_srcssl_create(ctx, this->ssl);
 			if (!ctx->src.ssl) {
@@ -1830,7 +1831,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				return;
 			}
 		}
-		if (ctx->pending_ssl_upgrade) {
+		if (ctx->clienthello_found) {
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Completing autossl upgrade\n");
 			}
@@ -1842,7 +1843,6 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
 			bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
-			ctx->pending_ssl_upgrade = 0; /* XXX ? */
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
 			                                     ctx->src.ssl);
