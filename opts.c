@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -446,14 +446,14 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 void
 proxyspec_free(proxyspec_t *spec)
 {
-	while (spec) {
+	do {
 		proxyspec_t *next = spec->next;
 		if (spec->natengine)
 			free(spec->natengine);
 		memset(spec, 0, sizeof(proxyspec_t));
 		free(spec);
 		spec = next;
-	}
+	} while (spec);
 }
 
 /*

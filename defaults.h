@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -60,7 +60,7 @@
 /*
  * Default elliptic curve for EC cipher suites.
  */
-#define DFLT_CURVE "secp160r2"
+#define DFLT_CURVE "prime256v1"
 
 #endif /* !DEFAULTS_H */
 

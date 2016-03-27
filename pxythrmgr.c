@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -119,9 +119,6 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 {
 	int idx = -1, dns = 0;
 
-	if (!ctx)
-		return -1;
-
 	dns = opts_has_dns_spec(ctx->opts);
 
 	pthread_mutex_init(&ctx->mutex, NULL);
@@ -210,8 +207,6 @@ leave:
 void
 pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
 {
-	if (!ctx)
-		return;
 	pthread_mutex_destroy(&ctx->mutex);
 	if (ctx->thr) {
 		for (int idx = 0; idx < ctx->num_thr; idx++) {
@@ -222,8 +217,12 @@ pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
 			pthread_join(ctx->thr[idx]->thr, NULL);
 		}
 		for (int idx = 0; idx < ctx->num_thr; idx++) {
-			evdns_base_free(ctx->thr[idx]->dnsbase, 0);
-			event_base_free(ctx->thr[idx]->evbase);
+			if (ctx->thr[idx]->dnsbase) {
+				evdns_base_free(ctx->thr[idx]->dnsbase, 0);
+			}
+			if (ctx->thr[idx]->evbase) {
+				event_base_free(ctx->thr[idx]->evbase);
+			}
 			free(ctx->thr[idx]);
 		}
 		free(ctx->thr);

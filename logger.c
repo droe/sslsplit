@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -49,6 +49,7 @@ struct logger {
 	logger_close_func_t close;
 	logger_prep_func_t prep;
 	logger_write_func_t write;
+	logger_except_func_t except;
 	thrqueue_t *queue;
 };
 
@@ -70,7 +71,7 @@ logger_clear(logger_t *logger)
 logger_t *
 logger_new(logger_reopen_func_t reopenfunc, logger_open_func_t openfunc,
            logger_close_func_t closefunc, logger_write_func_t writefunc,
-           logger_prep_func_t prepfunc)
+           logger_prep_func_t prepfunc, logger_except_func_t exceptfunc)
 {
 	logger_t *logger;
 
@@ -83,6 +84,7 @@ logger_new(logger_reopen_func_t reopenfunc, logger_open_func_t openfunc,
 	logger->close = closefunc;
 	logger->write = writefunc;
 	logger->prep = prepfunc;
+	logger->except = exceptfunc;
 	logger->queue = NULL;
 	return logger;
 }
@@ -186,16 +188,24 @@ logger_thread(void *arg)
 {
 	logger_t *logger = arg;
 	logbuf_t *lb;
+	int e = 0;
 
 	while ((lb = thrqueue_dequeue(logger->queue))) {
 		if (logbuf_ctl_isset(lb, LBFLAG_REOPEN)) {
-			logger->reopen();
+			if (logger->reopen() != 0)
+				e = 1;
 		} else if (logbuf_ctl_isset(lb, LBFLAG_OPEN)) {
-			logger->open(lb->fh);
+			if (logger->open(lb->fh) != 0)
+				e = 1;
 		} else if (logbuf_ctl_isset(lb, LBFLAG_CLOSE)) {
 			logger->close(lb->fh);
 		} else {
-			logbuf_write_free(lb, logger->write);
+			if (logbuf_write_free(lb, logger->write) < 0)
+				e = 1;
+		}
+
+		if (e && logger->except) {
+			logger->except();
 		}
 	}
 

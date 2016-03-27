@@ -2,7 +2,7 @@
 
 ## Copyright
 
-Copyright (c) 2009-2015, Daniel Roethlisberger and contributors.
+Copyright (c) 2009-2016, Daniel Roethlisberger and contributors.
 All rights reserved.
 Licensed under the 2-clause BSD license contained herein.
 
@@ -15,9 +15,14 @@ All rights reserved.
 Licensed under the MIT license.
 
 `xnu/xnu-*`:
-Copyright (c) 1988-2010, Apple Inc. and original copyright holders.
+Copyright (c) 1988-2015, Apple Inc. and original copyright holders.
 All rights reserved.
 Licensed under the APSL.
+
+`extra/log*.py`:
+Copyright (C) 2015, Maciej Kotowicz and Daniel Roethlisberger.
+All rights reserved.
+Licensed under a 2-clause BSD license.
 
 See the respective source and/or license files for details.
 

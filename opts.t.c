@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -385,7 +385,9 @@ opts_suite(void)
 
 	tc = tcase_create("proxyspec_parse");
 	tcase_add_test(tc, proxyspec_parse_01);
-	tcase_add_test(tc, proxyspec_parse_02);
+#ifndef TRAVIS
+	tcase_add_test(tc, proxyspec_parse_02); /* IPv6 */
+#endif /* TRAVIS */
 	tcase_add_exit_test(tc, proxyspec_parse_03, EXIT_FAILURE);
 	tcase_add_exit_test(tc, proxyspec_parse_04, EXIT_FAILURE);
 	tcase_add_test(tc, proxyspec_parse_05);
@@ -396,8 +398,10 @@ opts_suite(void)
 	tcase_add_exit_test(tc, proxyspec_parse_10, EXIT_FAILURE);
 	tcase_add_test(tc, proxyspec_parse_11);
 	tcase_add_exit_test(tc, proxyspec_parse_12, EXIT_FAILURE);
-	tcase_add_test(tc, proxyspec_parse_13);
-	tcase_add_test(tc, proxyspec_parse_14);
+#ifndef TRAVIS
+	tcase_add_test(tc, proxyspec_parse_13); /* IPv6 */
+	tcase_add_test(tc, proxyspec_parse_14); /* IPv6 */
+#endif /* TRAVIS */
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("opts_debug");

@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -70,7 +70,30 @@ static void
 main_version(void)
 {
 	fprintf(stderr, "%s %s (built %s)\n", PNAME, version, build_date);
-	fprintf(stderr, "Copyright (c) 2009-2015, "
+	if (strlen(version) < 5) {
+		/*
+		 * Note to package maintainers:  If you break the version
+		 * string in your build, it will be impossible to provide
+		 * proper upstream support to the users of the package,
+		 * because it will be difficult or impossible to identify
+		 * the exact codebase that is being used by the user
+		 * reporting a bug.  The version string is provided through
+		 * different means depending on whether the code is a git
+		 * checkout, a tarball downloaded from GitHub or a release.
+		 * See GNUmakefile for the gory details.
+		 */
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+		fprintf(stderr, "WARNING: Something is wrong with the "
+		                "version compiled into sslsplit!\n");
+		fprintf(stderr, "The version should contain a release "
+		                "number and/or a git commit reference.\n");
+		fprintf(stderr, "If using a package, please report a bug "
+		                "to the distro package maintainer.\n");
+		fprintf(stderr, "---------------------------------------"
+		                "---------------------------------------\n");
+	}
+	fprintf(stderr, "Copyright (c) 2009-2016, "
 	                "Daniel Roethlisberger <daniel@roe.ch>\n");
 	fprintf(stderr, "http://www.roe.ch/SSLsplit\n");
 	if (build_info[0]) {
@@ -128,7 +151,7 @@ main_usage(void)
 #define OPT_g 
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
-"  -G curve    use ECDH named curve (default: " DFLT_CURVE " for non-RSA leafkey)\n"
+"  -G curve    use ECDH named curve (default: " DFLT_CURVE ")\n"
 #define OPT_G "G:"
 #else /* OPENSSL_NO_ECDH */
 #define OPT_G 
@@ -927,7 +950,7 @@ main(int argc, char *argv[])
 	ssl_reinit();
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
-	if (log_init(opts, clisock[1], clisock[2]) == -1) {
+	if (log_init(opts, proxy, clisock[1], clisock[2]) == -1) {
 		fprintf(stderr, "%s: failed to init log facility: %s\n",
 		                argv0, strerror(errno));
 		goto out_log_failed;

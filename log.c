@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -50,6 +50,19 @@
  * backends, such as syslog and stderr.
  */
 
+
+/*
+ * Common code for all logs.
+ */
+static proxy_ctx_t *proxy_ctx = NULL;
+
+static void
+log_exceptcb(void)
+{
+	if (proxy_ctx) {
+		proxy_loopbreak(proxy_ctx);
+	}
+}
 
 /*
  * Error log.
@@ -937,7 +950,8 @@ log_preinit(opts_t *opts)
 			prepcb = log_content_file_prepcb;
 		}
 		if (!(content_log = logger_new(reopencb, opencb, closecb,
-		                               writecb, prepcb))) {
+		                               writecb, prepcb,
+		                               log_exceptcb))) {
 			log_content_file_fini();
 			goto out;
 		}
@@ -945,18 +959,21 @@ log_preinit(opts_t *opts)
 	if (opts->connectlog) {
 		if (log_connect_preinit(opts->connectlog) == -1)
 			goto out;
-		if (!(connect_log = logger_new(log_connect_reopencb, NULL, NULL,
-		                               log_connect_writecb, NULL))) {
+		if (!(connect_log = logger_new(log_connect_reopencb,
+		                               NULL, NULL,
+		                               log_connect_writecb, NULL,
+		                               log_exceptcb))) {
 			log_connect_fini();
 			goto out;
 		}
 	}
 	if (opts->certgendir) {
 		if (!(cert_log = logger_new(NULL, NULL, NULL, log_cert_writecb,
-		                            NULL)))
+		                            NULL, log_exceptcb)))
 			goto out;
 	}
-	if (!(err_log = logger_new(NULL, NULL, NULL, log_err_writecb, NULL)))
+	if (!(err_log = logger_new(NULL, NULL, NULL, log_err_writecb, NULL,
+	                           log_exceptcb)))
 		goto out;
 	return 0;
 
@@ -997,8 +1014,9 @@ log_preinit_undo(void)
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts, int clisock1, int clisock2)
+log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock1, int clisock2)
 {
+	proxy_ctx = ctx;
 	if (err_log)
 		if (logger_start(err_log) == -1)
 			return -1;

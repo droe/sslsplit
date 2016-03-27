@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -717,7 +717,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 #ifndef OPENSSL_NO_DH
 	if (ctx->opts->dh) {
 		SSL_CTX_set_tmp_dh(sslctx, ctx->opts->dh);
-	} else if (EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
+	} else {
 		SSL_CTX_set_tmp_dh_callback(sslctx, ssl_tmp_dh_callback);
 	}
 #endif /* !OPENSSL_NO_DH */
@@ -726,7 +726,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		EC_KEY *ecdh = ssl_ec_by_name(ctx->opts->ecdhcurve);
 		SSL_CTX_set_tmp_ecdh(sslctx, ecdh);
 		EC_KEY_free(ecdh);
-	} else if (EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
+	} else {
 		EC_KEY *ecdh = ssl_ec_by_name(NULL);
 		SSL_CTX_set_tmp_ecdh(sslctx, ecdh);
 		EC_KEY_free(ecdh);
@@ -2075,7 +2075,12 @@ connected:
 	}
 
 	if (events & BEV_EVENT_EOF) {
-		if (!other->closed) {
+		if (!ctx->connected) {
+			log_dbg_printf("EOF on inbound connection while "
+			               "connecting to original destination\n");
+			evutil_closesocket(ctx->fd);
+			other->closed = 1;
+		} else if (!other->closed) {
 			struct evbuffer *inbuf, *outbuf;
 			inbuf = bufferevent_get_input(bev);
 			outbuf = bufferevent_get_output(other->bev);

@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -208,7 +208,7 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 	case SIGQUIT:
 	case SIGINT:
 	case SIGHUP:
-		event_base_loopbreak(ctx->evbase);
+		proxy_loopbreak(ctx);
 		break;
 	case SIGUSR1:
 		if (log_reopen() == -1) {
@@ -391,6 +391,15 @@ proxy_run(proxy_ctx_t *ctx)
 	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("Main event loop stopped.\n");
 	}
+}
+
+/*
+ * Break the loop of the proxy, causing the proxy_run to return.
+ */
+void
+proxy_loopbreak(proxy_ctx_t *ctx)
+{
+	event_base_loopbreak(ctx->evbase);
 }
 
 /*

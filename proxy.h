@@ -1,6 +1,6 @@
 /*
  * SSLsplit - transparent SSL/TLS interception
- * Copyright (c) 2009-2015, Daniel Roethlisberger <daniel@roe.ch>
+ * Copyright (c) 2009-2016, Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  * http://www.roe.ch/SSLsplit
  *
@@ -35,6 +35,7 @@ typedef struct proxy_ctx proxy_ctx_t;
 
 proxy_ctx_t * proxy_new(opts_t *, int) NONNULL(1) MALLOC;
 void proxy_run(proxy_ctx_t *) NONNULL(1);
+void proxy_loopbreak(proxy_ctx_t *) NONNULL(1);
 void proxy_free(proxy_ctx_t *) NONNULL(1);
 
 #endif /* !PROXY_H */
