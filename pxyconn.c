@@ -979,6 +979,18 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 	if (!(sn = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)))
 		return SSL_TLSEXT_ERR_NOACK;
 
+	if (!ctx->sni) {
+		if (OPTS_DEBUG(ctx->opts)) {
+			log_dbg_printf("Warning: SNI parser yielded no "
+			               "hostname, copying OpenSSL one: "
+			               "[NULL] != [%s]\n", sn);
+		}
+		ctx->sni = strdup(sn);
+		if (!ctx->sni) {
+			ctx->enomem = 1;
+			return SSL_TLSEXT_ERR_NOACK;
+		}
+	}
 	if (OPTS_DEBUG(ctx->opts)) {
 		if (!!strcmp(sn, ctx->sni)) {
 			/*
@@ -990,7 +1002,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			 * to the original destination, there is no way back.
 			 * We log an error and hope this never happens.
 			 */
-			log_err_printf("Warning: SNI parser yielded different "
+			log_dbg_printf("Warning: SNI parser yielded different "
 			               "hostname than OpenSSL callback for "
 			               "the same ClientHello message: "
 			               "[%s] != [%s]\n", ctx->sni, sn);
