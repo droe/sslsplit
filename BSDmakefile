@@ -1,6 +1,6 @@
-USE_GNU:
+all:
 	@gmake $(.TARGETS)
 
-$(.TARGETS): USE_GNU
+$(.TARGETS): all
 
-.PHONY: USE_GNU
+.PHONY: all
