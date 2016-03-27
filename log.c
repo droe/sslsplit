@@ -43,6 +43,7 @@
 #include <syslog.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <netinet/in.h>
 
 /*
  * Centralized logging code multiplexing thread access to the logger based
