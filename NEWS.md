@@ -1,4 +1,9 @@
 
+### SSLsplit develop
+
+-   Add missing authors Maciej Kotowicz and Eun Soo Park to manual page.
+
+
 ### SSLsplit 0.5.0 2016-03-27
 
 -   Generically support STARTTLS through the new autossl proxyspec type that
