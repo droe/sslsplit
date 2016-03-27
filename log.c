@@ -57,11 +57,12 @@
  */
 static proxy_ctx_t *proxy_ctx = NULL;
 
-static void
+void
 log_exceptcb(void)
 {
 	if (proxy_ctx) {
 		proxy_loopbreak(proxy_ctx);
+		proxy_ctx = NULL;
 	}
 }
 
