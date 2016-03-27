@@ -88,6 +88,11 @@ and Alternate Protocols to prevent switching to QUIC/SPDY.
 HTTP compression, encodings and keep-alive are disabled to make the logs more
 readable.
 .LP
+As an experimental feature, SSLsplit supports STARTTLS and similar mechanisms,
+where a protocol starts on a plain text TCP connection and is later upgraded to
+SSL/TLS through protocol-specific means, such as the STARTTLS command in SMTP.
+SSLsplit supports generic upgrading of TCP connections to SSL.
+.LP
 SSLsplit does not automagically redirect any network traffic.  To actually
 implement an attack, you also need to redirect the traffic to the system
 running \fBsslsplit\fP.  Your options include running \fBsslsplit\fP on a
