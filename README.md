@@ -39,6 +39,11 @@ HSTS to allow the user to accept untrusted certificates, and Alternate
 Protocols to prevent switching to QUIC/SPDY.  HTTP compression, encodings and
 keep-alive are disabled to make the logs more readable.
 
+As an experimental feature, SSLsplit supports STARTTLS and similar mechanisms,
+where a protocol starts on a plain text TCP connection and is later upgraded to
+SSL/TLS through protocol-specific means, such as the STARTTLS command in SMTP.
+SSLsplit supports generic upgrading of TCP connections to SSL.
+
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.
 
