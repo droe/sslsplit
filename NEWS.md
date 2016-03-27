@@ -1,6 +1,9 @@
 
 ### SSLsplit develop
 
+-   Generically support STARTTLS through the new autossl proxyspec type that
+    upgrades a TCP connection to SSL/TLS when a ClientHello message is seen
+    (based on contribution by @RichardPoole42, pull req #87).
 -   Fix a rare segmentation fault upon receiving EOF on the inbound connection
     while the outbound connection has not been established yet (patch by
     @eunsoopark, issue #124).
