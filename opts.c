@@ -371,7 +371,8 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 				if (!strcmp(**argv, "tcp") ||
 				    !strcmp(**argv, "ssl") ||
 				    !strcmp(**argv, "http") ||
-				    !strcmp(**argv, "https")) {
+				    !strcmp(**argv, "https") ||
+				    !strcmp(**argv, "autossl")) {
 					/* implicit default natengine */
 					(*argv)--; (*argc)++; /* rewind */
 					state = 0;

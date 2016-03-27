@@ -207,6 +207,7 @@ main_usage(void)
 "              https 127.0.0.1 9443 sni 443     # https/4; SNI DNS lookups\n"
 "              tcp 127.0.0.1 10025              # tcp/4; default NAT engine\n"
 "              ssl 2001:db8::2 9999 pf          # ssl/6; NAT engine 'pf'\n"
+"              autossl ::1 10025                # autossl/6; STARTTLS et al\n"
 "Example:\n"
 "  %s -k ca.key -c ca.pem -P  https 127.0.0.1 8443  https ::1 8443\n"
 	"%s", BNAME, dflt, BNAME, warn);
