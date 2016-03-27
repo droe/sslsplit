@@ -14,7 +14,7 @@ information will allow faster analysis of the problem:
 -   Output of `sslsplit -V`
 -   Output of `uname -a`
 -   Exact command line arguments used to run SSLsplit
--   Relevant part of debug mode (`-d`) output, if applicable
+-   Relevant part of debug mode (`-D`) output, if applicable
 -   The NAT redirection rules you are using, if applicable
 -   For build problems, the full output of `make`
 
