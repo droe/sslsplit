@@ -128,6 +128,8 @@ typedef struct pxy_conn_ctx {
 	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
 	unsigned int enomem : 1;                       /* 1 if out of memory */
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
+	unsigned int clienthello_search : 1;       /* 1 if waiting for hello */
+	unsigned int clienthello_found : 1;      /* 1 if conn upgrade to SSL */
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
@@ -198,6 +200,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	memset(ctx, 0, sizeof(pxy_conn_ctx_t));
 	ctx->spec = spec;
 	ctx->opts = opts;
+	ctx->clienthello_search = spec->upgrade;
 	ctx->fd = fd;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
@@ -366,7 +369,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
-	if (!ctx->spec->ssl || ctx->passthrough) {
+	if (!ctx->src.ssl) {
 		rv = asprintf(&msg, "%s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
 		              " %s"
@@ -382,7 +385,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 #endif /* HAVE_LOCAL_PROCINFO */
 		             );
 	} else {
-		rv = asprintf(&msg, "ssl %s %s %s %s "
+		rv = asprintf(&msg, "%s %s %s %s %s "
 		              "sni:%s names:%s "
 		              "sproto:%s:%s dproto:%s:%s "
 		              "origcrt:%s usedcrt:%s"
@@ -390,6 +393,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 		              " %s"
 #endif /* HAVE_LOCAL_PROCINFO */
 		              "\n",
+		              ctx->clienthello_found ? "upgrade" : "ssl",
 		              STRORDASH(ctx->srchost_str),
 		              STRORDASH(ctx->srcport_str),
 		              STRORDASH(ctx->dsthost_str),
@@ -973,6 +977,18 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 	if (!(sn = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)))
 		return SSL_TLSEXT_ERR_NOACK;
 
+	if (!ctx->sni) {
+		if (OPTS_DEBUG(ctx->opts)) {
+			log_dbg_printf("Warning: SNI parser yielded no "
+			               "hostname, copying OpenSSL one: "
+			               "[NULL] != [%s]\n", sn);
+		}
+		ctx->sni = strdup(sn);
+		if (!ctx->sni) {
+			ctx->enomem = 1;
+			return SSL_TLSEXT_ERR_NOACK;
+		}
+	}
 	if (OPTS_DEBUG(ctx->opts)) {
 		if (!!strcmp(sn, ctx->sni)) {
 			/*
@@ -984,7 +1000,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			 * to the original destination, there is no way back.
 			 * We log an error and hope this never happens.
 			 */
-			log_err_printf("Warning: SNI parser yielded different "
+			log_dbg_printf("Warning: SNI parser yielded different "
 			               "hostname than OpenSSL callback for "
 			               "the same ClientHello message: "
 			               "[%s] != [%s]\n", ctx->sni, sn);
@@ -1471,6 +1487,71 @@ deny:
 	}
 }
 
+/*
+ * Peek into pending data to see if it is an SSL/TLS ClientHello, and if so,
+ * upgrade the connection from plain TCP to SSL/TLS.
+ *
+ * Return 1 if ClientHello was found and connection was upgraded to SSL/TLS,
+ * 0 otherwise.
+ *
+ * WARNING: This is experimental code and will need to be improved.
+ *
+ * TODO - enable search and skip bytes before ClientHello in case it does not
+ *        start at offset 0 (i.e. chello > vec_out[0].iov_base)
+ * TODO - peek into more than just the current segment
+ * TODO - add retry mechanism for short truncated ClientHello, possibly generic
+ */
+int
+pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
+{
+	struct evbuffer *inbuf;
+	struct evbuffer_iovec vec_out[1];
+	const unsigned char *chello;
+	if (OPTS_DEBUG(ctx->opts)) {
+		log_dbg_printf("Checking for a client hello\n");
+	}
+	/* peek the buffer */
+	inbuf = bufferevent_get_input(ctx->src.bev);
+	if (evbuffer_peek(inbuf, 1024, 0, vec_out, 1)) {
+		if (ssl_tls_clienthello_parse(vec_out[0].iov_base,
+		                              vec_out[0].iov_len,
+		                              0, &chello, &ctx->sni) == 0) {
+			if (OPTS_DEBUG(ctx->opts)) {
+				log_dbg_printf("Peek found ClientHello\n");
+			}
+			ctx->dst.ssl = pxy_dstssl_create(ctx);
+			if (!ctx->dst.ssl) {
+				log_err_printf("Error creating SSL for "
+				               "upgrade\n");
+				return 0;
+			}
+			ctx->dst.bev = bufferevent_openssl_filter_new(
+			               ctx->evbase, ctx->dst.bev, ctx->dst.ssl,
+			               BUFFEREVENT_SSL_CONNECTING, 0);
+			bufferevent_setcb(ctx->dst.bev, pxy_bev_readcb,
+			                  pxy_bev_writecb, pxy_bev_eventcb,
+			                  ctx);
+			bufferevent_enable(ctx->dst.bev, EV_READ|EV_WRITE);
+			if(!ctx->dst.bev) {
+				return 0;
+			}
+			if( OPTS_DEBUG(ctx->opts)) {
+				log_err_printf("Replaced dst bufferevent, new "
+				               "one is %p\n", ctx->dst.bev);
+			}
+			ctx->clienthello_search = 0;
+			ctx->clienthello_found = 1;
+			return 1;
+		} else {
+			if (OPTS_DEBUG(ctx->opts)) {
+				log_dbg_printf("Peek found no ClientHello\n");
+			}
+			return 0;
+		}
+	}
+	return 0;
+}
+
 void
 pxy_conn_terminate_free(pxy_conn_ctx_t *ctx)
 {
@@ -1510,6 +1591,12 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		/* XXX should signal main loop instead of calling exit() */
 		log_fini();
 		exit(EXIT_FAILURE);
+	}
+
+	if (ctx->clienthello_search) {
+		if (pxy_conn_autossl_peek_and_upgrade(ctx)) {
+			return;
+		}
 	}
 
 	struct evbuffer *inbuf = bufferevent_get_input(bev);
@@ -1723,7 +1810,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		ctx->connected = 1;
 
 		/* wrap client-side socket in an eventbuffer */
-		if (ctx->spec->ssl && !ctx->passthrough) {
+		if ((ctx->spec->ssl || ctx->clienthello_found) &&
+		    !ctx->passthrough) {
 			ctx->src.ssl = pxy_srcssl_create(ctx, this->ssl);
 			if (!ctx->src.ssl) {
 				bufferevent_free_and_close_fd(bev, ctx);
@@ -1743,8 +1831,22 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				return;
 			}
 		}
-		ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
-		                                     ctx->src.ssl);
+		if (ctx->clienthello_found) {
+			if (OPTS_DEBUG(ctx->opts)) {
+				log_dbg_printf("Completing autossl upgrade\n");
+			}
+			ctx->src.bev = bufferevent_openssl_filter_new(
+			               ctx->evbase, ctx->src.bev, ctx->src.ssl,
+			               BUFFEREVENT_SSL_ACCEPTING,
+			               BEV_OPT_DEFER_CALLBACKS);
+			bufferevent_setcb(ctx->src.bev, pxy_bev_readcb,
+			                  pxy_bev_writecb, pxy_bev_eventcb,
+			                  ctx);
+			bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
+		} else {
+			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
+			                                     ctx->src.ssl);
+		}
 		if (!ctx->src.bev) {
 			if (ctx->src.ssl) {
 				SSL_free(ctx->src.ssl);
@@ -2118,10 +2220,12 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 	pxy_conn_ctx_t *ctx = arg;
 
 #ifndef OPENSSL_NO_TLSEXT
-	/* for SSL, peek clientHello and parse SNI from it */
+	/* for SSL, peek ClientHello and parse SNI from it */
 	if (ctx->spec->ssl && !ctx->passthrough /*&& ctx->ev*/) {
 		unsigned char buf[1024];
 		ssize_t n;
+		const unsigned char *chello;
+		int rv;
 
 		n = recv(fd, buf, sizeof(buf), MSG_PEEK);
 		if (n == -1) {
@@ -2138,15 +2242,23 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 			return;
 		}
 
-		ctx->sni = ssl_tls_clienthello_parse_sni(buf, &n);
+		rv = ssl_tls_clienthello_parse(buf, n, 0, &chello, &ctx->sni);
+		if ((rv == 1) && !chello) {
+			log_err_printf("Peeking did not yield a (truncated) "
+			               "ClientHello message, "
+			               "aborting connection\n");
+			evutil_closesocket(fd);
+			pxy_conn_ctx_free(ctx);
+			return;
+		}
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("SNI peek: [%s] [%s]\n",
 			               ctx->sni ? ctx->sni : "n/a",
-			               (!ctx->sni && (n == -1)) ?
+			               ((rv == 1) && chello) ?
 			               "incomplete" : "complete");
 		}
-		if (!ctx->sni && (n == -1) && (ctx->sni_peek_retries++ < 50)) {
-			/* ssl_tls_clienthello_parse_sni indicates that we
+		if ((rv == 1) && chello && (ctx->sni_peek_retries++ < 50)) {
+			/* ssl_tls_clienthello_parse indicates that we
 			 * should retry later when we have more data, and we
 			 * haven't reached the maximum retry count yet.
 			 * Reschedule this event as timeout-only event in

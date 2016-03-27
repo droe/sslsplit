@@ -80,6 +80,12 @@
 X509 * ssl_ssl_cert_get(SSL *);
 #endif /* OpenSSL 0.9.8y or 1.0.0k or 1.0.1e */
 
+#ifdef OPENSSL_NO_TLSEXT
+#ifndef TLSEXT_MAXLEN_host_name
+#define TLSEXT_MAXLEN_host_name 255
+#endif /* !TLSEXT_MAXLEN_host_name */
+#endif /* OPENSSL_NO_TLSEXT */
+
 /*
  * SSL_OP_NO_* is used as an indication that OpenSSL is sufficiently recent
  * to have the respective protocol implemented.
@@ -191,10 +197,9 @@ int ssl_session_is_valid(SSL_SESSION *) NONNULL(1);
 
 int ssl_is_ocspreq(const unsigned char *, size_t) NONNULL(1) WUNRES;
 
-#ifndef OPENSSL_NO_TLSEXT
-char * ssl_tls_clienthello_parse_sni(const unsigned char *, ssize_t *)
-       NONNULL(1,2) MALLOC;
-#endif /* !OPENSSL_NO_TLSEXT */
+int ssl_tls_clienthello_parse(const unsigned char *, ssize_t, int,
+                              const unsigned char **, char **)
+    NONNULL(1,4) WUNRES;
 int ssl_dnsname_match(const char *, size_t, const char *, size_t)
     NONNULL(1,3) WUNRES;
 char * ssl_wildcardify(const char *) NONNULL(1) MALLOC;

@@ -336,6 +336,9 @@ SNI DNS lookup):
 .br
 \fBtcp\fP   \fIlistenaddr port\fP
 [\fInat-engine\fP|\fIfwdaddr port\fP]
+.br
+\fBautossl\fP \fIlistenaddr port\fP
+[\fInat-engine\fP|\fIfwdaddr port\fP]
 .ad
 .TP
 \fBhttps\fP
@@ -354,6 +357,16 @@ the removal of HPKP, HSTS and Alternate Protocol response headers.
 Plain TCP connection without SSL/TLS and without any lower level protocol
 decoding; decrypted connection content is treated as opaque stream of bytes
 and not modified.
+.TP
+\fBautossl\fP
+Plain TCP connection until a Client Hello SSL/TLS message appears in the byte
+stream, then automatic upgrade to SSL/TLS interception.
+This is generic, protocol-independent STARTTLS support, that may erroneously
+trigger on byte sequences that look like Client Hello messages even though
+there was no actual STARTTLS command issued.
+This is an experimental feature and may in its current state miss some Client
+Hello messages depending on circumstances.  YMMV.
+Testing and patches highly welcome.
 .TP
 .I listenaddr port
 IPv4 or IPv6 address and port or service name to listen on.  This is the
@@ -374,7 +387,7 @@ If \fIfwdaddr\fP is a hostname, it will be resolved to an IP address.
 .TP
 \fBsni\fP \fIport\fP
 Use the Server Name Indication (SNI) hostname sent by the client in the
-ClientHello SSL/TLS message to determine the IP address of the server to
+Client Hello SSL/TLS message to determine the IP address of the server to
 connect to.  This only works for \fBssl\fP and \fBhttps\fP \fIproxyspecs\fP and
 needs a port or service name as an argument.
 Because this requires DNS lookups, it is preferrable to use NAT engine
