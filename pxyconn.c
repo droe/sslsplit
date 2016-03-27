@@ -1973,7 +1973,12 @@ connected:
 	}
 
 	if (events & BEV_EVENT_EOF) {
-		if (!other->closed) {
+		if (!ctx->connected) {
+			log_dbg_printf("EOF on inbound connection while "
+			               "connecting to original destination\n");
+			evutil_closesocket(ctx->fd);
+			other->closed = 1;
+		} else if (!other->closed) {
 			struct evbuffer *inbuf, *outbuf;
 			inbuf = bufferevent_get_input(bev);
 			outbuf = bufferevent_get_output(other->bev);

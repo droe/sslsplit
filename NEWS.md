@@ -1,6 +1,9 @@
 
 ### SSLsplit develop
 
+-   Fix a rare segmentation fault upon receiving EOF on the inbound connection
+    while the outbound connection has not been established yet (patch by
+    @eunsoopark, issue #124).
 -   Enable full-strength DHE and ECDHE by default, even for non-RSA leaf keys,
     in order to avoid weak cipher warnings from browsers (issue #119).
 -   Fix SSL sessions to actually time out (patch by @eunsoopark, issue #115).
