@@ -201,9 +201,6 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->spec = spec;
 	ctx->opts = opts;
 	ctx->looking_for_client_hello = spec->upgrade;
-	if (OPTS_DEBUG(opts)) {
-		log_dbg_printf("looking status is %d\n", ctx->looking_for_client_hello);
-	}
 	ctx->fd = fd;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
 	ctx->thrmgr = thrmgr;
@@ -1489,8 +1486,22 @@ deny:
 	}
 }
 
+/*
+ * Peek into pending data to see if it is an SSL/TLS ClientHello, and if so,
+ * upgrade the connection from plain TCP to SSL/TLS.
+ *
+ * Return 1 if ClientHello was found and connection was upgraded to SSL/TLS,
+ * 0 otherwise.
+ *
+ * WARNING: This is experimental code and will need to be improved.
+ *
+ * TODO - enable search and skip bytes before ClientHello in case it does not
+ *        start at offset 0 (i.e. chello > vec_out[0].iov_base)
+ * TODO - peek into more than just the current segment
+ * TODO - add retry mechanism for short truncated ClientHello, possibly generic
+ */
 int
-pxy_conn_check_and_upgrade(pxy_conn_ctx_t *ctx)
+pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 {
 	struct evbuffer *inbuf;
 	struct evbuffer_iovec vec_out[1];
@@ -1501,32 +1512,38 @@ pxy_conn_check_and_upgrade(pxy_conn_ctx_t *ctx)
 	/* peek the buffer */
 	inbuf = bufferevent_get_input(ctx->src.bev);
 	if (evbuffer_peek(inbuf, 1024, 0, vec_out, 1)) {
-		if (ssl_tls_clienthello_parse(vec_out[0].iov_base, vec_out[0].iov_len, 0, &chello, &ctx->sni) == 0) {
+		if (ssl_tls_clienthello_parse(vec_out[0].iov_base,
+		                              vec_out[0].iov_len,
+		                              0, &chello, &ctx->sni) == 0) {
 			if (OPTS_DEBUG(ctx->opts)) {
-				log_dbg_printf("Found a clienthello in midstream\n");
+				log_dbg_printf("Peek found ClientHello\n");
 			}
 			ctx->dst.ssl = pxy_dstssl_create(ctx);
 			if (!ctx->dst.ssl) {
-				log_err_printf("Error creating SSL for upgrade\n");
+				log_err_printf("Error creating SSL for "
+				               "upgrade\n");
 				return 0;
 			}
-			ctx->dst.bev = bufferevent_openssl_filter_new(ctx->evbase, ctx->dst.bev, ctx->dst.ssl, BUFFEREVENT_SSL_CONNECTING, 0);
-			bufferevent_setcb(ctx->dst.bev, pxy_bev_readcb, pxy_bev_writecb, pxy_bev_eventcb, ctx);
+			ctx->dst.bev = bufferevent_openssl_filter_new(
+			               ctx->evbase, ctx->dst.bev, ctx->dst.ssl,
+			               BUFFEREVENT_SSL_CONNECTING, 0);
+			bufferevent_setcb(ctx->dst.bev, pxy_bev_readcb,
+			                  pxy_bev_writecb, pxy_bev_eventcb,
+			                  ctx);
 			bufferevent_enable(ctx->dst.bev, EV_READ|EV_WRITE);
 			if(!ctx->dst.bev) {
 				return 0;
 			}
 			if( OPTS_DEBUG(ctx->opts)) {
-				log_err_printf("Replaced dst bufferevent, new one is %p\n", ctx->dst.bev);
+				log_err_printf("Replaced dst bufferevent, new "
+				               "one is %p\n", ctx->dst.bev);
 			}
-
-			ctx->spec->ssl = 1;
 			ctx->looking_for_client_hello = 0;
 			ctx->pending_ssl_upgrade = 1;
 			return 1;
 		} else {
 			if (OPTS_DEBUG(ctx->opts)) {
-				log_dbg_printf("checked buffer, no client hello found\n");
+				log_dbg_printf("Peek found no ClientHello\n");
 			}
 			return 0;
 		}
@@ -1576,7 +1593,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	}
 
 	if(ctx->looking_for_client_hello) {
-		if(pxy_conn_check_and_upgrade(ctx)) {
+		if(pxy_conn_autossl_peek_and_upgrade(ctx)) {
 			return;
 		}
 	}
@@ -1792,7 +1809,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		ctx->connected = 1;
 
 		/* wrap client-side socket in an eventbuffer */
-		if (ctx->spec->ssl && !ctx->passthrough) {
+		if ((ctx->spec->ssl || ctx->pending_ssl_upgrade) &&
+		    !ctx->passthrough) {
 			ctx->src.ssl = pxy_srcssl_create(ctx, this->ssl);
 			if (!ctx->src.ssl) {
 				bufferevent_free_and_close_fd(bev, ctx);
@@ -1812,17 +1830,19 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				return;
 			}
 		}
-		if(ctx->pending_ssl_upgrade) {
+		if (ctx->pending_ssl_upgrade) {
 			if (OPTS_DEBUG(ctx->opts)) {
-				log_dbg_printf("completing ssl upgrade\n");
+				log_dbg_printf("Completing autossl upgrade\n");
 			}
-			ctx->src.bev = bufferevent_openssl_filter_new(ctx->evbase,
-			                               ctx->src.bev, ctx->src.ssl,
-			        BUFFEREVENT_SSL_ACCEPTING, BEV_OPT_DEFER_CALLBACKS);
+			ctx->src.bev = bufferevent_openssl_filter_new(
+			               ctx->evbase, ctx->src.bev, ctx->src.ssl,
+			               BUFFEREVENT_SSL_ACCEPTING,
+			               BEV_OPT_DEFER_CALLBACKS);
 			bufferevent_setcb(ctx->src.bev, pxy_bev_readcb,
-			                  pxy_bev_writecb, pxy_bev_eventcb, ctx);
+			                  pxy_bev_writecb, pxy_bev_eventcb,
+			                  ctx);
 			bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
-			ctx->pending_ssl_upgrade = 0;
+			ctx->pending_ssl_upgrade = 0; /* XXX ? */
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
 			                                     ctx->src.ssl);
