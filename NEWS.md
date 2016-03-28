@@ -39,9 +39,8 @@
     after throttling one direction (issue #109).
 -   Fix build with LibreSSL that lacks recent OpenSSL API additions.
 -   Fix build with OpenSSL versions that had SSLv3 support removed.
--   Fix a rare segmentation fault upon receiving EOF on the inbound connection
-    while the outbound connection has not been established yet (patch by
-    @eunsoopark, issue #124).
+-   Fix a rare segmentation fault upon receiving EOF on the outbound connection
+    while it has not been established yet (patch by @eunsoopark, issue #124).
 -   Fix SSL sessions to actually time out (patch by @eunsoopark, issue #115).
 -   Fix passthrough mode with -t and an empty directory (issue #92).
 -   Minor bugfixes and improvements.

@@ -2075,8 +2075,8 @@ connected:
 
 	if (events & BEV_EVENT_EOF) {
 		if (!ctx->connected) {
-			log_dbg_printf("EOF on inbound connection while "
-			               "connecting to original destination\n");
+			log_dbg_printf("EOF on outbound connection before "
+			               "connection establishment\n");
 			evutil_closesocket(ctx->fd);
 			other->closed = 1;
 		} else if (!other->closed) {
