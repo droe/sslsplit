@@ -44,7 +44,10 @@ cert_new(void)
 		return NULL;
 	memset(c, 0, sizeof(cert_t));
 	c->references = 1;
-	pthread_mutex_init(&c->mutex, NULL);
+	if (pthread_mutex_init(&c->mutex, NULL)) {
+		free(c);
+		return NULL;
+	}
 	return c;
 }
 
