@@ -948,7 +948,10 @@ main(int argc, char *argv[])
 		               strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
-	ssl_reinit();
+	if (ssl_reinit() == -1) {
+		fprintf(stderr, "%s: failed to reinit SSL\n", argv0);
+		goto out_sslreinit_failed;
+	}
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (log_init(opts, proxy, clisock[1], clisock[2]) == -1) {
@@ -973,6 +976,7 @@ out_nat_failed:
 	cachemgr_fini();
 out_cachemgr_failed:
 	log_fini();
+out_sslreinit_failed:
 out_log_failed:
 out_parent:
 	opts_free(opts);

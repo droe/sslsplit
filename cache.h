@@ -71,7 +71,7 @@ typedef struct cache {
 typedef void (*cache_init_cb_t)(struct cache *);
 
 cache_t * cache_new(cache_init_cb_t) MALLOC;
-void cache_reinit(cache_t *) NONNULL(1);
+int cache_reinit(cache_t *) NONNULL(1) WUNRES;
 void cache_free(cache_t *) NONNULL(1);
 void cache_gc(cache_t *) NONNULL(1);
 cache_val_t cache_get(cache_t *, cache_key_t) NONNULL(1) WUNRES;

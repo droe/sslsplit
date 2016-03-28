@@ -256,7 +256,10 @@ ssl_thr_dyn_create_cb(UNUSED const char *file, UNUSED int line)
 	struct CRYPTO_dynlock_value *dl;
 
 	if ((dl = malloc(sizeof(struct CRYPTO_dynlock_value)))) {
-		pthread_mutex_init(&dl->mutex, NULL);
+		if (pthread_mutex_init(&dl->mutex, NULL)) {
+			free(dl);
+			return NULL;
+		}
 	}
 	return dl;
 }
@@ -335,7 +338,10 @@ ssl_init(void)
 	ssl_mutex_num = CRYPTO_num_locks();
 	ssl_mutex = malloc(ssl_mutex_num * sizeof(*ssl_mutex));
 	for (int i = 0; i < ssl_mutex_num; i++) {
-		pthread_mutex_init(&ssl_mutex[i], NULL);
+		if (pthread_mutex_init(&ssl_mutex[i], NULL)) {
+			log_err_printf("Failed to initialize mutex\n");
+			return -1;
+		}
 	}
 	CRYPTO_set_locking_callback(ssl_thr_locking_cb);
 	CRYPTO_set_dynlock_create_callback(ssl_thr_dyn_create_cb);
@@ -389,19 +395,23 @@ ssl_init(void)
 }
 
 /*
- * Re-initialize OpenSSL after forking.
+ * Re-initialize OpenSSL after forking.  Returns 0 on success, -1 on failure.
  */
-void
+int
 ssl_reinit(void)
 {
 	if (!ssl_initialized)
-		return;
+		return 0;
 
 #ifdef OPENSSL_THREADS
 	for (int i = 0; i < ssl_mutex_num; i++) {
-		pthread_mutex_init(&ssl_mutex[i], NULL);
+		if (pthread_mutex_init(&ssl_mutex[i], NULL)) {
+			return -1;
+		}
 	}
 #endif /* OPENSSL_THREADS */
+
+	return 0;
 }
 
 /*

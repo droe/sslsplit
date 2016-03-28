@@ -121,7 +121,10 @@ pxy_thrmgr_run(pxy_thrmgr_ctx_t *ctx)
 
 	dns = opts_has_dns_spec(ctx->opts);
 
-	pthread_mutex_init(&ctx->mutex, NULL);
+	if (pthread_mutex_init(&ctx->mutex, NULL)) {
+		log_dbg_printf("Failed to initialize mutex\n");
+		goto leave;
+	}
 
 	if (!(ctx->thr = malloc(ctx->num_thr * sizeof(pxy_thr_ctx_t*)))) {
 		log_dbg_printf("Failed to allocate memory\n");

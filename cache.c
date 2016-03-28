@@ -47,20 +47,22 @@ cache_new(cache_init_cb_t init_cb)
 	if (!(cache = malloc(sizeof(cache_t))))
 		return NULL;
 
+	if (pthread_mutex_init(&cache->mutex, NULL)) {
+		free(cache);
+		return NULL;
+	}
+
 	init_cb(cache);
-
-	pthread_mutex_init(&cache->mutex, NULL);
-
 	return cache;
 }
 
 /*
- * Reinitialize cache after fork().
+ * Reinitialize cache after fork().  Returns 0 on success, -1 on failure.
  */
-void
+int
 cache_reinit(cache_t *cache)
 {
-	pthread_mutex_init(&cache->mutex, NULL);
+	return pthread_mutex_init(&cache->mutex, NULL) ? -1 : 0;
 }
 
 /*

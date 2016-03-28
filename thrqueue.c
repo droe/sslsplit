@@ -60,11 +60,11 @@ thrqueue_new(size_t sz)
 		goto out0;
 	if (!(queue->data = malloc(sz * sizeof(void*))))
 		goto out1;
-	if (0 != pthread_mutex_init(&queue->mutex, NULL))
+	if (pthread_mutex_init(&queue->mutex, NULL))
 		goto out2;
-	if (0 != pthread_cond_init(&queue->notempty, NULL))
+	if (pthread_cond_init(&queue->notempty, NULL))
 		goto out3;
-	if (0 != pthread_cond_init(&queue->notfull, NULL))
+	if (pthread_cond_init(&queue->notfull, NULL))
 		goto out4;
 	queue->sz = sz;
 	queue->n = 0;

@@ -90,10 +90,14 @@ out4:
 int
 cachemgr_init(void)
 {
-	cache_reinit(cachemgr_fkcrt);
-	cache_reinit(cachemgr_tgcrt);
-	cache_reinit(cachemgr_ssess);
-	cache_reinit(cachemgr_dsess);
+	if (cache_reinit(cachemgr_fkcrt))
+		return -1;
+	if (cache_reinit(cachemgr_tgcrt))
+		return -1;
+	if (cache_reinit(cachemgr_ssess))
+		return -1;
+	if (cache_reinit(cachemgr_dsess))
+		return -1;
 	return 0;
 }
 

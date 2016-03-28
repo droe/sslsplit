@@ -142,7 +142,7 @@ X509 * ssl_ssl_cert_get(SSL *);
 
 void ssl_openssl_version(void);
 int ssl_init(void) WUNRES;
-void ssl_reinit(void);
+int ssl_reinit(void) WUNRES;
 void ssl_fini(void);
 
 char * ssl_sha1_to_str(unsigned char *, int) NONNULL(1) MALLOC;

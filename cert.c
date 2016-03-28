@@ -43,11 +43,11 @@ cert_new(void)
 	if (!(c = malloc(sizeof(cert_t))))
 		return NULL;
 	memset(c, 0, sizeof(cert_t));
-	c->references = 1;
 	if (pthread_mutex_init(&c->mutex, NULL)) {
 		free(c);
 		return NULL;
 	}
+	c->references = 1;
 	return c;
 }
 
@@ -62,11 +62,14 @@ cert_new3(EVP_PKEY *key, X509 *crt, STACK_OF(X509) *chain)
 
 	if (!(c = malloc(sizeof(cert_t))))
 		return NULL;
+	if (pthread_mutex_init(&c->mutex, NULL)) {
+		free(c);
+		return NULL;
+	}
 	c->key = key;
 	c->crt = crt;
 	c->chain = chain;
 	c->references = 1;
-	pthread_mutex_init(&c->mutex, NULL);
 	return c;
 }
 
@@ -81,6 +84,10 @@ cert_new3_copy(EVP_PKEY *key, X509 *crt, STACK_OF(X509) *chain)
 
 	if (!(c = malloc(sizeof(cert_t))))
 		return NULL;
+	if (pthread_mutex_init(&c->mutex, NULL)) {
+		free(c);
+		return NULL;
+	}
 	c->key = key;
 	ssl_key_refcount_inc(c->key);
 	c->crt = crt;
@@ -90,7 +97,6 @@ cert_new3_copy(EVP_PKEY *key, X509 *crt, STACK_OF(X509) *chain)
 		ssl_x509_refcount_inc(sk_X509_value(c->chain, i));
 	}
 	c->references = 1;
-	pthread_mutex_init(&c->mutex, NULL);
 	return c;
 }
 
@@ -105,6 +111,10 @@ cert_new_load(const char *filename)
 	if (!(c = malloc(sizeof(cert_t))))
 		return NULL;
 	memset(c, 0, sizeof(cert_t));
+	if (pthread_mutex_init(&c->mutex, NULL)) {
+		free(c);
+		return NULL;
+	}
 
 	if (ssl_x509chain_load(&c->crt, &c->chain, filename) == -1) {
 		free(c);
@@ -120,7 +130,6 @@ cert_new_load(const char *filename)
 		return NULL;
 	}
 	c->references = 1;
-	pthread_mutex_init(&c->mutex, NULL);
 	return c;
 }
 
