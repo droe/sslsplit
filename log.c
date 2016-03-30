@@ -263,6 +263,7 @@ log_connect_fini(void)
  */
 
 #define PREPFLAG_REQUEST 1
+#define PREPFLAG_EOF     2
 
 struct log_content_ctx {
 	unsigned int open : 1;
@@ -622,15 +623,23 @@ log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 }
 
 int
-log_content_close(log_content_ctx_t **pctx)
+log_content_close(log_content_ctx_t **pctx, int by_requestor)
 {
 	int rv = 0;
+	unsigned long prepflags = PREPFLAG_EOF;
 
 	if (!(*pctx) || !(*pctx)->open)
 		return -1;
+	if (by_requestor)
+		prepflags |= PREPFLAG_REQUEST;
+	if (logger_submit(content_log, (*pctx), prepflags, NULL) == -1) {
+		rv = -1;
+		goto out;
+	}
 	if (logger_close(content_log, *pctx) == -1) {
 		rv = -1;
 	}
+out:
 	*pctx = NULL;
 	return rv;
 }
@@ -822,8 +831,13 @@ log_content_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 	                          : ctx->u.file.header_resp))
 		goto out;
 
-	/* prepend size tag and newline */
-	head = logbuf_new_printf(lb->fh, lb, " (%zu):\n", logbuf_size(lb));
+	/* prepend size tag or EOF, and newline */
+	if (prepflags & PREPFLAG_EOF) {
+		head = logbuf_new_printf(NULL, NULL, " (EOF)\n");
+	} else {
+		head = logbuf_new_printf(lb->fh, lb, " (%zu):\n",
+		                         logbuf_size(lb));
+	}
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
 		logbuf_free(lb);

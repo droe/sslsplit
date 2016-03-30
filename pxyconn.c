@@ -217,7 +217,7 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 }
 
 static void NONNULL(1)
-pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
+pxy_conn_ctx_free(pxy_conn_ctx_t *ctx, int by_requestor)
 {
 #ifdef DEBUG_PROXY
 	if (OPTS_DEBUG(ctx->opts)) {
@@ -225,6 +225,11 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 		                (void*)ctx);
 	}
 #endif /* DEBUG_PROXY */
+	if (WANT_CONTENT_LOG(ctx) && ctx->logctx) {
+		if (log_content_close(&ctx->logctx, by_requestor) == -1) {
+			log_err_printf("Warning: Content log close failed\n");
+		}
+	}
 	pxy_thrmgr_detach(ctx->thrmgr, ctx->thridx);
 	if (ctx->srchost_str) {
 		free(ctx->srchost_str);
@@ -287,11 +292,6 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->sni) {
 		free(ctx->sni);
-	}
-	if (WANT_CONTENT_LOG(ctx) && ctx->logctx) {
-		if (log_content_close(&ctx->logctx) == -1) {
-			log_err_printf("Warning: Content log close failed\n");
-		}
 	}
 	free(ctx);
 }
@@ -1552,8 +1552,8 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 	return 0;
 }
 
-void
-pxy_conn_terminate_free(pxy_conn_ctx_t *ctx)
+static void
+pxy_conn_terminate_free(pxy_conn_ctx_t *ctx, int is_requestor)
 {
 	log_err_printf("Terminating connection%s!\n",
 	               ctx->enomem ? " (out of memory)" : "");
@@ -1565,7 +1565,7 @@ pxy_conn_terminate_free(pxy_conn_ctx_t *ctx)
 		bufferevent_free_and_close_fd(ctx->src.bev, ctx);
 		ctx->src.bev = NULL;
 	}
-	pxy_conn_ctx_free(ctx);
+	pxy_conn_ctx_free(ctx, is_requestor);
 }
 
 /*
@@ -1707,7 +1707,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 
 	/* out of memory condition? */
 	if (ctx->enomem) {
-		pxy_conn_terminate_free(ctx);
+		pxy_conn_terminate_free(ctx, (bev == ctx->src.bev));
 		return;
 	}
 
@@ -1761,7 +1761,7 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 			/* finished writing and other end is closed;
 			 * close this end too and clean up memory */
 			bufferevent_free_and_close_fd(bev, ctx);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, (bev == ctx->dst.bev));
 		}
 		return;
 	}
@@ -1784,6 +1784,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 	pxy_conn_ctx_t *ctx = arg;
 	pxy_conn_desc_t *this = (bev==ctx->src.bev) ? &ctx->src : &ctx->dst;
 	pxy_conn_desc_t *other = (bev==ctx->src.bev) ? &ctx->dst : &ctx->src;
+	int is_requestor = (bev == ctx->src.bev);
 
 #ifdef DEBUG_PROXY
 	if (OPTS_DEBUG(ctx->opts)) {
@@ -1828,7 +1829,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 					return;
 				}
 				evutil_closesocket(ctx->fd);
-				pxy_conn_ctx_free(ctx);
+				pxy_conn_ctx_free(ctx, 1);
 				return;
 			}
 		}
@@ -1855,7 +1856,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			}
 			bufferevent_free_and_close_fd(bev, ctx);
 			evutil_closesocket(ctx->fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 
@@ -1866,7 +1867,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			                     &ctx->dsthost_str,
 			                     &ctx->dstport_str) != 0) {
 				ctx->enomem = 1;
-				pxy_conn_terminate_free(ctx);
+				pxy_conn_terminate_free(ctx, 1);
 				return;
 			}
 
@@ -1889,7 +1890,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 					if (!ctx->lproc.user ||
 					    !ctx->lproc.group) {
 						ctx->enomem = 1;
-						pxy_conn_terminate_free(ctx);
+						pxy_conn_terminate_free(ctx, 1);
 						return;
 					}
 				}
@@ -1910,7 +1911,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			                    ) == -1) {
 				if (errno == ENOMEM)
 					ctx->enomem = 1;
-				pxy_conn_terminate_free(ctx);
+				pxy_conn_terminate_free(ctx, 1);
 				return;
 			}
 		}
@@ -2134,7 +2135,7 @@ leave:
 	bufferevent_free_and_close_fd(bev, ctx);
 	this->bev = NULL;
 	if (other->closed) {
-		pxy_conn_ctx_free(ctx);
+		pxy_conn_ctx_free(ctx, is_requestor);
 	}
 }
 
@@ -2148,7 +2149,7 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 	if (!ctx->addrlen) {
 		log_err_printf("No target address; aborting connection\n");
 		evutil_closesocket(ctx->fd);
-		pxy_conn_ctx_free(ctx);
+		pxy_conn_ctx_free(ctx, 1);
 		return;
 	}
 
@@ -2158,7 +2159,7 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 		if (!ctx->dst.ssl) {
 			log_err_printf("Error creating SSL\n");
 			evutil_closesocket(ctx->fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 	}
@@ -2169,7 +2170,7 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 			ctx->dst.ssl = NULL;
 		}
 		evutil_closesocket(ctx->fd);
-		pxy_conn_ctx_free(ctx);
+		pxy_conn_ctx_free(ctx, 1);
 		return;
 	}
 
@@ -2205,7 +2206,7 @@ pxy_sni_resolve_cb(int errcode, struct evutil_addrinfo *ai, void *arg)
 		log_err_printf("Cannot resolve SNI hostname '%s': %s\n",
 		               ctx->sni, evutil_gai_strerror(errcode));
 		evutil_closesocket(ctx->fd);
-		pxy_conn_ctx_free(ctx);
+		pxy_conn_ctx_free(ctx, 1);
 		return;
 	}
 
@@ -2246,13 +2247,13 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 			log_err_printf("Error peeking on fd, aborting "
 			               "connection\n");
 			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 		if (n == 0) {
 			/* socket got closed while we were waiting */
 			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 
@@ -2262,7 +2263,7 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 			               "ClientHello message, "
 			               "aborting connection\n");
 			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 		if (OPTS_DEBUG(ctx->opts)) {
@@ -2290,7 +2291,7 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 				               "event, aborting "
 				               "connection\n");
 				evutil_closesocket(fd);
-				pxy_conn_ctx_free(ctx);
+				pxy_conn_ctx_free(ctx, 1);
 				return;
 			}
 			event_add(ctx->ev, &retry_delay);
@@ -2358,7 +2359,7 @@ pxy_conn_setup(evutil_socket_t fd,
 			log_err_printf("Connection not found in NAT "
 			               "state table, aborting connection\n");
 			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 	} else if (spec->connect_addrlen > 0) {
@@ -2372,7 +2373,7 @@ pxy_conn_setup(evutil_socket_t fd,
 			log_err_printf("SNI mode used for non-SSL connection; "
 			               "aborting connection\n");
 			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx);
+			pxy_conn_ctx_free(ctx, 1);
 			return;
 		}
 	}
@@ -2406,7 +2407,7 @@ pxy_conn_setup(evutil_socket_t fd,
 memout:
 	log_err_printf("Aborting connection setup (out of memory)!\n");
 	evutil_closesocket(fd);
-	pxy_conn_ctx_free(ctx);
+	pxy_conn_ctx_free(ctx, 1);
 	return;
 }
 

@@ -55,7 +55,7 @@ int logger_reopen(logger_t *) NONNULL(1) WUNRES;
 int logger_open(logger_t *, void *) NONNULL(1,2) WUNRES;
 int logger_close(logger_t *, void *) NONNULL(1,2) WUNRES;
 int logger_submit(logger_t *, void *, unsigned long,
-                  logbuf_t *) NONNULL(1,4) WUNRES;
+                  logbuf_t *) NONNULL(1) WUNRES;
 int logger_printf(logger_t *, void *, unsigned long,
                   const char *, ...) PRINTF(4,5) NONNULL(1,4) WUNRES;
 int logger_print(logger_t *, void *, unsigned long,

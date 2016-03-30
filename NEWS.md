@@ -1,6 +1,9 @@
 
 ### SSLsplit develop
 
+-   Extend -L content logging with EOF message to allow log parsers to figure
+    out when a connection ends (issue #128 by @mattes).  Note that log parsers
+    need to be adjusted to handle the new EOF message.
 -   Add missing authors Maciej Kotowicz and Eun Soo Park to manual page.
 -   Fix SSL connections that result from autossl to shutdown cleanly.
 -   Fix data processing when EOF is received before all incoming data has been
