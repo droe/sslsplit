@@ -140,7 +140,7 @@ retry:
 	}
 	ctx->ev = event_new(ctx->evbase, fd, want, pxy_ssl_shutdown_cb, ctx);
 	if (ctx->ev) {
-		event_add(ctx->ev, want ? NULL : &retry_delay);
+		event_add(ctx->ev, &retry_delay);
 		return;
 	}
 	log_err_printf("Failed to shutdown SSL connection cleanly: "
