@@ -2,6 +2,7 @@
 ### SSLsplit develop
 
 -   Add missing authors Maciej Kotowicz and Eun Soo Park to manual page.
+-   Fix SSL connections that result from autossl to shutdown cleanly.
 
 
 ### SSLsplit 0.5.0 2016-03-27

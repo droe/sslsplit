@@ -1131,7 +1131,7 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	evutil_socket_t fd = bufferevent_getfd(bev);
 	SSL *ssl = NULL;
 
-	if (ctx->spec->ssl && !ctx->passthrough) {
+	if ((ctx->spec->ssl || ctx->clienthello_found) && !ctx->passthrough) {
 		ssl = bufferevent_openssl_get_ssl(bev); /* does not inc refc */
 	}
 
