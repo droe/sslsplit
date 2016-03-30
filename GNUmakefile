@@ -156,6 +156,7 @@ PKGCONFIG?=	pkg-config
 
 BASENAME?=	basename
 CAT?=		cat
+CHECKNR?=	checknr
 CUT?=		cut
 GREP?=		grep
 INSTALL?=	install
@@ -430,7 +431,10 @@ ifdef GITDIR
 lint:
 	$(CPPCHECK) $(CPPCHECKFLAGS) --force --enable=all --error-exitcode=1 .
 
-mantest:
+manlint: $(TARGET).1
+	$(CHECKNR) $(TARGET).1
+
+mantest: $(TARGET).1
 	$(RM) -f man1
 	$(LN) -sf . man1
 	$(MAN) -M . 1 $(TARGET)
@@ -482,6 +486,6 @@ endif
 
 FORCE:
 
-.PHONY: all config clean test lint install deinstall \
+.PHONY: all config clean test travis lint install deinstall manlint \
         mantest man manclean fetchdeps dist disttest distclean realclean
 
