@@ -1600,6 +1600,8 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 
 	struct evbuffer *inbuf = bufferevent_get_input(bev);
 	if (other->closed) {
+		log_dbg_printf("Warning: Drained %zu bytes (conn closed)\n",
+		               evbuffer_get_length(inbuf));
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
 		return;
 	}
@@ -2074,28 +2076,41 @@ connected:
 	}
 
 	if (events & BEV_EVENT_EOF) {
+#ifdef DEBUG_PROXY
+		if (OPTS_DEBUG(ctx->opts)) {
+			log_dbg_printf("evbuffer size at EOF: "
+			               "i:%zu o:%zu i:%zu o:%zu\n",
+			                evbuffer_get_length(
+			                    bufferevent_get_input(bev)),
+			                evbuffer_get_length(
+			                    bufferevent_get_output(bev)),
+			                evbuffer_get_length(
+			                    bufferevent_get_input(other->bev)),
+			                evbuffer_get_length(
+			                    bufferevent_get_output(other->bev))
+			                );
+		}
+#endif /* DEBUG_PROXY */
 		if (!ctx->connected) {
 			log_dbg_printf("EOF on outbound connection before "
 			               "connection establishment\n");
 			evutil_closesocket(ctx->fd);
 			other->closed = 1;
 		} else if (!other->closed) {
-			struct evbuffer *inbuf, *outbuf;
-			inbuf = bufferevent_get_input(bev);
-			outbuf = bufferevent_get_output(other->bev);
-			if (evbuffer_get_length(inbuf) > 0) {
-				evbuffer_add_buffer(outbuf, inbuf);
-			} else {
-				/* if the other end is still open and doesn't
-				 * have data to send, close it, otherwise its
-				 * writecb will close it after writing what's
-				 * left in the output buffer. */
-				if (evbuffer_get_length(outbuf) == 0) {
-					bufferevent_free_and_close_fd(
-							other->bev, ctx);
-					other->bev = NULL;
-					other->closed = 1;
-				}
+			/* if there is data pending in the closed connection,
+			 * handle it here, otherwise it will be lost. */
+			if (evbuffer_get_length(bufferevent_get_input(bev))) {
+				pxy_bev_readcb(bev, ctx);
+			}
+			/* if the other end is still open and doesn't
+			 * have data to send, close it, otherwise its
+			 * writecb will close it after writing what's
+			 * left in the output buffer. */
+			if (evbuffer_get_length(
+			    bufferevent_get_output(other->bev)) == 0) {
+				bufferevent_free_and_close_fd(other->bev, ctx);
+				other->bev = NULL;
+				other->closed = 1;
 			}
 		}
 		goto leave;
