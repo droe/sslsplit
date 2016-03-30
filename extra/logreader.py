@@ -64,7 +64,7 @@ class LogSyntaxError(Exception):
 def parse_header(line):
     """Parse the header line into a dict with useful fields"""
     # 2015-09-27 14:55:41 UTC [192.0.2.1]:56721 -> [192.0.2.2]:443 (37):
-    m = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+) \[(.+?)\]:(\d+) -> \[(.+?)\]:(\d+) \((\d+)\):', line)
+    m = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+) \[(.+?)\]:(\d+) -> \[(.+?)\]:(\d+) \((\d+|EOF)\):?', line)
     if not m:
         raise LogSyntaxError(line)
     res = {}
@@ -73,7 +73,11 @@ def parse_header(line):
     res['src_port'] = int(m.group(3))
     res['dst_addr'] = m.group(4)
     res['dst_port'] = int(m.group(5))
-    res['size'] = int(m.group(6))
+    if m.group(6) == 'EOF':
+        res['eof'] = True
+    else:
+        res['eof'] = False
+        res['size'] = int(m.group(6))
     return res
 
 def parse_log(f):
@@ -83,7 +87,8 @@ def parse_log(f):
         if not line:
             break
         res = parse_header(line)
-        res['data'] = read_count(f, res['size'])
+        if (not res['eof']):
+            res['data'] = read_count(f, res['size'])
         yield res
 
 if __name__ == '__main__':

@@ -172,16 +172,21 @@ class NetworkStack():
         tm = parse_timestamp(logentry['timestamp'])
         conn5tuple = self._make5tuple(logentry)
 
-        if not conn5tuple in self.connstate:
-            self.connstate[conn5tuple] = NetworkStack.ConnState(logentry, tm,
-                                                                self)
-            self.connstate[conn5tuple].syn()
+        if logentry['eof']:
+            if conn5tuple in self.connstate:
+                self.connstate[conn5tuple].fin()
+                del self.connstate[conn5tuple]
         else:
-            self.connstate[conn5tuple].touch(tm)
+            if not conn5tuple in self.connstate:
+                self.connstate[conn5tuple] = NetworkStack.ConnState(logentry,
+                                                                    tm,
+                                                                    self)
+                self.connstate[conn5tuple].syn()
+            else:
+                self.connstate[conn5tuple].touch(tm)
+            self.connstate[conn5tuple].data(logentry)
 
-        self.connstate[conn5tuple].data(logentry)
-
-        # at most very 60 seconds, time out old connections (doesn't scale!)
+        # at most every 60s, time out old connections (should not happen)
         if tm > self.last_timeout_tm + datetime.timedelta(0, 1, 0):
             for conn in self.connstate:
                 if self.last_timeout_tm > self.connstate[conn5tuple].tm + \
