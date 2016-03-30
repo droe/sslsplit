@@ -608,13 +608,11 @@ connection data into separate files under \fB/tmp\fP (add \fB-e\fP
 \fInat-engine\fP to select the appropriate engine if multiple engines are
 available on your system):
 .LP
-.HS
 .nf
 \fBsslsplit -k ca.key -c ca.crt -l connect.log -L /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
-.RE
 .LP
 If the Linux netfilter engine is used with the iptables REDIRECT target, it is
 important to listen to the correct IP address (e.g. 192.0.2.1) or on all
@@ -623,25 +621,21 @@ connections.
 .LP
 Intercepting IMAP/IMAPS using the same settings:
 .LP
-.HS
 .nf
 \fBsslsplit -k ca.key -c ca.crt -l connect.log -L /tmp \\
          ssl ::1 10993  ssl 127.0.0.1 10993 \\
          tcp ::1 10143  tcp 127.0.0.1 10143\fP
 .fi
-.RE
 .LP
 A more targetted setup, HTTPS only, using certificate/chain/key files from
 \fB/path/to/cert.d\fP and statically redirecting to \fBwww.example.org\fP
 instead of querying a NAT engine:
 .LP
-.HS
 .nf
 \fBsslsplit -t /path/to/cert.d -l connect.log -L /tmp \\
          https ::1       10443 www.example.org 443 \\
          https 127.0.0.1 10443 www.example.org 443\fP
 .fi
-.RE
 .LP
 The original example, but using SSL options optimized for speed by disabling
 compression and selecting only fast cipher cipher suites and using a
@@ -652,31 +646,26 @@ algorithm performance on your system.  Note that clients may not support all
 algorithms and key sizes.  Also, some clients warn their users about cipher
 suites they consider weak.
 .LP
-.HS
 .nf
 \fBsslsplit -Z -s NULL:RC4:AES128:-DHE -K leaf.key \\
          -k ca.key -c ca.crt -l connect.log -L /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
-.RE
 .LP
 The original example, but running as a daemon under user \fBsslsplit\fP and
 writing a PID file:
 .LP
-.HS
 .nf
 \fBsslsplit -d -p /var/run/sslsplit.pid -u sslsplit \\
          -k ca.key -c ca.crt -l connect.log -L /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
-.RE
 .LP
 To generate a CA private key \fBca.key\fP  and certificate \fBca.crt\fP using
 OpenSSL:
 .LP
-.HS
 .nf
 \fBcat >x509v3ca.cnf <<'EOF'\fP
 [ req ]
