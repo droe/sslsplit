@@ -1335,8 +1335,10 @@ ssl_wildcardify(const char *hostname)
 	if (!(wildcarded = malloc(dotsz + 2)))
 		return NULL;
 	wildcarded[0] = '*';
-	strncpy(wildcarded + 1, dot, dotsz);
-	wildcarded[dotsz + 1] = '\0';
+	for (size_t i = 0; i < dotsz; i++) {
+		wildcarded[i+1] = dot[i];
+	}
+	wildcarded[dotsz+1] = '\0';
 	return wildcarded;
 }
 
