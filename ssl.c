@@ -1741,6 +1741,8 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
  * Note that this code currently only supports SSL 3.0 and TLS 1.0-1.2 and that
  * it expects the ClientHello message to be unfragmented in a single record.
  *
+ * TODO - implement SSL 2.0 ClientHello parsing to support old STARTTLS clients
+ *
  * References:
  * RFC 2246: The TLS Protocol Version 1.0
  * RFC 3546: Transport Layer Security (TLS) Extensions

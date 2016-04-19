@@ -1535,10 +1535,10 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
 			bufferevent_enable(ctx->dst.bev, EV_READ|EV_WRITE);
-			if(!ctx->dst.bev) {
+			if (!ctx->dst.bev) {
 				return 0;
 			}
-			if( OPTS_DEBUG(ctx->opts)) {
+			if (OPTS_DEBUG(ctx->opts)) {
 				log_err_printf("Replaced dst bufferevent, new "
 				               "one is %p\n", ctx->dst.bev);
 			}
