@@ -1530,7 +1530,8 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			}
 			ctx->dst.bev = bufferevent_openssl_filter_new(
 			               ctx->evbase, ctx->dst.bev, ctx->dst.ssl,
-			               BUFFEREVENT_SSL_CONNECTING, 0);
+			               BUFFEREVENT_SSL_CONNECTING,
+			               BEV_OPT_DEFER_CALLBACKS);
 			bufferevent_setcb(ctx->dst.bev, pxy_bev_readcb,
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
