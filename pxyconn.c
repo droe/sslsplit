@@ -118,16 +118,19 @@ typedef struct pxy_conn_ctx {
 	struct pxy_conn_desc dst;
 
 	/* status flags */
+	unsigned int connected : 1;       /* 0 until both ends are connected */
+	unsigned int enomem : 1;                       /* 1 if out of memory */
+	/* ssl */
+	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 	unsigned int immutable_cert : 1;  /* 1 if the cert cannot be changed */
 	unsigned int generated_cert : 1;     /* 1 if we generated a new cert */
-	unsigned int connected : 1;       /* 0 until both ends are connected */
+	unsigned int passthrough : 1;      /* 1 if SSL passthrough is active */
+	/* http */
 	unsigned int seen_req_header : 1; /* 0 until request header complete */
 	unsigned int seen_resp_header : 1;  /* 0 until response hdr complete */
 	unsigned int sent_http_conn_close : 1;   /* 0 until Conn: close sent */
-	unsigned int passthrough : 1;      /* 1 if SSL passthrough is active */
 	unsigned int ocsp_denied : 1;                /* 1 if OCSP was denied */
-	unsigned int enomem : 1;                       /* 1 if out of memory */
-	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
+	/* autossl */
 	unsigned int clienthello_search : 1;       /* 1 if waiting for hello */
 	unsigned int clienthello_found : 1;      /* 1 if conn upgrade to SSL */
 
