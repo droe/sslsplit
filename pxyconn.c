@@ -1988,8 +1988,9 @@ connected:
 		           SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE) {
 			/* these can happen due to client cert auth,
 			 * only log error if debugging is activated */
-			log_dbg_printf("Error from bufferevent: "
+			log_dbg_printf("Error from %s bufferevent: "
 			               "%i:%s %lu:%i:%s:%i:%s:%i:%s\n",
+			               (bev == ctx->src.bev) ? "src" : "dst",
 			               errno,
 			               errno ? strerror(errno) : "-",
 			               sslerr,
@@ -2015,8 +2016,9 @@ connected:
 			}
 		} else {
 			/* real errors */
-			log_err_printf("Error from bufferevent: "
+			log_err_printf("Error from %s bufferevent: "
 			               "%i:%s %lu:%i:%s:%i:%s:%i:%s\n",
+			               (bev == ctx->src.bev) ? "src" : "dst",
 			               errno,
 			               errno ? strerror(errno) : "-",
 			               sslerr,
