@@ -295,7 +295,7 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine)
 		switch (state) {
 			default:
 			case 0:
-				/* tcp | ssl | http | https */
+				/* tcp | ssl | http | https | autossl */
 				curspec = malloc(sizeof(proxyspec_t));
 				memset(curspec, 0, sizeof(proxyspec_t));
 				curspec->next = spec;
