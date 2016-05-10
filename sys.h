@@ -54,8 +54,8 @@ char * sys_ip46str_sanitize(const char *) NONNULL(1) MALLOC;
 int sys_isdir(const char *) NONNULL(1) WUNRES;
 int sys_mkpath(const char *, mode_t) NONNULL(1) WUNRES;
 
-typedef void (*sys_dir_eachfile_cb_t)(const char *, void *) NONNULL(1);
-int sys_dir_eachfile(const char *, sys_dir_eachfile_cb_t, void *) NONNULL(1,2);
+typedef int (*sys_dir_eachfile_cb_t)(const char *, void *) NONNULL(1) WUNRES;
+int sys_dir_eachfile(const char *, sys_dir_eachfile_cb_t, void *) NONNULL(1,2) WUNRES;
 
 uint32_t sys_get_cpu_cores(void) WUNRES;
 

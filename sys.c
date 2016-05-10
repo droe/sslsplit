@@ -521,7 +521,6 @@ sys_mkpath(const char *path, mode_t mode)
  * Iterate over all files in a directory hierarchy, calling the callback
  * cb for each file, passing the filename and arg as arguments.  Files and
  * directories beginning with a dot are skipped, symlinks are followed.
- * FIXME - there is no facility to return errors from the file handlers
  */
 int
 sys_dir_eachfile(const char *dirname, sys_dir_eachfile_cb_t cb, void *arg)
@@ -529,6 +528,7 @@ sys_dir_eachfile(const char *dirname, sys_dir_eachfile_cb_t cb, void *arg)
 	FTS *tree;
 	FTSENT *node;
 	char * paths[2];
+	int rv = 0;
 
 	paths[1] = NULL;
 	paths[0] = strdup(dirname);
@@ -539,25 +539,32 @@ sys_dir_eachfile(const char *dirname, sys_dir_eachfile_cb_t cb, void *arg)
 	if (!tree) {
 		log_err_printf("Cannot open directory '%s': %s\n",
 		               dirname, strerror(errno));
-		return -1;
+		rv = -1;
+		goto out1;
 	}
 
 	while ((node = fts_read(tree))) {
 		if (node->fts_level > 0 && node->fts_name[0] == '.')
 			fts_set(tree, node, FTS_SKIP);
 		else if (node->fts_info & FTS_F) {
-			cb(node->fts_path, arg);
+			rv = cb(node->fts_path, arg);
+			if (rv == -1)
+				goto out2;
 		}
 	}
 	if (errno) {
 		log_err_printf("Error reading directory entry: %s\n",
 		               strerror(errno));
-		return -1;
+		rv = -1;
+		goto out2;
 	}
+
+out2:
 	fts_close(tree);
 
+out1:
 	free(paths[0]);
-	return 0;
+	return rv;
 }
 
 /*

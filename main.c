@@ -215,8 +215,9 @@ main_usage(void)
 
 /*
  * Callback to load a cert/chain/key combo from a single PEM file.
+ * A return value of -1 indicates a fatal error to the file walker.
  */
-static void
+static int
 main_loadtgcrt(const char *filename, void *arg)
 {
 	opts_t *opts = arg;
@@ -227,15 +228,13 @@ main_loadtgcrt(const char *filename, void *arg)
 	if (!cert) {
 		log_err_printf("Failed to load cert and key from PEM file "
 		                "'%s'\n", filename);
-		log_fini();
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 	if (X509_check_private_key(cert->crt, cert->key) != 1) {
 		log_err_printf("Cert does not match key in PEM file "
 		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
-		log_fini();
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
 #ifdef DEBUG_CERTIFICATE
@@ -265,6 +264,7 @@ main_loadtgcrt(const char *filename, void *arg)
 	}
 	free(names);
 	cert_free(cert);
+	return 0;
 }
 
 /*
@@ -891,7 +891,12 @@ main(int argc, char *argv[])
 
 	/* Load certs before dropping privs but after cachemgr_preinit() */
 	if (opts->tgcrtdir) {
-		sys_dir_eachfile(opts->tgcrtdir, main_loadtgcrt, opts);
+		if (sys_dir_eachfile(opts->tgcrtdir,
+		                     main_loadtgcrt, opts) == -1) {
+			fprintf(stderr, "%s: failed to load certs from %s\n",
+			                argv0, opts->tgcrtdir);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Detach from tty; from this point on, only canonicalized absolute
