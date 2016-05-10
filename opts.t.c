@@ -71,10 +71,14 @@ static char *argv11[] = {
 };
 static char *argv12[] = {
 	"autossl", "127.0.0.1", "10025", "127.0.0.2", "25",
-	"https", "127.0.0.1", "10443", "127.0.0.2", "443",
+	"https", "127.0.0.1", "10443", "127.0.0.2", "443"
 };
 static char *argv13[] = {
 	"autossl", "127.0.0.1", "10025", "sni", "25"
+};
+static char *argv14[] = {
+	"https", "127.0.0.1", "10443",
+	"autossl", "127.0.0.1", "10025", "127.0.0.2", "25"
 };
 
 #define NATENGINE "pf"
@@ -453,6 +457,40 @@ START_TEST(proxyspec_parse_17)
 }
 END_TEST
 
+START_TEST(proxyspec_parse_18)
+{
+	proxyspec_t *spec;
+	int argc = 8;
+	char **argv = argv14;
+
+	spec = proxyspec_parse(&argc, &argv, NATENGINE);
+	fail_unless(!!spec, "failed to parse spec");
+	fail_unless(!spec->ssl, "SSL");
+	fail_unless(!spec->http, "HTTP");
+	fail_unless(spec->upgrade, "not Upgrade");
+	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	            "not IPv4 listen addr");
+	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	            "not IPv4 connect addr");
+	fail_unless(!spec->sni_port, "SNI port is set");
+	fail_unless(!spec->natengine, "natengine is set");
+	fail_unless(!spec->natlookup, "natlookup() is set");
+	fail_unless(!spec->natsocket, "natsocket() is set");
+	fail_unless(!!spec->next, "next is not set");
+	fail_unless(spec->next->ssl, "not SSL");
+	fail_unless(spec->next->http, "not HTTP");
+	fail_unless(!spec->next->upgrade, "Upgrade");
+	fail_unless(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
+	            "not IPv4 listen addr");
+	fail_unless(!spec->next->connect_addrlen, "connect addr set");
+	fail_unless(!spec->next->sni_port, "SNI port is set");
+	fail_unless(!!spec->next->natengine, "natengine is not set");
+	fail_unless(!spec->next->natlookup, "natlookup() is set");
+	fail_unless(!spec->next->natsocket, "natsocket() is set");
+	proxyspec_free(spec);
+}
+END_TEST
+
 START_TEST(opts_debug_01)
 {
 	opts_t *opts;
@@ -497,6 +535,7 @@ opts_suite(void)
 	tcase_add_test(tc, proxyspec_parse_15);
 	tcase_add_test(tc, proxyspec_parse_16);
 	tcase_add_exit_test(tc, proxyspec_parse_17, EXIT_FAILURE);
+	tcase_add_test(tc, proxyspec_parse_18);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("opts_debug");
