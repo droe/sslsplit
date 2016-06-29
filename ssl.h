@@ -57,6 +57,9 @@
 #if (OPENSSL_VERSION_NUMBER < 0x0090802FL) && !defined(OPENSSL_NO_EC)
 #define OPENSSL_NO_EC
 #endif
+#if (OPENSSL_VERSION_NUMBER < 0x10002000) && !defined(OPENSSL_NO_ALPNEXT)
+#define OPENSSL_NO_ALPNEXT
+#endif
 
 /*
  * The constructors returning a SSL_METHOD * were changed to return
@@ -84,6 +87,10 @@ X509 * ssl_ssl_cert_get(SSL *);
 #ifndef TLSEXT_MAXLEN_host_name
 #define TLSEXT_MAXLEN_host_name 255
 #endif /* !TLSEXT_MAXLEN_host_name */
+
+#ifndef TLSEXT_MAXLEN_alpn
+#define TLSEXT_MAXLEN_alpn 255
+#endif /* !TLSEXT_MAXLEN_alpn */
 #endif /* OPENSSL_NO_TLSEXT */
 
 /*
@@ -198,7 +205,8 @@ int ssl_session_is_valid(SSL_SESSION *) NONNULL(1);
 int ssl_is_ocspreq(const unsigned char *, size_t) NONNULL(1) WUNRES;
 
 int ssl_tls_clienthello_parse(const unsigned char *, ssize_t, int,
-                              const unsigned char **, char **)
+                              const unsigned char **, char **,
+                              unsigned char **, unsigned int *)
     NONNULL(1,4) WUNRES;
 int ssl_dnsname_match(const char *, size_t, const char *, size_t)
     NONNULL(1,3) WUNRES;
