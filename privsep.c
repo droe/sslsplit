@@ -631,12 +631,11 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 			}
 		}
 
-		/* break if all server sockets received an EOF */
-		i = 0;
-		while (i < nsrvsock && srveof[i])
-			i++;
-		if (i == nsrvsock)
-			break;
+		/*
+		 * We cannot exit as long as we need the signal handling,
+		 * which is as long as the child process is running.
+		 * The only way out of here is receiving SIGCHLD.
+		 */
 	}
 
 	return 0;
