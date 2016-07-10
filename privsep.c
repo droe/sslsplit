@@ -72,12 +72,14 @@
 #define PRIVSEP_ANS_SYS_ERR	4	/* system error; arg=errno */
 
 /* communication with signal handler */
-static int received_sighup;
-static int received_sigint;
-static int received_sigquit;
-static int received_sigchld;
-static int received_sigusr1;
-static int selfpipe_wrfd; /* write end of pipe used for unblocking select */
+static volatile sig_atomic_t received_sighup;
+static volatile sig_atomic_t received_sigint;
+static volatile sig_atomic_t received_sigquit;
+static volatile sig_atomic_t received_sigterm;
+static volatile sig_atomic_t received_sigchld;
+static volatile sig_atomic_t received_sigusr1;
+/* write end of pipe used for unblocking select */
+static volatile sig_atomic_t selfpipe_wrfd;
 
 static void
 privsep_server_signal_handler(int sig)
