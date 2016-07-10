@@ -15,6 +15,7 @@ patches or pull requests, in chronological order of their first contribution:
 -   Richard Poole ([RichardPoole42](https://github.com/RichardPoole42))
 -   Maciej Kotowicz ([mak](https://github.com/mak))
 -   Eun Soo Park ([eunsoopark](https://github.com/eunsoopark))
+-   Christian Groschupp ([cgroschupp](https://github.com/cgroschupp))
 
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.

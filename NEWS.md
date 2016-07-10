@@ -13,6 +13,8 @@
 -   Fix data processing when EOF is received before all incoming data has been
     processed.
 -   Fix parallel make build (-j) for the test target (issue #140).
+-   Do not set owner and group if install target is called by unprivileged
+    user (pull req #141 by @cgroschupp).
 -   Minor bugfixes and improvements.
 
 
