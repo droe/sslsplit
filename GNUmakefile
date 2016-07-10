@@ -18,9 +18,8 @@
 # PREFIX	Prefix to install under (default /usr/local)
 # DESTDIR	Destination root under which prefix is located (default /)
 # MANDIR	Subdir of PREFIX that contains man section dirs
-# INSTALLUID	UID to use for installed files
-# INSTALLGID	GID to use for installed files
-# NOPERMCHANGE not change permissions on the installed files (default not set)
+# INSTALLUID	UID to use for installed files if installing as root
+# INSTALLGID	GID to use for installed files if installing as root
 #
 # Standard compiler variables are respected, e.g.:
 #
@@ -154,12 +153,12 @@ BINMODE?=	0755
 MANUID?=	$(INSTALLUID)
 MANGID?=	$(INSTALLGID)
 MANMODE?=	0644
-BINPERM=
-MANPERM=
-
-ifndef NOPERMCHANGE
-BINPERM=-o $(BINUID) -g $(BINGID)
-MANPERM=-o $(MANUID) -g $(MANGID)
+ifeq ($(shell id -u),0)
+BINOWNERFLAGS?=	-o $(BINUID) -g $(BINGID)
+MANOWNERFLAGS?=	-o $(MANUID) -g $(MANGID)
+else
+BINOWNERFLAGS?=	
+MANOWNERFLAGS?=	
 endif
 
 OPENSSL?=	openssl
@@ -430,9 +429,9 @@ install: $(TARGET)
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
-	$(INSTALL) $(BINPERM) -m $(BINMODE) \
+	$(INSTALL) $(BINOWNERFLAGS) -m $(BINMODE) \
 		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
-	$(INSTALL) $(MANPERM) -m $(MANMODE) \
+	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \
 		$(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
 
 deinstall:
