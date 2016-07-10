@@ -12,6 +12,7 @@
 -   Fix SSL connections that result from autossl to shutdown cleanly.
 -   Fix data processing when EOF is received before all incoming data has been
     processed.
+-   Fix parallel make build (-j) for the test target (issue #140).
 -   Minor bugfixes and improvements.
 
 

@@ -111,7 +111,7 @@ targets/wildcard.roe.ch.pem: rsa.crt
 		targets/wildcard.roe.ch.crt
 
 # localhost network connectivity is required
-session.pem:
+session.pem: server.pem
 	openssl s_server -accept 46143 -cert server.pem -quiet -no_ssl2 & \
 		pid=$$! ; \
 		sleep 1 ; \
