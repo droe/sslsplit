@@ -97,6 +97,9 @@ privsep_server_signal_handler(int sig)
 	case SIGQUIT:
 		received_sigquit = 1;
 		break;
+	case SIGTERM:
+		received_sigterm = 1;
+		break;
 	case SIGCHLD:
 		received_sigchld = 1;
 		break;
@@ -535,6 +538,15 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 				}
 				received_sigquit = 0;
 			}
+			if (received_sigterm) {
+				if (kill(childpid, SIGTERM) == -1) {
+					log_err_printf("kill(%i,SIGTERM) "
+					               "failed: %s (%i)\n",
+					               childpid,
+					               strerror(errno), errno);
+				}
+				received_sigterm = 0;
+			}
 			if (received_sighup) {
 				if (kill(childpid, SIGHUP) == -1) {
 					log_err_printf("kill(%i,SIGHUP) "
@@ -865,6 +877,11 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 	}
 	if (signal(SIGINT, privsep_server_signal_handler) == SIG_ERR) {
 		log_err_printf("Failed to install SIGINT handler: %s (%i)\n",
+		               strerror(errno), errno);
+		return -1;
+	}
+	if (signal(SIGTERM, privsep_server_signal_handler) == SIG_ERR) {
+		log_err_printf("Failed to install SIGTERM handler: %s (%i)\n",
 		               strerror(errno), errno);
 		return -1;
 	}

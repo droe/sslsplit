@@ -56,7 +56,7 @@
  * Proxy engine, built around libevent 2.x.
  */
 
-static int signals[] = { SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
+static int signals[] = { SIGTERM, SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
 
 struct proxy_ctx {
 	pxy_thrmgr_ctx_t *thrmgr;
@@ -193,7 +193,7 @@ proxy_listener_setup(struct event_base *evbase, pxy_thrmgr_ctx_t *thrmgr,
 }
 
 /*
- * Signal handler for SIGQUIT, SIGINT, SIGHUP, SIGPIPE and SIGUSR1.
+ * Signal handler for SIGTERM, SIGQUIT, SIGINT, SIGHUP, SIGPIPE and SIGUSR1.
  */
 static void
 proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
@@ -205,6 +205,7 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 	}
 
 	switch(fd) {
+	case SIGTERM:
 	case SIGQUIT:
 	case SIGINT:
 	case SIGHUP:
