@@ -527,22 +527,45 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 			 * all the individual signal flags */
 			read(sigpipe, buf, sizeof(buf));
 			if (received_sigquit) {
-				kill(childpid, SIGQUIT);
+				if (kill(childpid, SIGQUIT) == -1) {
+					log_err_printf("kill(%i,SIGQUIT) "
+					               "failed: %s (%i)\n",
+					               childpid,
+					               strerror(errno), errno);
+				}
 				received_sigquit = 0;
 			}
 			if (received_sighup) {
-				kill(childpid, SIGHUP);
+				if (kill(childpid, SIGHUP) == -1) {
+					log_err_printf("kill(%i,SIGHUP) "
+					               "failed: %s (%i)\n",
+					               childpid,
+					               strerror(errno), errno);
+				}
 				received_sighup = 0;
 			}
 			if (received_sigusr1) {
-				kill(childpid, SIGUSR1);
+				if (kill(childpid, SIGUSR1) == -1) {
+					log_err_printf("kill(%i,SIGUSR1) "
+					               "failed: %s (%i)\n",
+					               childpid,
+					               strerror(errno), errno);
+				}
 				received_sigusr1 = 0;
 			}
 			if (received_sigint) {
 				/* if we don't detach from the TTY, the
 				 * child process receives SIGINT directly */
-				if (opts->detach)
-					kill(childpid, SIGINT);
+				if (opts->detach) {
+					if (kill(childpid, SIGINT) == -1) {
+						log_err_printf("kill(%i,SIGINT"
+						               ") failed: "
+						               "%s (%i)\n",
+						               childpid,
+						               strerror(errno),
+						               errno);
+					}
+				}
 				received_sigint = 0;
 			}
 			if (received_sigchld) {
