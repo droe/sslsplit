@@ -34,10 +34,10 @@ certificate verification vulnerabilities in SSL/TLS stacks.
 SSLsplit implements a number of defences against mechanisms which would
 normally prevent MitM attacks or make them more difficult.  SSLsplit can deny
 OCSP requests in a generic way.  For HTTP and HTTPS connections, SSLsplit
-removes response headers for HPKP in order to prevent public key pinning, for
-HSTS to allow the user to accept untrusted certificates, and Alternate
-Protocols to prevent switching to QUIC/SPDY.  HTTP compression, encodings and
-keep-alive are disabled to make the logs more readable.
+removes response headers for HPKP in order to prevent server-instructed public
+key pinning, for HSTS to avoid the strict transport security restrictions, and
+Alternate Protocols to prevent switching to QUIC/SPDY.  HTTP compression,
+encodings and keep-alive are disabled to make the logs more readable.
 
 As an experimental feature, SSLsplit supports STARTTLS and similar mechanisms,
 where a protocol starts on a plain text TCP connection and is later upgraded to
