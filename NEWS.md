@@ -6,8 +6,9 @@
     need to be adjusted to handle the new EOF message.
 -   Add missing authors Maciej Kotowicz and Eun Soo Park to manual page.
 -   Fix multiple signal handling issues in the privilege separation parent
-    which led to the parent process being stuck in wait() while still having
-    signals queued up for forwarding to the child process (issue #137).
+    which led to the parent process being killed ungracefully (SIGTERM) or
+    being stuck in wait() while still having signals (SIGQUIT etc) queued up
+    for forwarding to the child process (issue #137).
 -   Fix SSL connections that result from autossl to shutdown cleanly.
 -   Fix data processing when EOF is received before all incoming data has been
     processed.
