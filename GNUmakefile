@@ -20,6 +20,7 @@
 # MANDIR	Subdir of PREFIX that contains man section dirs
 # INSTALLUID	UID to use for installed files
 # INSTALLGID	GID to use for installed files
+# NOPERMCHANGE not change permissions on the installed files (default not set)
 #
 # Standard compiler variables are respected, e.g.:
 #
@@ -150,6 +151,13 @@ BINMODE?=	0755
 MANUID?=	$(INSTALLUID)
 MANGID?=	$(INSTALLGID)
 MANMODE?=	0644
+BINPERM=
+MANPERM=
+
+ifndef NOPERMCHANGE
+BINPERM=-o $(BINUID) -g $(BINGID)
+MANPERM=-o $(MANUID) -g $(MANGID)
+endif
 
 OPENSSL?=	openssl
 PKGCONFIG?=	pkg-config
@@ -418,9 +426,9 @@ install: $(TARGET)
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
-	$(INSTALL) -o $(BINUID) -g $(BINGID) -m $(BINMODE) \
+	$(INSTALL) $(BINPERM) -m $(BINMODE) \
 		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
-	$(INSTALL) -o $(MANUID) -g $(MANGID) -m $(MANMODE) \
+	$(INSTALL) $(MANPERM) -m $(MANMODE) \
 		$(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
 
 deinstall:
