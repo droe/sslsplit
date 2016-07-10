@@ -71,6 +71,9 @@ DEBUG_CFLAGS?=	-g
 # Define to add thread debugging; dump thread state when choosing a thread.
 #FEATURES+=	-DDEBUG_THREAD
 
+# Define to add privilege separation server event loop debugging.
+#FEATURES+=	-DDEBUG_PRIVSEP_SERVER
+
 # When debugging OpenSSL related issues, make sure you use a debug build of
 # OpenSSL and consider enabling its debugging options -DREF_PRINT -DREF_CHECK
 # for debugging reference counting of OpenSSL objects and/or

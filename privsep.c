@@ -86,6 +86,10 @@ privsep_server_signal_handler(int sig)
 {
 	int saved_errno;
 
+#ifdef DEBUG_PRIVSEP_SERVER
+	log_dbg_printf("privsep_server_signal_handler\n");
+#endif /* DEBUG_PRIVSEP_SERVER */
+
 	saved_errno = errno;
 	switch (sig) {
 	case SIGHUP:
@@ -110,6 +114,9 @@ privsep_server_signal_handler(int sig)
 	if (selfpipe_wrfd != -1) {
 		ssize_t n;
 
+#ifdef DEBUG_PRIVSEP_SERVER
+		log_dbg_printf("writing to selfpipe_wrfd %i\n", selfpipe_wrfd);
+#endif /* DEBUG_PRIVSEP_SERVER */
 		do {
 			n = write(selfpipe_wrfd, "!", 1);
 		} while (n == -1 && errno == EINTR);
@@ -118,6 +125,10 @@ privsep_server_signal_handler(int sig)
 			               "%s (%i)\n", strerror(errno), errno);
 			/* ignore error */
 		}
+#ifdef DEBUG_PRIVSEP_SERVER
+	} else {
+		log_dbg_printf("selfpipe_wrfd is %i - not writing\n", selfpipe_wrfd);
+#endif /* DEBUG_PRIVSEP_SERVER */
 	}
 	errno = saved_errno;
 }
@@ -506,6 +517,9 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 		fd_set readfds;
 		int maxfd, rv;
 
+#ifdef DEBUG_PRIVSEP_SERVER
+		log_dbg_printf("privsep_server select()\n");
+#endif /* DEBUG_PRIVSEP_SERVER */
 		do {
 			FD_ZERO(&readfds);
 			FD_SET(sigpipe, &readfds);
@@ -517,12 +531,18 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 				}
 			}
 			rv = select(maxfd + 1, &readfds, NULL, NULL, NULL);
+#ifdef DEBUG_PRIVSEP_SERVER
+			log_dbg_printf("privsep_server woke up (1)\n");
+#endif /* DEBUG_PRIVSEP_SERVER */
 		} while (rv == -1 && errno == EINTR);
 		if (rv == -1) {
 			log_err_printf("Select failed: %s (%i)\n",
 			               strerror(errno), errno);
 			return -1;
 		}
+#ifdef DEBUG_PRIVSEP_SERVER
+		log_dbg_printf("privsep_server woke up (2)\n");
+#endif /* DEBUG_PRIVSEP_SERVER */
 
 		if (FD_ISSET(sigpipe, &readfds)) {
 			char buf[16];
@@ -602,8 +622,12 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 					               srvsock[i]);
 					return -1;
 				}
-				if (rv == 1)
+				if (rv == 1) {
+#ifdef DEBUG_PRIVSEP_SERVER
+					log_dbg_printf("srveof[%zu]=1\n", i);
+#endif /* DEBUG_PRIVSEP_SERVER */
 					srveof[i] = 1;
+				}
 			}
 		}
 
@@ -913,6 +937,9 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 		               strerror(errno), errno);
 		/* fall through */
 	}
+#ifdef DEBUG_PRIVSEP_SERVER
+	log_dbg_printf("privsep_server exited\n");
+#endif /* DEBUG_PRIVSEP_SERVER */
 
 	for (size_t i = 0; i < nclisock; i++)
 		close(sockcliv[i][0]);
