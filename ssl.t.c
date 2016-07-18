@@ -339,6 +339,24 @@ static unsigned char clienthello06[] =
 	"\x01\x03\x02\x03\x03\x02\x01\x02\x02\x02\x03\x01\x01\x00\x0f\x00"
 	"\x01\x01";
 	/* TLS 1.2, SNI extension with hostname "daniel.roe.ch" */
+static unsigned char clienthello07[] =
+	"\x16\x03\x01\x00\xe1\x01\x00\x00\xdd\x03\x03\x26\xa2\xf8\x55\xe8"
+	"\x40\x7d\x60\x6e\xc4\xca\x59\xfd\xc6\x82\xa0\xbe\x1f\x02\x18\x5f"
+	"\xac\x75\xc4\x2f\x8e\xe3\x48\x56\xcb\x19\xca\x20\x84\xea\x90\x8a"
+	"\x98\xb9\x9e\xef\x7e\x9a\x51\x28\xbf\x5b\xbf\x66\x0c\x79\x35\x00"
+	"\x23\xd7\xa0\xe5\x3c\x47\x5b\x41\xc5\x41\xa7\xb1\x00\x1a\xc0\x2b"
+	"\xc0\x2f\xcc\xa9\xcc\xa8\xc0\x0a\xc0\x09\xc0\x13\xc0\x14\x00\x33"
+	"\x00\x39\x00\x2f\x00\x35\x00\x0a\x01\x00\x00\x7a\x00\x00\x00\x15"
+	"\x00\x13\x00\x00\x10\x68\x74\x74\x70\x32\x2e\x67\x6f\x6c\x61\x6e"
+	"\x67\x2e\x6f\x72\x67\x00\x17\x00\x00\xff\x01\x00\x01\x00\x00\x0a"
+	"\x00\x08\x00\x06\x00\x17\x00\x18\x00\x19\x00\x0b\x00\x02\x01\x00"
+	"\x00\x23\x00\x00\x33\x74\x00\x00\x00\x10\x00\x17\x00\x15\x02\x68"
+	"\x32\x08\x73\x70\x64\x79\x2f\x33\x2e\x31\x08\x68\x74\x74\x70\x2f"
+	"\x31\x2e\x31\x00\x05\x00\x05\x01\x00\x00\x00\x00\x00\x0d\x00\x16"
+	"\x00\x14\x04\x01\x05\x01\x06\x01\x02\x01\x04\x03\x05\x03\x06\x03"
+	"\x02\x03\x04\x02\x02\x02";
+	/* TLS, SNI extension with hostname "http2.golang.org" and ALPN extension
+	 * accepting h2, spdy/3.1, http/1.1 */
 
 START_TEST(ssl_tls_clienthello_parse_01)
 {
@@ -348,7 +366,7 @@ START_TEST(ssl_tls_clienthello_parse_01)
 
 	rv = ssl_tls_clienthello_parse(clienthello01,
 	                               sizeof(clienthello01) - 1,
-	                               0, &ch, &sni);
+	                               0, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 1, "rv not 1");
 	fail_unless(ch == NULL, "ch not NULL");
 	fail_unless(sni == (void*)0xDEADBEEF, "sni was modified");
@@ -363,7 +381,7 @@ START_TEST(ssl_tls_clienthello_parse_02)
 
 	rv = ssl_tls_clienthello_parse(clienthello02,
 	                                sizeof(clienthello02) - 1,
-	                                0, &ch, &sni);
+	                                0, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 0, "rv not 0");
 	fail_unless(ch != NULL, "ch is NULL");
 	fail_unless(sni == NULL, "sni not NULL");
@@ -378,7 +396,7 @@ START_TEST(ssl_tls_clienthello_parse_03)
 
 	rv = ssl_tls_clienthello_parse(clienthello03,
 	                                sizeof(clienthello03) - 1,
-	                                0, &ch, &sni);
+	                                0, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 0, "rv not 0");
 	fail_unless(ch != NULL, "ch is NULL");
 	fail_unless(sni && !strcmp(sni, "192.168.100.4"),
@@ -394,7 +412,7 @@ START_TEST(ssl_tls_clienthello_parse_04)
 
 	rv = ssl_tls_clienthello_parse(clienthello04,
 	                                sizeof(clienthello04) - 1,
-	                                0, &ch, &sni);
+	                                0, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 0, "rv not 0");
 	fail_unless(ch != NULL, "ch is NULL");
 	fail_unless(sni && !strcmp(sni, "kamesh.com"),
@@ -411,7 +429,7 @@ START_TEST(ssl_tls_clienthello_parse_05)
 		ssize_t sz;
 
 		sz = (ssize_t)i;
-		rv = ssl_tls_clienthello_parse(clienthello04, sz, 0, &ch, &sni);
+		rv = ssl_tls_clienthello_parse(clienthello04, sz, 0, &ch, &sni, NULL, NULL);
 		fail_unless(rv == 1, "rv not 1");
 		fail_unless(ch != NULL, "ch is NULL");
 		fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
@@ -427,7 +445,7 @@ START_TEST(ssl_tls_clienthello_parse_06)
 
 	rv = ssl_tls_clienthello_parse(clienthello05,
 	                                sizeof(clienthello05) - 1,
-	                                0, &ch, &sni);
+	                                0, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 0, "rv not 0");
 	fail_unless(ch != NULL, "ch is NULL");
 	fail_unless(sni && !strcmp(sni, "daniel.roe.ch"),
@@ -444,7 +462,7 @@ START_TEST(ssl_tls_clienthello_parse_07)
 		ssize_t sz;
 
 		sz = (ssize_t)i;
-		rv = ssl_tls_clienthello_parse(clienthello05, sz, 0, &ch, &sni);
+		rv = ssl_tls_clienthello_parse(clienthello05, sz, 0, &ch, &sni, NULL, NULL);
 		fail_unless(rv == 1, "rv not 1");
 		fail_unless(ch != NULL, "ch is NULL");
 		fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
@@ -460,7 +478,7 @@ START_TEST(ssl_tls_clienthello_parse_08)
 
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
-	                                0, &ch, &sni);
+	                                0, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 1, "rv not 1");
 	fail_unless(ch == NULL, "ch not NULL");
 	fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
@@ -475,7 +493,7 @@ START_TEST(ssl_tls_clienthello_parse_09)
 
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
-	                                1, &ch, &sni);
+	                                1, &ch, &sni, NULL, NULL);
 	fail_unless(rv == 0, "rv not 0");
 	fail_unless(ch != NULL, "ch is NULL");
 	fail_unless((ch - clienthello06) != 21, "ch does not point to start");
@@ -491,10 +509,36 @@ START_TEST(ssl_tls_clienthello_parse_10)
 
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
-	                                1, &ch, NULL);
+	                                1, &ch, NULL, NULL, NULL);
 	fail_unless(rv == 0, "rv not 0");
 	fail_unless(ch != NULL, "ch is NULL");
 	fail_unless((ch - clienthello06) != 21, "ch does not point to start");
+}
+END_TEST
+
+START_TEST(ssl_tls_clienthello_parse_11)
+{
+	int rv;
+	const unsigned char *ch;
+	char *sni;
+	unsigned char *alpn = 0;
+	unsigned long alpnLen = 0;
+
+	rv = ssl_tls_clienthello_parse(clienthello07,
+	                                sizeof(clienthello07) - 1,
+	                                1, &ch, &sni, &alpn, &alpnLen);
+	fail_unless(rv == 0, "rv not 0");
+	fail_unless(ch != NULL, "ch is NULL");
+	fail_unless((ch - clienthello07) != 21, "ch does not point to start");
+	fail_unless(sni && !strcmp(sni, "http2.golang.org"),
+	            "sni not 'http2.golang.org' but should be");
+#ifndef OPENSSL_NO_ALPNEXT
+	fail_unless(alpnLen == 21);
+	unsigned char alpnExp[] = "\x2h2\x8spdy/3.1\x8http/1.1";
+	fail_unless(memcmp(alpn, alpnExp, alpnLen) == 0,
+			"incorrect alpn extracted: should be h2, spdy/3.1, http/1.1");
+	free(alpn);
+#endif /* !OPENSSL_NO_ALPNEXT */
 }
 END_TEST
 
@@ -727,6 +771,7 @@ ssl_suite(void)
 	tcase_add_test(tc, ssl_tls_clienthello_parse_08);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_09);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_10);
+	tcase_add_test(tc, ssl_tls_clienthello_parse_11);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_key_identifier_sha1");
