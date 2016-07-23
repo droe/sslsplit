@@ -15,6 +15,7 @@
 -   Fix parallel make build (-j) for the test target (issue #140).
 -   Do not set owner and group if install target is called by unprivileged
     user (pull req #141 by @cgroschupp).
+-   Add XNU headers for Mac OS X 10.11.3, 10.11.4 and 10.11.5.
 -   Minor bugfixes and improvements.
 
 
