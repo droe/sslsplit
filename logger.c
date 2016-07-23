@@ -314,7 +314,7 @@ logger_print(logger_t *logger, void *fh, unsigned long prepflags,
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new_copy(s, s ? strlen(s) : 0, fh, NULL)))
+	if (!(lb = logbuf_new_copy(s, strlen(s), fh, NULL)))
 		return -1;
 	return logger_submit(logger, fh, prepflags, lb);
 }
@@ -334,7 +334,7 @@ logger_print_freebuf(logger_t *logger, void *fh, unsigned long prepflags,
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new(s, s ? strlen(s) : 0, fh, NULL)))
+	if (!(lb = logbuf_new(s, strlen(s), fh, NULL)))
 		return -1;
 	return logger_submit(logger, fh, prepflags, lb);
 }

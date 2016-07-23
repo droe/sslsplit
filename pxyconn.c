@@ -1541,7 +1541,8 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			}
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_err_printf("Replaced dst bufferevent, new "
-				               "one is %p\n", ctx->dst.bev);
+				               "one is %p\n",
+				               (void*)ctx->dst.bev);
 			}
 			ctx->clienthello_search = 0;
 			ctx->clienthello_found = 1;
