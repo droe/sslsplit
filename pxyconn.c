@@ -729,7 +729,9 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 	SSL_CTX_set_tlsext_servername_callback(sslctx, pxy_ossl_servername_cb);
 	SSL_CTX_set_tlsext_servername_arg(sslctx, ctx);
 #ifndef OPENSSL_NO_ALPNEXT
-	SSL_CTX_set_alpn_select_cb(sslctx, pxy_ossl_alpn_select_cb, ctx);
+	if (!ctx->spec->http) {
+		SSL_CTX_set_alpn_select_cb(sslctx, pxy_ossl_alpn_select_cb, ctx);
+	}
 #endif /* !OPENSSL_NO_ALPNEXT */
 #endif /* !OPENSSL_NO_TLSEXT */
 #ifndef OPENSSL_NO_DH
@@ -964,22 +966,24 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 
 #ifndef OPENSSL_NO_ALPNEXT
 	/* Try and get ALPN reply from real server. */
-	const unsigned char *alpn = 0;
-	unsigned int alpnLen = 0;
-	SSL_get0_alpn_selected(origssl, &alpn, &alpnLen);
+	if (!ctx->spec->http) {
+		const unsigned char *alpn = 0;
+		unsigned int alpnLen = 0;
+		SSL_get0_alpn_selected(origssl, &alpn, &alpnLen);
 
-	if (alpn != 0 && alpnLen > 0) {
+		if (alpn != 0 && alpnLen > 0) {
 
-		if ( ctx->alpn != 0 ) {
-			free(ctx->alpn);
-			ctx->alpn = 0;
-			ctx->alpnLen = 0;
+			if ( ctx->alpn != 0 ) {
+				free(ctx->alpn);
+				ctx->alpn = 0;
+				ctx->alpnLen = 0;
+			}
+			ctx->alpn = malloc(alpnLen);
+			memcpy(ctx->alpn, alpn, alpnLen);
+			ctx->alpnLen = alpnLen;
+
+			log_dbg_printf("Received ALPN from real server.\n");
 		}
-		ctx->alpn = malloc(alpnLen);
-		memcpy(ctx->alpn, alpn, alpnLen);
-		ctx->alpnLen = alpnLen;
-
-		log_dbg_printf("Received ALPN from real server.\n");
 	}
 #endif /* !OPENSSL_NO_ALPNEXT */
 
@@ -1161,8 +1165,10 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		SSL_set_tlsext_host_name(ssl, ctx->sni);
 	}
 #ifndef OPENSSL_NO_ALPNEXT
-	if (ctx->alpn) {
-		SSL_set_alpn_protos(ssl, ctx->alpn, ctx->alpnLen);
+	if (!ctx->spec->http) {
+		if (ctx->alpn) {
+			SSL_set_alpn_protos(ssl, ctx->alpn, ctx->alpnLen);
+		}
 	}
 #endif /* !OPENSSL_NO_ALPNEXT */
 #endif /* !OPENSSL_NO_TLSEXT */
