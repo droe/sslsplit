@@ -129,6 +129,11 @@ ssl_openssl_version(void)
 	fprintf(stderr, "OpenSSL has no support for TLS extensions\n"
 	                "TLS Server Name Indication (SNI) not supported\n");
 #endif /* OPENSSL_NO_TLSEXT */
+#ifndef OPENSSL_NO_ALPNEXT
+	fprintf(stderr, "TLS Application Layer Protocol Negotiation (ALPN) supported\n");
+#else /* OPENSSL_NO_ALPNEXT */
+	fprintf(stderr, "TLS Application Layer Protocol Negotiation (ALPN) not supported\n");
+#endif /* OPENSSL_NO_ALPNEXT */
 #ifdef OPENSSL_THREADS
 #ifndef OPENSSL_NO_THREADID
 	fprintf(stderr, "OpenSSL is thread-safe with THREADID\n");
@@ -1737,14 +1742,18 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
  * RFC 5246: The Transport Layer Security (TLS) Protocol Version 1.2
  * RFC 6066: Transport Layer Security (TLS) Extensions: Extension Definitions
  */
+//#define DEBUG_CLIENTHELLO_PARSER
 int
 ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
-                          const unsigned char **clienthello, char **servername)
+                          const unsigned char **clienthello, char **servername,
+                          unsigned char **alpn, unsigned int *alpnLen)
 {
 #ifdef DEBUG_CLIENTHELLO_PARSER
 #define DBG_printf(...) log_dbg_printf("ClientHello parser: " __VA_ARGS__)
+#define DBG_printf_plain(...) log_dbg_printf(__VA_ARGS__)
 #else /* !DEBUG_CLIENTHELLO_PARSER */
 #define DBG_printf(...) 
+#define DBG_printf_plain(...)
 #endif /* !DEBUG_CLIENTHELLO_PARSER */
 	const unsigned char *p = buf;
 	ssize_t n = sz;
@@ -1930,7 +1939,7 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 			if (n < extlen)
 				goto continue_search;
 			switch (exttype) {
-			case 0: {
+			case 0x0: {
 				ssize_t extn = extlen;
 				const unsigned char *extp = p;
 
@@ -1980,12 +1989,62 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 				}
 				break;
 			}
+#ifndef OPENSSL_NO_ALPNEXT
+			case 0x10: {
+				DBG_printf("Extracting ALPN\n");
+				ssize_t extn = extlen;
+				const unsigned char *extp = p;
+
+				if (extn < 2)
+					goto continue_search;
+				DBG_printf("list length %02x %02x\n",
+				           extp[0], extp[1]);
+				ssize_t alpnlistlen = extp[1] + (extp[0] << 8);
+				DBG_printf("alpnlistln = %zd\n", alpnlistlen);
+				extp += 2;
+				extn -= 2;
+
+				if (alpnlistlen != extn)
+					goto continue_search;
+
+				/* Only care if we have the entire ALPN extension. */
+				if (alpnlistlen > n)
+					goto continue_search;
+
+				//if (alpnlistlen > TLSEXT_MAXLEN_alpn)
+				if (alpnlistlen > 255)
+					goto continue_search;
+
+				if (alpn != NULL && (*alpn) == NULL) {
+					*alpn = malloc(extn);
+					memcpy(*alpn, extp, extn);
+					*alpnLen = extn;
+				}
+
+#ifdef DEBUG_CLIENTHELLO_PARSER
+				DBG_printf("Extracted ALPN:\n");
+				for (ssize_t i = 0; i < extn; ) {
+					for ( int j = 0; j < 8 && i < extn; ++i, ++j) {
+						int num = (int)((*alpn)[i]) & 0xff;
+						DBG_printf_plain(" ");
+						if ( num <= 0xf )
+							DBG_printf_plain("0");
+						DBG_printf_plain("%x", num);
+					}
+					DBG_printf_plain("\n");
+				}
+#endif /* DEBUG_CLIENTHELLO_PARSER */
+
+				break;
+			}
+#endif /* !OPENSSL_NO_ALPNEXT */
 			default:
 				DBG_printf("skipped\n");
 				break;
 			}
 			p += extlen;
 			n -= extlen;
+
 		} /* while have more extensions */
 
 #ifdef DEBUG_CLIENTHELLO_PARSER

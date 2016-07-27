@@ -133,6 +133,8 @@ typedef struct pxy_conn_ctx {
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
+	unsigned char *alpn;
+	unsigned int alpnLen;
 
 	/* log strings from socket */
 	char *srchost_str;
@@ -288,6 +290,9 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx)
 	if (ctx->sni) {
 		free(ctx->sni);
 	}
+	if (ctx->alpn) {
+		free(ctx->alpn);
+	}
 	if (WANT_CONTENT_LOG(ctx) && ctx->logctx) {
 		if (log_content_close(&ctx->logctx) == -1) {
 			log_err_printf("Warning: Content log close failed\n");
@@ -306,6 +311,15 @@ static void pxy_fd_readcb(evutil_socket_t, short, void *);
 /* forward declaration of OpenSSL callbacks */
 #ifndef OPENSSL_NO_TLSEXT
 static int pxy_ossl_servername_cb(SSL *ssl, int *al, void *arg);
+#ifndef OPENSSL_NO_ALPNEXT
+static int pxy_ossl_alpn_select_cb(
+		UNUSED SSL *ssl,
+		const unsigned char **out,
+		unsigned char *outlen,
+		UNUSED const unsigned char *in,
+		UNUSED unsigned int inlen,
+		void *arg);
+#endif /* !OPENSSL_NO_ALPNEXT */
 #endif /* !OPENSSL_NO_TLSEXT */
 static int pxy_ossl_sessnew_cb(SSL *, SSL_SESSION *);
 static void pxy_ossl_sessremove_cb(SSL_CTX *, SSL_SESSION *);
@@ -714,6 +728,11 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 #ifndef OPENSSL_NO_TLSEXT
 	SSL_CTX_set_tlsext_servername_callback(sslctx, pxy_ossl_servername_cb);
 	SSL_CTX_set_tlsext_servername_arg(sslctx, ctx);
+#ifndef OPENSSL_NO_ALPNEXT
+	if (!ctx->spec->http) {
+		SSL_CTX_set_alpn_select_cb(sslctx, pxy_ossl_alpn_select_cb, ctx);
+	}
+#endif /* !OPENSSL_NO_ALPNEXT */
 #endif /* !OPENSSL_NO_TLSEXT */
 #ifndef OPENSSL_NO_DH
 	if (ctx->opts->dh) {
@@ -944,6 +963,30 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 		ctx->enomem = 1;
 		return NULL;
 	}
+
+#ifndef OPENSSL_NO_ALPNEXT
+	/* Try and get ALPN reply from real server. */
+	if (!ctx->spec->http) {
+		const unsigned char *alpn = 0;
+		unsigned int alpnLen = 0;
+		SSL_get0_alpn_selected(origssl, &alpn, &alpnLen);
+
+		if (alpn != 0 && alpnLen > 0) {
+
+			if ( ctx->alpn != 0 ) {
+				free(ctx->alpn);
+				ctx->alpn = 0;
+				ctx->alpnLen = 0;
+			}
+			ctx->alpn = malloc(alpnLen);
+			memcpy(ctx->alpn, alpn, alpnLen);
+			ctx->alpnLen = alpnLen;
+
+			log_dbg_printf("Received ALPN from real server.\n");
+		}
+	}
+#endif /* !OPENSSL_NO_ALPNEXT */
+
 	SSL *ssl = SSL_new(sslctx);
 	SSL_CTX_free(sslctx); /* SSL_new() increments refcount */
 	if (!ssl) {
@@ -1067,6 +1110,27 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 
 	return SSL_TLSEXT_ERR_OK;
 }
+#ifndef OPENSSL_NO_ALPNEXT
+static int
+pxy_ossl_alpn_select_cb(
+		UNUSED SSL *ssl,
+		const unsigned char **out,
+		unsigned char *outlen,
+		UNUSED const unsigned char *in,
+		UNUSED unsigned int inlen,
+		void *arg)
+{
+	pxy_conn_ctx_t *ctx = (pxy_conn_ctx_t *)arg;
+
+	*out = ctx->alpn;
+	*outlen = ctx->alpnLen;
+
+	log_dbg_printf("ALPN callback, need to relay choice to real client\n");
+
+	return SSL_TLSEXT_ERR_OK;
+}
+#endif /* !OPENSSL_NO_ALPNEXT */
+
 #endif /* !OPENSSL_NO_TLSEXT */
 
 /*
@@ -1100,6 +1164,13 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	if (ctx->sni) {
 		SSL_set_tlsext_host_name(ssl, ctx->sni);
 	}
+#ifndef OPENSSL_NO_ALPNEXT
+	if (!ctx->spec->http) {
+		if (ctx->alpn) {
+			SSL_set_alpn_protos(ssl, ctx->alpn, ctx->alpnLen);
+		}
+	}
+#endif /* !OPENSSL_NO_ALPNEXT */
 #endif /* !OPENSSL_NO_TLSEXT */
 
 #ifdef SSL_MODE_RELEASE_BUFFERS
@@ -1515,7 +1586,8 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 	if (evbuffer_peek(inbuf, 1024, 0, vec_out, 1)) {
 		if (ssl_tls_clienthello_parse(vec_out[0].iov_base,
 		                              vec_out[0].iov_len,
-		                              0, &chello, &ctx->sni) == 0) {
+		                              0, &chello, &ctx->sni,
+		                              &ctx->alpn, &ctx->alpnLen) == 0) {
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Peek found ClientHello\n");
 			}
@@ -1986,7 +2058,7 @@ connected:
 		           SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE) {
 			/* these can happen due to client cert auth,
 			 * only log error if debugging is activated */
-			log_dbg_printf("Error from bufferevent: "
+			log_dbg_printf("Error from bufferevent_dbg: "
 			               "%i:%s %lu:%i:%s:%i:%s:%i:%s\n",
 			               errno,
 			               errno ? strerror(errno) : "-",
@@ -2013,7 +2085,7 @@ connected:
 			}
 		} else {
 			/* real errors */
-			log_err_printf("Error from bufferevent: "
+			log_err_printf("Error from bufferevent_err: "
 			               "%i:%s %lu:%i:%s:%i:%s:%i:%s\n",
 			               errno,
 			               errno ? strerror(errno) : "-",
@@ -2242,7 +2314,7 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 			return;
 		}
 
-		rv = ssl_tls_clienthello_parse(buf, n, 0, &chello, &ctx->sni);
+		rv = ssl_tls_clienthello_parse(buf, n, 0, &chello, &ctx->sni, &ctx->alpn, &ctx->alpnLen);
 		if ((rv == 1) && !chello) {
 			log_err_printf("Peeking did not yield a (truncated) "
 			               "ClientHello message, "
