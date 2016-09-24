@@ -933,8 +933,6 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 		ctx->ssl_names = ssl_x509_names_to_str(ctx->origcrt ?
 		                                       ctx->origcrt :
 		                                       cert->crt);
-		if (!ctx->ssl_names)
-			ctx->enomem = 1;
 	}
 
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
