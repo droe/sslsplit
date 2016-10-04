@@ -878,6 +878,7 @@ out:
 static int
 pcap_dump_file_preinit(const char *logfile)
 {
+	unlink(logfile);
 	content_file_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
 	                       DFLT_FILEMODE);
 	if (content_file_fd == -1) {
