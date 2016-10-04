@@ -345,7 +345,7 @@ LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS) -lnet
 
 ifneq ($(shell uname),Darwin)
-CFLAGS+=	-g -pthread
+CFLAGS+=	-pthread
 LDFLAGS+=	-pthread
 endif
 
