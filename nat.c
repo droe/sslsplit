@@ -338,6 +338,7 @@ nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 		log_err_printf("Error from getsockopt(SO_ORIGINAL_DST): %s\n",
 		               strerror(errno));
 	}
+
 	return rv;
 }
 

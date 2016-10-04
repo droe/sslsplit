@@ -226,6 +226,8 @@ PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_openssl \
 		&& echo libevent_openssl)
 PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_pthreads \
 		&& echo libevent_pthreads)
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libnet \
+		&& echo libnet)
 endif
 TPKGS:=		
 ifndef CHECK_BASE
@@ -288,7 +290,7 @@ endif
 ifdef OPENSSL_FOUND
 PKG_CPPFLAGS+=	-I$(OPENSSL_FOUND)/include
 PKG_LDFLAGS+=	-L$(OPENSSL_FOUND)/lib
-PKG_LIBS+=	-lssl -lcrypto -lz
+PKG_LIBS+=	-lssl -lcrypto -lz 
 endif
 ifdef LIBEVENT_FOUND
 PKG_CPPFLAGS+=	-I$(LIBEVENT_FOUND)/include
@@ -340,10 +342,10 @@ CFLAGS+=	$(PKG_CFLAGS) \
 CPPFLAGS+=	$(PKG_CPPFLAGS) $(CPPDEFS) $(FEATURES)
 TCPPFLAGS+=	$(TPKG_CPPFLAGS)
 LDFLAGS+=	$(PKG_LDFLAGS)
-LIBS+=		$(PKG_LIBS)
+LIBS+=		$(PKG_LIBS) -lnet
 
 ifneq ($(shell uname),Darwin)
-CFLAGS+=	-pthread
+CFLAGS+=	-g -pthread
 LDFLAGS+=	-pthread
 endif
 

@@ -78,6 +78,7 @@ typedef struct opts {
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlog_isdir : 1;
 	unsigned int contentlog_isspec : 1;
+	unsigned int contentlog_pcap:1;
 #ifdef HAVE_LOCAL_PROCINFO
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
