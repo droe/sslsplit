@@ -174,6 +174,7 @@ main_usage(void)
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
 "  -L logfile  content log: full data to file or named pipe (excludes -S/-F)\n"
 "  -X pcapfile Pcap Dump: full packet to file (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
+"  -X Interface Network Interface for mirroring (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
 "  -S logdir   content log: full data to separate files in dir (excludes -L/-F)\n"
 "  -F pathspec content log: full data to sep files with %% subst (excl. -L/-S):\n"
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
@@ -304,7 +305,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:X:L:S:F:dDVhW:w:")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:X:M:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -554,6 +555,8 @@ main(int argc, char *argv[])
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 0;
 				break;
+			case 'M':
+				opts->contentlog_mirror = 1;
 			case 'X':
 				if (opts->contentlog)
 					free(opts->contentlog);

@@ -24,7 +24,7 @@ write_pcap_global_hdr(int fd)
 }
 
 void
-store_ip_port(pcap_log_t *pcap, char* srcip, char *srcport, char * dstip, char *dstport)
+store_ip_port(pcap_log_t *pcap, char* srcip, char *srcport, char * dstip, char *dstport, int mirror)
 {
 	pcap->srcIp = inet_addr(srcip);
 	pcap->srcPort = atoi(srcport);
@@ -33,6 +33,7 @@ store_ip_port(pcap_log_t *pcap, char* srcip, char *srcport, char * dstip, char *
 	pcap->epoch = time(NULL);
 	pcap->seq = 0;
 	pcap->ack = 0;
+	pcap->mirror = mirror;
 }
 
 int
@@ -82,7 +83,7 @@ write_packet_into_file(libnet_t *l, int fd)
 }
 
 int
-build_ip_packet(int fd, pcap_log_t *pcap, char flags, char * payload, size_t payloadlen)
+build_ip_packet(void *iohandle, pcap_log_t *pcap, char flags, char * payload, size_t payloadlen)
 {
     char errbuf[LIBNET_ERRBUF_SIZE];
     static libnet_t *l = NULL;
@@ -93,11 +94,11 @@ build_ip_packet(int fd, pcap_log_t *pcap, char flags, char * payload, size_t pay
     if(l == NULL){
 		l = libnet_init(
 				LIBNET_LINK,                            /* injection type */
-				"lo",                                   /* network interface */
+				pcap->mirror ? iohandle : "lo",                                   /* network interface */
 				errbuf);                                /* error buffer */
 
 		if (l == NULL){
-			fprintf(stderr, "libnet_init() failed: %s", errbuf);
+			log_err_printf("libnet_init() failed: %s", errbuf);
 			exit(EXIT_FAILURE);
 		}
 
@@ -124,7 +125,7 @@ build_ip_packet(int fd, pcap_log_t *pcap, char flags, char * payload, size_t pay
         0);                                         /* libnet id */
     if (t == -1)
     {
-        fprintf(stderr, "Can't build TCP header: %s\n", libnet_geterror(l));
+    	log_err_printf("Can't build TCP header: %s\n", libnet_geterror(l));
         goto bad;
     }
 
@@ -143,7 +144,7 @@ build_ip_packet(int fd, pcap_log_t *pcap, char flags, char * payload, size_t pay
         l,                                          /* libnet handle */
         0);                                         /* libnet id */
     if (t == -1){
-        fprintf(stderr, "Can't build IP header: %s\n", libnet_geterror(l));
+    	log_err_printf("Can't build IP header: %s\n", libnet_geterror(l));
         goto bad;
     }
 
@@ -156,13 +157,25 @@ build_ip_packet(int fd, pcap_log_t *pcap, char flags, char * payload, size_t pay
         l,                                          /* libnet handle */
         0);                                         /* libnet id */
     if (t == -1){
-        fprintf(stderr, "Can't build ethernet header: %s\n", libnet_geterror(l));
+    	log_err_printf("Can't build ethernet header: %s\n", libnet_geterror(l));
         goto bad;
     }
 
     pcap->seq += payloadlen;
 
-    return write_packet_into_file(l, fd);
+    if(pcap->mirror){
+    	t = libnet_write(l);
+	    libnet_clear_packet(l);
+    }
+    else{
+    	t = write_packet_into_file(l, (int)iohandle);
+    }
+
+    if(t == -1){
+    	log_err_printf("Can't write packet: %s\n", libnet_geterror(l));
+    }
+
+    return t;
 bad:
 	return -1;
 }

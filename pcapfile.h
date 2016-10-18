@@ -14,6 +14,7 @@ typedef struct pcap_log{
 	unsigned short dstPort;
 	unsigned int ack;
 	unsigned int seq;
+	unsigned int mirror;
 } pcap_log_t;
 
 
@@ -39,8 +40,8 @@ typedef struct pcaprec_hdr_s {
 } pcaprec_hdr_t;
 
 
-void store_ip_port(pcap_log_t *, char* , char *, char * , char *);
-int build_ip_packet(int fd, pcap_log_t *pcap, char, char * payload, size_t payloadlen);
+void store_ip_port(pcap_log_t *, char* , char *, char * , char *, int);
+int build_ip_packet(void * iohandle, pcap_log_t *pcap, char, char * payload, size_t payloadlen);
 int write_pcap_global_hdr(int fd);
 
 #endif

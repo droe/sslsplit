@@ -609,8 +609,8 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 			free(ctx->u.pcap.response);
 			goto errout;
 		}
-		store_ip_port(ctx->u.pcap.request, srchost, srcport, dsthost, dstport);
-		store_ip_port(ctx->u.pcap.response, dsthost, dstport, srchost, srcport);
+		store_ip_port(ctx->u.pcap.request, srchost, srcport, dsthost, dstport, opts->contentlog_mirror);
+		store_ip_port(ctx->u.pcap.response, dsthost, dstport, srchost, srcport, opts->contentlog_mirror);
 	}
 
 	/* submit an open event */
@@ -876,29 +876,39 @@ out:
 }
 
 static int
-pcap_dump_file_preinit(const char *logfile)
+pcap_dump_file_preinit(const char *logfile, int mirror)
 {
-	unlink(logfile);
-	content_file_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
-	                       DFLT_FILEMODE);
-	if (content_file_fd == -1) {
-		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
-		               logfile, strerror(errno), errno);
-		return -1;
+	if(mirror == 0){
+		unlink(logfile);
+		content_file_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
+							   DFLT_FILEMODE);
+		if (content_file_fd == -1) {
+			log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+						   logfile, strerror(errno), errno);
+			return -1;
+		}
+
+		if(write_pcap_global_hdr(content_file_fd) == -1){
+			close(content_file_fd);
+			connect_fd = -1;
+			return -1;
+		}
+
+		if (!(content_file_fn = realpath(logfile, NULL))) {
+			log_err_printf("Failed to realpath '%s': %s (%i)\n",
+			              logfile, strerror(errno), errno);
+			close(content_file_fd);
+			connect_fd = -1;
+			return -1;
+		}
 	}
-	if (!(content_file_fn = realpath(logfile, NULL))) {
-		log_err_printf("Failed to realpath '%s': %s (%i)\n",
-		              logfile, strerror(errno), errno);
-		close(content_file_fd);
-		connect_fd = -1;
-		return -1;
+	else{
+		asprintf(&content_file_fn, "%s", logfile);
 	}
 
-	if(write_pcap_global_hdr(content_file_fd) == -1){
-		close(content_file_fd);
-		connect_fd = -1;
-		return -1;
-	}
+
+
+
 
 	return 0;
 }
@@ -921,26 +931,27 @@ static void
 pcap_dump_file_closecb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
+	void *iohandle = ctx->u.pcap.request->mirror ? content_file_fn : content_file_fd;
 
 	if(ctx->u.pcap.request->seq > 0 && ctx->u.pcap.request->ack > 0){
 
-		if(build_ip_packet(content_file_fd, ctx->u.pcap.request, TH_FIN | TH_ACK, NULL, 0) == -1){
+		if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_FIN | TH_ACK, NULL, 0) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 		}
 		ctx->u.pcap.response->ack += 1;
-		if(build_ip_packet(content_file_fd, ctx->u.pcap.response, TH_ACK, NULL, 0) == -1){
+		if(build_ip_packet(iohandle, ctx->u.pcap.response, TH_ACK, NULL, 0) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 		}
-		if(build_ip_packet(content_file_fd, ctx->u.pcap.response, TH_FIN | TH_ACK, NULL, 0) == -1){
+		if(build_ip_packet(iohandle, ctx->u.pcap.response, TH_FIN | TH_ACK, NULL, 0) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 		}
 		ctx->u.pcap.request->ack += 1;
 		ctx->u.pcap.request->seq += 1;
 
-		if(build_ip_packet(content_file_fd, ctx->u.pcap.request, TH_ACK, NULL, 0) == -1){
+		if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_ACK, NULL, 0) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 		}
@@ -969,11 +980,12 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 {
 	log_content_ctx_t *ctx = fh;
 	char flags = TH_PUSH | TH_ACK;
+	void *iohandle = ctx->u.pcap.request->mirror ? content_file_fn : content_file_fd;
 
 	if(ctx->is_request){
 		if(ctx->u.pcap.request->seq == 0){
 			if(ctx->is_request){
-				if(build_ip_packet(content_file_fd, ctx->u.pcap.request, TH_SYN, NULL, 0) == -1){
+				if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_SYN, NULL, 0) == -1){
 					log_err_printf("Warning: Failed to write to content log: %s\n",
 					               strerror(errno));
 					return -1;
@@ -981,7 +993,7 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 
 				ctx->u.pcap.response->ack = ctx->u.pcap.request->seq + 1;
 
-				if(build_ip_packet(content_file_fd, ctx->u.pcap.response, TH_SYN | TH_ACK, NULL, 0) == -1){
+				if(build_ip_packet(iohandle, ctx->u.pcap.response, TH_SYN | TH_ACK, NULL, 0) == -1){
 					log_err_printf("Warning: Failed to write to content log: %s\n",
 					               strerror(errno));
 					return -1;
@@ -989,7 +1001,7 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 
 				ctx->u.pcap.request->ack = ctx->u.pcap.response->seq + 1;
 				ctx->u.pcap.request->seq += 1;
-				if(build_ip_packet(content_file_fd, ctx->u.pcap.request, TH_ACK, NULL, 0) == -1){
+				if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_ACK, NULL, 0) == -1){
 						log_err_printf("Warning: Failed to write to content log: %s\n",
 								               strerror(errno));
 						return -1;
@@ -999,7 +1011,7 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 			}
 		}
 
-		if(build_ip_packet(content_file_fd, ctx->u.pcap.request, flags, buf, sz) == -1){
+		if(build_ip_packet(iohandle, ctx->u.pcap.request, flags, buf, sz) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 			return -1;
@@ -1007,7 +1019,7 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 		ctx->u.pcap.response->ack += sz;
 	}
 	else{
-		if(build_ip_packet(content_file_fd, ctx->u.pcap.response, flags, buf, sz) == -1){
+		if(build_ip_packet(iohandle, ctx->u.pcap.response, flags, buf, sz) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 			return -1;
@@ -1142,9 +1154,10 @@ log_preinit(opts_t *opts)
 			}
 		}
 		else{
-			if (pcap_dump_file_preinit(opts->contentlog) == -1)
+
+			if (pcap_dump_file_preinit(opts->contentlog, opts->contentlog_mirror) == -1)
 				goto out;
-			reopencb = pcap_dump_file_reopencb;
+			reopencb = opts->contentlog_mirror == 0 ? pcap_dump_file_reopencb : NULL;
 			opencb = NULL;
 			closecb = pcap_dump_file_closecb;
 			writecb = pcap_dump_file_writecb;
