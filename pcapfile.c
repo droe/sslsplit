@@ -83,6 +83,34 @@ write_packet_into_file(libnet_t *l, int fd)
 }
 
 int
+write_payload(void *iohandle, pcap_log_t *from, pcap_log_t *to, char flags, char * payload, size_t payloadlen)
+{
+	int sendsize = 0;
+
+	while(payloadlen > 0){
+		payload += sendsize;
+		sendsize = payloadlen > MSS_VAL ? MSS_VAL : payloadlen;
+
+		if(build_ip_packet(iohandle, from, flags, payload, sendsize) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+					strerror(errno));
+			return -1;
+		}
+		to->ack += sendsize;
+
+		payloadlen -= sendsize;
+	}
+
+	if(build_ip_packet(iohandle, to, TH_ACK, NULL, 0) == -1){
+					log_err_printf("Warning: Failed to write to content log: %s\n",
+							               strerror(errno));
+					return -1;
+	}
+
+	return 0;
+}
+
+int
 build_ip_packet(void *iohandle, pcap_log_t *pcap, char flags, char * payload, size_t payloadlen)
 {
     char errbuf[LIBNET_ERRBUF_SIZE];

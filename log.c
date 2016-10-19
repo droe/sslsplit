@@ -981,6 +981,7 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 	log_content_ctx_t *ctx = fh;
 	char flags = TH_PUSH | TH_ACK;
 	void *iohandle = ctx->u.pcap.request->mirror ? content_file_fn : content_file_fd;
+	int sendsize = 0;
 
 	if(ctx->is_request){
 		if(ctx->u.pcap.request->seq == 0){
@@ -1011,20 +1012,18 @@ pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
 			}
 		}
 
-		if(build_ip_packet(iohandle, ctx->u.pcap.request, flags, buf, sz) == -1){
+		if(write_payload(iohandle, ctx->u.pcap.request, ctx->u.pcap.response, flags, buf, sz) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 			return -1;
 		}
-		ctx->u.pcap.response->ack += sz;
 	}
 	else{
-		if(build_ip_packet(iohandle, ctx->u.pcap.response, flags, buf, sz) == -1){
+		if(write_payload(iohandle, ctx->u.pcap.response, ctx->u.pcap.request, flags, buf, sz) == -1){
 			log_err_printf("Warning: Failed to write to content log: %s\n",
 			               strerror(errno));
 			return -1;
 		}
-		ctx->u.pcap.request->ack += sz;
 	}
 
 	return sz;

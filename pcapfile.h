@@ -6,6 +6,8 @@
 #include <time.h>
 #include "libnet.h"
 
+#define MSS_VAL (1460)
+
 typedef struct pcap_log{
 	time_t epoch;
 	unsigned int srcIp;
@@ -43,5 +45,6 @@ typedef struct pcaprec_hdr_s {
 void store_ip_port(pcap_log_t *, char* , char *, char * , char *, int);
 int build_ip_packet(void * iohandle, pcap_log_t *pcap, char, char * payload, size_t payloadlen);
 int write_pcap_global_hdr(int fd);
+int write_payload(void *iohandle, pcap_log_t *from, pcap_log_t *to, char flags, char * payload, size_t payloadlen);
 
 #endif
