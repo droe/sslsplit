@@ -116,8 +116,8 @@ build_ip_packet(void *iohandle, pcap_log_t *pcap, char flags, char * payload, si
     char errbuf[LIBNET_ERRBUF_SIZE];
     static libnet_t *l = NULL;
     libnet_ptag_t t;
-    char enet_src[6] = {0x84,0x34,0xC3,0x50,0x68,0x8A};
-    char enet_dst[6] = {0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
+    static char enet_src[MAC_LEN] = {0x84,0x34,0xC3,0x50,0x68,0x8A};
+    struct libnet_ether_addr *src_mac_addr;
 
     if(l == NULL){
 		l = libnet_init(
@@ -127,7 +127,16 @@ build_ip_packet(void *iohandle, pcap_log_t *pcap, char flags, char * payload, si
 
 		if (l == NULL){
 			log_err_printf("libnet_init() failed: %s", errbuf);
-			exit(EXIT_FAILURE);
+			goto bad;
+		}
+
+		if(pcap->mirror){
+			src_mac_addr = libnet_get_hwaddr(l);
+			if ( src_mac_addr == NULL ) {
+				log_err_printf("Couldn't get own MAC address: %s\n", libnet_geterror(l));
+				goto bad;
+			}
+			memcpy(enet_src, src_mac_addr->ether_addr_octet, sizeof(enet_src));
 		}
 
 		libnet_seed_prand(l);
@@ -177,7 +186,7 @@ build_ip_packet(void *iohandle, pcap_log_t *pcap, char flags, char * payload, si
     }
 
     t = libnet_build_ethernet(
-        enet_dst,                                   /* ethernet destination */
+    	pcap->target_mac,                                   /* ethernet destination */
         enet_src,                                   /* ethernet source */
         ETHERTYPE_IP,                               /* protocol type */
         NULL,                                       /* payload */
@@ -208,4 +217,17 @@ bad:
 	return -1;
 }
 
+int get_macaddr_of_mirror_ip(char *ip, char *mac, char *netint)
+{
+	if( send_arp_request(ip, netint) == -1 ){
+		log_err_printf("Error on sending arp request\n");
+		return (-1);
+	}
 
+	if( get_arp_response(ip, mac) == -1 ){
+		log_err_printf("Couldnt get arp response\n");
+		return (-1);
+	}
+
+	return 0;
+}

@@ -4,9 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "libnet.h"
+#include <libnet.h>
+#include "arpop.h"
 
 #define MSS_VAL (1460)
+#define MIRROR_TO_INTERFACE (1)
+
 
 typedef struct pcap_log{
 	time_t epoch;
@@ -17,6 +20,7 @@ typedef struct pcap_log{
 	unsigned int ack;
 	unsigned int seq;
 	unsigned int mirror;
+	char target_mac[MAC_LEN];
 } pcap_log_t;
 
 
@@ -46,5 +50,6 @@ void store_ip_port(pcap_log_t *, char* , char *, char * , char *, int);
 int build_ip_packet(void * iohandle, pcap_log_t *pcap, char, char * payload, size_t payloadlen);
 int write_pcap_global_hdr(int fd);
 int write_payload(void *iohandle, pcap_log_t *from, pcap_log_t *to, char flags, char * payload, size_t payloadlen);
+int get_macaddr_of_mirror_ip(char *ip, char *mac, char *netint);
 
 #endif

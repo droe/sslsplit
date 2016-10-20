@@ -41,6 +41,7 @@
 #include "log.h"
 #include "version.h"
 #include "defaults.h"
+#include "pcapfile.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -174,7 +175,9 @@ main_usage(void)
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
 "  -L logfile  content log: full data to file or named pipe (excludes -S/-F)\n"
 "  -X pcapfile Pcap Dump: full packet to file (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
-"  -X Interface Network Interface for mirroring (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
+"  -M Interface Network Interface for mirroring (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
+"  -T Ip Addr  all traffic will be mirrored to this ip address.\n"
+"              This parameter is used with -M option.\n"
 "  -S logdir   content log: full data to separate files in dir (excludes -L/-F)\n"
 "  -F pathspec content log: full data to sep files with %% subst (excl. -L/-S):\n"
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
@@ -305,7 +308,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:X:M:L:S:F:dDVhW:w:")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:X:M:T:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -556,7 +559,7 @@ main(int argc, char *argv[])
 				opts->contentlog_isspec = 0;
 				break;
 			case 'M':
-				opts->contentlog_mirror = 1;
+				opts->contentlog_mirror = MIRROR_TO_INTERFACE;
 			case 'X':
 				if (opts->contentlog)
 					free(opts->contentlog);
@@ -566,6 +569,9 @@ main(int argc, char *argv[])
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 0;
 				opts->contentlog_pcap = 1;
+				break;
+			case 'T':
+				opts->mirrortarget = strdup(optarg);
 				break;
 			case 'S':
 				if (!sys_isdir(optarg)) {
@@ -703,8 +709,20 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	opts->spec = proxyspec_parse(&argc, &argv, natengine);
-
 	/* usage checks before defaults */
+
+	if(opts->mirrortarget != NULL && opts->contentlog_mirror != 0){
+		if(get_macaddr_of_mirror_ip(opts->mirrortarget, opts->target_mac, opts->contentlog) == -1){
+			log_err_printf("Target Mirroring error. Arp Response couldnt read!!\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (opts->mirrortarget != NULL && opts->contentlog_mirror == 0){
+		fprintf(stderr, "When target ip address is specified with -T option, "
+						"mirroring interface should be specified with -M option\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
 		                argv0);

@@ -32,6 +32,7 @@
 #include "nat.h"
 #include "ssl.h"
 #include "attrib.h"
+#include "arpop.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -94,6 +95,8 @@ typedef struct opts {
 	char *connectlog;
 	char *contentlog;
 	char *contentlog_basedir; /* static part of logspec, for privsep srv */
+	char *mirrortarget;
+	char target_mac[MAC_LEN];
 	CONST_SSL_METHOD *(*sslmethod)(void);
 	X509 *cacrt;
 	EVP_PKEY *cakey;

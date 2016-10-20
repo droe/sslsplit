@@ -509,6 +509,7 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
                  char *exec_path, char *user, char *group)
 {
 	log_content_ctx_t *ctx;
+	char enet_dst[MAC_LEN] = {0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
 
 	if (*pctx)
 		return 0;
@@ -603,6 +604,15 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 	else{
 		ctx->u.pcap.request = malloc(sizeof(pcap_log_t));
 		ctx->u.pcap.response = malloc(sizeof(pcap_log_t));
+
+		if(opts->mirrortarget != NULL && opts->contentlog_mirror != 0){
+			memcpy(ctx->u.pcap.request->target_mac, opts->target_mac, sizeof(opts->target_mac));
+			memcpy(ctx->u.pcap.response->target_mac, opts->target_mac, sizeof(opts->target_mac));
+		}
+		else{
+			memcpy(ctx->u.pcap.request->target_mac, enet_dst, sizeof(enet_dst));
+			memcpy(ctx->u.pcap.response->target_mac, enet_dst, sizeof(enet_dst));
+		}
 
 		if(!ctx->u.pcap.request || !ctx->u.pcap.response){
 			free(ctx->u.pcap.request);
