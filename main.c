@@ -712,10 +712,13 @@ main(int argc, char *argv[])
 	/* usage checks before defaults */
 
 	if(opts->mirrortarget != NULL && opts->contentlog_mirror != 0){
-		if(get_macaddr_of_mirror_ip(opts->mirrortarget, opts->target_mac, opts->contentlog) == -1){
-			log_err_printf("Target Mirroring error. Arp Response couldnt read!!\n");
-			exit(EXIT_FAILURE);
-		}
+		do{
+			rv = get_macaddr_of_mirror_ip(opts->mirrortarget, opts->target_mac, opts->contentlog);
+			if(rv == -1){
+				log_err_printf("Target Mirroring error. Arp Response couldnt read!!\n");
+				sleep(5);
+			}
+		}while(rv == -1);
 	}
 	else if (opts->mirrortarget != NULL && opts->contentlog_mirror == 0){
 		fprintf(stderr, "When target ip address is specified with -T option, "
