@@ -347,7 +347,7 @@ endif
 
 CFLAGS+=	$(PKG_CFLAGS) \
 		-std=c99 -Wall -Wextra -pedantic \
-		-D_FORTIFY_SOURCE=2 -fstack-protector-all
+		-D_FORTIFY_SOURCE=2 -fstack-protector-all -O
 CPPFLAGS+=	$(PKG_CPPFLAGS) $(CPPDEFS) $(FEATURES)
 TCPPFLAGS+=	$(TPKG_CPPFLAGS)
 LDFLAGS+=	$(PKG_LDFLAGS)
