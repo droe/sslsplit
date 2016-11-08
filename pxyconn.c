@@ -577,7 +577,14 @@ pxy_ossl_sessnew_cb(MAYBE_UNUSED SSL *ssl, SSL_SESSION *sess)
 	}
 #endif /* HAVE_SSLV2 */
 	if (sess) {
-		cachemgr_ssess_set(sess);
+		
+		/* cachemgr_ssess_set(sess);
+         * Macro deprecated in 1.1
+		*/
+
+		unsigned int sess_length = 0;
+		cache_set(cachemgr_ssess, cachessess_mkkey(SSL_SESSION_get0_id_context(sess, &sess_length), sess_length), cachessess_mkval(sess));
+	
 	}
 	return 0;
 }
@@ -599,7 +606,12 @@ pxy_ossl_sessremove_cb(UNUSED SSL_CTX *sslctx, SSL_SESSION *sess)
 	}
 #endif /* DEBUG_SESSION_CACHE */
 	if (sess) {
-		cachemgr_ssess_del(sess);
+		
+		/* cachemgr_ssess_del(sess);
+         * Function deprecated in 1.1
+		*/
+		unsigned int sess_length = 0;
+		cache_del(cachemgr_ssess, cachessess_mkkey(SSL_SESSION_get0_id_context(sess, &sess_length), sess_length));
 	}
 }
 

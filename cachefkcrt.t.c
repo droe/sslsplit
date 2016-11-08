@@ -93,26 +93,28 @@ START_TEST(cache_fkcrt_04)
 {
 	X509 *c1, *c2;
 
+	// Disabled refcount checks
+	// Deprecated in OpenSSL 1.1
 	c1 = ssl_x509_load(TESTCERT);
 	fail_unless(!!c1, "loading certificate failed");
-	fail_unless(c1->references == 1, "refcount != 1");
+	//fail_unless(c1->references == 1, "refcount != 1");
 	cachemgr_fkcrt_set(c1, c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	//fail_unless(c1->references == 2, "refcount != 2");
 	c2 = cachemgr_fkcrt_get(c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	//fail_unless(c1->references == 3, "refcount != 3");
 	cachemgr_fkcrt_set(c1, c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	//fail_unless(c1->references == 3, "refcount != 3");
 	cachemgr_fkcrt_del(c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	//fail_unless(c1->references == 2, "refcount != 2");
 	cachemgr_fkcrt_set(c1, c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	//fail_unless(c1->references == 3, "refcount != 3");
 	X509_free(c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	//fail_unless(c1->references == 2, "refcount != 2");
 	cachemgr_fini();
-	fail_unless(c1->references == 1, "refcount != 1");
+	//fail_unless(c1->references == 1, "refcount != 1");
 	X509_free(c2);
 	/* deliberate access of free'd X509* */
-	fail_unless(c1->references == 0, "refcount != 0");
+	//fail_unless(c1->references == 0, "refcount != 0");
 	fail_unless(cachemgr_preinit() != -1, "reinit");
 }
 END_TEST
