@@ -516,12 +516,9 @@ START_TEST(ssl_key_identifier_sha1_01)
 	X509_EXTENSION *ext = X509_get_ext(c, loc);
 	fail_unless(!!ext, "loading ext failed");
 	
-	/* fail_unless(ext->value->length - 2 == SSL_KEY_IDSZ,
-	            "extension length mismatch");
-	   fail_unless(!memcmp(ext->value->data + 2, keyid, SSL_KEY_IDSZ),
-	            "key id mismatch");
-	   Deprecated in OpenSSL 1.1
-	*/
+	/* Deprecated in OpenSSL 1.1 */	
+	//fail_unless(ext->value->length - 2 == SSL_KEY_IDSZ,"extension length mismatch");
+	//fail_unless(!memcmp(ext->value->data + 2, keyid, SSL_KEY_IDSZ), "key id mismatch");
 
 	/* TODO replace deprecated test for extension length mismatch */
 	/* TODO replace key id test mismatch */
