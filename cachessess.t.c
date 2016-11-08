@@ -68,13 +68,16 @@ cachemgr_teardown(void)
 START_TEST(cache_ssess_01)
 {
 	SSL_SESSION *s1, *s2;
+	char* session_id;
+	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
 	fail_unless(!!s1, "creating session failed");
 	fail_unless(ssl_session_is_valid(s1), "session invalid");
 
 	cachemgr_ssess_set(s1);
-	s2 = cachemgr_ssess_get(s1->session_id, s1->session_id_length);
+	session_id = SSL_SESSION_get_id(s1, &len);
+	s2 = cachemgr_ssess_get(session_id, len);
 	fail_unless(!!s2, "cache returned no session");
 	fail_unless(s2 != s1, "cache returned same pointer");
 	SSL_SESSION_free(s1);
@@ -85,12 +88,15 @@ END_TEST
 START_TEST(cache_ssess_02)
 {
 	SSL_SESSION *s1, *s2;
+	char* session_id;
+	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
 	fail_unless(!!s1, "creating session failed");
 	fail_unless(ssl_session_is_valid(s1), "session invalid");
 
-	s2 = cachemgr_ssess_get(s1->session_id, s1->session_id_length);
+	session_id = SSL_SESSION_get_id(s1, &len);
+	s2 = cachemgr_ssess_get(session_id, len);
 	fail_unless(s2 == NULL, "session was already in empty cache");
 	SSL_SESSION_free(s1);
 }
@@ -99,6 +105,8 @@ END_TEST
 START_TEST(cache_ssess_03)
 {
 	SSL_SESSION *s1, *s2;
+	char* session_id;
+	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
 	fail_unless(!!s1, "creating session failed");
@@ -106,15 +114,19 @@ START_TEST(cache_ssess_03)
 
 	cachemgr_ssess_set(s1);
 	cachemgr_ssess_del(s1);
-	s2 = cachemgr_ssess_get(s1->session_id, s1->session_id_length);
+	session_id = SSL_SESSION_get_id(s1, &len);
+	s2 = cachemgr_ssess_get(session_id, len);
 	fail_unless(s2 == NULL, "cache returned deleted session");
 	SSL_SESSION_free(s1);
 }
 END_TEST
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 START_TEST(cache_ssess_04)
 {
 	SSL_SESSION *s1, *s2;
+	char* session_id;
+	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
 	fail_unless(!!s1, "creating session failed");
@@ -123,7 +135,8 @@ START_TEST(cache_ssess_04)
 	fail_unless(s1->references == 1, "refcount != 1");
 	cachemgr_ssess_set(s1);
 	fail_unless(s1->references == 1, "refcount != 1");
-	s2 = cachemgr_ssess_get(s1->session_id, s1->session_id_length);
+	session_id = SSL_SESSION_get_id(s1, &len);
+	s2 = cachemgr_ssess_get(session_id, len);
 	fail_unless(s1->references == 1, "refcount != 1");
 	fail_unless(!!s2, "cache returned no session");
 	fail_unless(s2->references == 1, "refcount != 1");
@@ -137,6 +150,7 @@ START_TEST(cache_ssess_04)
 	SSL_SESSION_free(s2);
 }
 END_TEST
+#endif
 
 Suite *
 cachessess_suite(void)
@@ -151,7 +165,9 @@ cachessess_suite(void)
 	tcase_add_test(tc, cache_ssess_01);
 	tcase_add_test(tc, cache_ssess_02);
 	tcase_add_test(tc, cache_ssess_03);
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 	tcase_add_test(tc, cache_ssess_04);
+#endif
 	suite_add_tcase(s, tc);
 
 	return s;

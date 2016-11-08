@@ -61,15 +61,20 @@ void cachemgr_gc(void);
 #define cachemgr_ssess_get(key, keysz) \
         cache_get(cachemgr_ssess, cachessess_mkkey((key), (keysz)))
 #define cachemgr_ssess_set(val) \
-        cache_set(cachemgr_ssess, \
-                  cachessess_mkkey((val)->session_id, \
-                                   (val)->session_id_length), \
-                  cachessess_mkval(val))
+        { \
+                unsigned int len; \
+                const unsigned char* id = SSL_SESSION_get_id(val, &len); \
+                cache_set(cachemgr_ssess, \
+                          cachessess_mkkey(id, len), \
+                          cachessess_mkval(val));    \
+        }
 #define cachemgr_ssess_del(val) \
-        cache_del(cachemgr_ssess, \
-                  cachessess_mkkey((val)->session_id, \
-                                   (val)->session_id_length))
-
+        { \
+                unsigned int len; \
+                const unsigned char* id = SSL_SESSION_get_id(val, &len); \
+                cache_del(cachemgr_ssess, \
+                          cachessess_mkkey(id, len)); \
+        }
 #define cachemgr_dsess_get(addr, addrlen, sni) \
         cache_get(cachemgr_dsess, cachedsess_mkkey((addr), (addrlen), (sni)))
 #define cachemgr_dsess_set(addr, addrlen, sni, val) \

@@ -63,7 +63,7 @@ ec.key:
 	$(OPENSSL) req -new -nodes -x509 $(DIGEST) -out $@ -key $< \
 		-config $(CONFIG) -extensions $(CA_EXT) \
 		-subj $(CA_SUBJECT) \
-		-set_serial 0 -days $(CA_DAYS)
+		-set_serial 1 -days $(CA_DAYS)
 
 server.key:
 	$(OPENSSL) genrsa -out $@ 2048
@@ -112,7 +112,7 @@ targets/wildcard.roe.ch.pem: rsa.crt
 
 # localhost network connectivity is required
 session.pem:
-	openssl s_server -accept 46143 -cert server.pem -quiet -no_ssl2 & \
+	openssl s_server -accept 46143 -cert server.pem -quiet & \
 		pid=$$! ; \
 		sleep 1 ; \
 		echo q | $(OPENSSL) s_client -connect localhost:46143 \
