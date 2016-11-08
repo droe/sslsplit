@@ -917,7 +917,7 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 #endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
 	case EVP_PKEY_EC:
-		md = EVP_PKEY_meth_find(EVP_PKEY_DSA);
+		md = EVP_PKEY_meth_find(EVP_PKEY_EC);
 		break;
 #endif /* !OPENSSL_NO_ECDSA */
 	default:
