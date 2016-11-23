@@ -1460,6 +1460,7 @@ ssl_x509_names(X509 *crt)
  * in the Subject DN CN and subjectAltNames extension, separated by slashes.
  * Caller must free returned buffer.
  * Embedded NULL characters in hostnames are replaced with '!'.
+ * If no CN and no subjectAltNames are found, returns "-".
  */
 char *
 ssl_x509_names_to_str(X509 *crt)
@@ -1470,7 +1471,7 @@ ssl_x509_names_to_str(X509 *crt)
 
 	names = ssl_x509_names(crt);
 	if (!names)
-		return NULL;
+		return strdup("-");
 
 	sz = 0;
 	for (char **p = names; *p; p++) {

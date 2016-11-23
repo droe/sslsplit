@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   No longer assume an out of memory condition when a certificate contains
+    neither a CN nor a subjectAltName extension.
 -   Extend -L content logging with EOF message to allow log parsers to figure
     out when a connection ends (issue #128 by @mattes).  Note that log parsers
     need to be adjusted to handle the new EOF message.
