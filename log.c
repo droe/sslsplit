@@ -265,6 +265,7 @@ log_connect_fini(void)
 
 struct log_content_ctx {
 	unsigned int open : 1;
+	unsigned int is_request;
 	union {
 		struct {
 			char *header_req;
@@ -278,6 +279,10 @@ struct log_content_ctx {
 			int fd;
 			char *filename;
 		} spec;
+		struct {
+			pcap_log_t * request;
+			pcap_log_t * response;
+		}pcap;
 	} u;
 };
 
@@ -504,6 +509,7 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
                  char *exec_path, char *user, char *group)
 {
 	log_content_ctx_t *ctx;
+	char enet_dst[MAC_LEN] = {0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
 
 	if (*pctx)
 		return 0;
@@ -512,86 +518,109 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 		return -1;
 	ctx = *pctx;
 
-	if (opts->contentlog_isdir) {
-		/* per-connection-file content log (-S) */
-		char timebuf[24];
-		time_t epoch;
-		struct tm *utc;
-		char *dsthost_clean, *srchost_clean;
+	if(!opts->contentlog_pcap){
+		if (opts->contentlog_isdir) {
+			/* per-connection-file content log (-S) */
+			char timebuf[24];
+			time_t epoch;
+			struct tm *utc;
+			char *dsthost_clean, *srchost_clean;
 
-		if (time(&epoch) == -1) {
-			log_err_printf("Failed to get time\n");
-			goto errout;
-		}
-		if ((utc = gmtime(&epoch)) == NULL) {
-			log_err_printf("Failed to convert time: %s (%i)\n",
-			               strerror(errno), errno);
-			goto errout;
-		}
-		if (!strftime(timebuf, sizeof(timebuf),
-		              "%Y%m%dT%H%M%SZ", utc)) {
-			log_err_printf("Failed to format time: %s (%i)\n",
-			               strerror(errno), errno);
-			goto errout;
-		}
-		srchost_clean = sys_ip46str_sanitize(srchost);
-		if (!srchost_clean) {
-			log_err_printf("Failed to sanitize srchost\n");
-			goto errout;
-		}
-		dsthost_clean = sys_ip46str_sanitize(dsthost);
-		if (!dsthost_clean) {
-			log_err_printf("Failed to sanitize dsthost\n");
-			free(srchost_clean);
-			goto errout;
-		}
-		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
-		             opts->contentlog, timebuf,
-		             srchost_clean, srcport,
-		             dsthost_clean, dstport) < 0) {
-			log_err_printf("Failed to format filename: %s (%i)\n",
-			               strerror(errno), errno);
+			if (time(&epoch) == -1) {
+				log_err_printf("Failed to get time\n");
+				goto errout;
+			}
+			if ((utc = gmtime(&epoch)) == NULL) {
+				log_err_printf("Failed to convert time: %s (%i)\n",
+							   strerror(errno), errno);
+				goto errout;
+			}
+			if (!strftime(timebuf, sizeof(timebuf),
+						  "%Y%m%dT%H%M%SZ", utc)) {
+				log_err_printf("Failed to format time: %s (%i)\n",
+							   strerror(errno), errno);
+				goto errout;
+			}
+			srchost_clean = sys_ip46str_sanitize(srchost);
+			if (!srchost_clean) {
+				log_err_printf("Failed to sanitize srchost\n");
+				goto errout;
+			}
+			dsthost_clean = sys_ip46str_sanitize(dsthost);
+			if (!dsthost_clean) {
+				log_err_printf("Failed to sanitize dsthost\n");
+				free(srchost_clean);
+				goto errout;
+			}
+			if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
+						 opts->contentlog, timebuf,
+						 srchost_clean, srcport,
+						 dsthost_clean, dstport) < 0) {
+				log_err_printf("Failed to format filename: %s (%i)\n",
+							   strerror(errno), errno);
+				free(srchost_clean);
+				free(dsthost_clean);
+				goto errout;
+			}
 			free(srchost_clean);
 			free(dsthost_clean);
-			goto errout;
-		}
-		free(srchost_clean);
-		free(dsthost_clean);
-	} else if (opts->contentlog_isspec) {
-		/* per-connection-file content log with logspec (-F) */
-		char *dsthost_clean, *srchost_clean;
-		srchost_clean = sys_ip46str_sanitize(srchost);
-		if (!srchost_clean) {
-			log_err_printf("Failed to sanitize srchost\n");
-			goto errout;
-		}
-		dsthost_clean = sys_ip46str_sanitize(dsthost);
-		if (!dsthost_clean) {
-			log_err_printf("Failed to sanitize dsthost\n");
+		} else if (opts->contentlog_isspec) {
+			/* per-connection-file content log with logspec (-F) */
+			char *dsthost_clean, *srchost_clean;
+			srchost_clean = sys_ip46str_sanitize(srchost);
+			if (!srchost_clean) {
+				log_err_printf("Failed to sanitize srchost\n");
+				goto errout;
+			}
+			dsthost_clean = sys_ip46str_sanitize(dsthost);
+			if (!dsthost_clean) {
+				log_err_printf("Failed to sanitize dsthost\n");
+				free(srchost_clean);
+				goto errout;
+			}
+			ctx->u.spec.filename = log_content_format_pathspec(
+												   opts->contentlog,
+												   srchost_clean, srcport,
+												   dsthost_clean, dstport,
+												   exec_path, user, group);
 			free(srchost_clean);
+			free(dsthost_clean);
+			if (!ctx->u.spec.filename) {
+				goto errout;
+			}
+		} else {
+			/* single-file content log (-L) */
+			if (asprintf(&ctx->u.file.header_req, "[%s]:%s -> [%s]:%s",
+						 srchost, srcport, dsthost, dstport) < 0) {
+				goto errout;
+			}
+			if (asprintf(&ctx->u.file.header_resp, "[%s]:%s -> [%s]:%s",
+						 dsthost, dstport, srchost, srcport) < 0) {
+				free(ctx->u.file.header_req);
+				goto errout;
+			}
+		}
+	}
+	else{
+		ctx->u.pcap.request = malloc(sizeof(pcap_log_t));
+		ctx->u.pcap.response = malloc(sizeof(pcap_log_t));
+
+		if(opts->mirrortarget != NULL && opts->contentlog_mirror != 0){
+			memcpy(ctx->u.pcap.request->target_mac, opts->target_mac, sizeof(opts->target_mac));
+			memcpy(ctx->u.pcap.response->target_mac, opts->target_mac, sizeof(opts->target_mac));
+		}
+		else{
+			memcpy(ctx->u.pcap.request->target_mac, enet_dst, sizeof(enet_dst));
+			memcpy(ctx->u.pcap.response->target_mac, enet_dst, sizeof(enet_dst));
+		}
+
+		if(!ctx->u.pcap.request || !ctx->u.pcap.response){
+			free(ctx->u.pcap.request);
+			free(ctx->u.pcap.response);
 			goto errout;
 		}
-		ctx->u.spec.filename = log_content_format_pathspec(
-		                                       opts->contentlog,
-		                                       srchost_clean, srcport,
-		                                       dsthost_clean, dstport,
-		                                       exec_path, user, group);
-		free(srchost_clean);
-		free(dsthost_clean);
-		if (!ctx->u.spec.filename) {
-			goto errout;
-		}
-	} else {
-		/* single-file content log (-L) */
-		if (asprintf(&ctx->u.file.header_req, "[%s]:%s -> [%s]:%s",
-		             srchost, srcport, dsthost, dstport) < 0) {
-			goto errout;
-		}
-		if (asprintf(&ctx->u.file.header_resp, "[%s]:%s -> [%s]:%s",
-		             dsthost, dstport, srchost, srcport) < 0) {
-			free(ctx->u.file.header_req);
-			goto errout;
-		}
+		store_ip_port(ctx->u.pcap.request, srchost, srcport, dsthost, dstport, opts->contentlog_mirror);
+		store_ip_port(ctx->u.pcap.response, dsthost, dstport, srchost, srcport, opts->contentlog_mirror);
 	}
 
 	/* submit an open event */
@@ -856,6 +885,187 @@ out:
 	return lb;
 }
 
+static int
+pcap_dump_file_preinit(const char *logfile, int mirror)
+{
+	if(mirror == 0){
+		unlink(logfile);
+		content_file_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
+							   DFLT_FILEMODE);
+		if (content_file_fd == -1) {
+			log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+						   logfile, strerror(errno), errno);
+			return -1;
+		}
+
+		if(write_pcap_global_hdr(content_file_fd) == -1){
+			close(content_file_fd);
+			connect_fd = -1;
+			return -1;
+		}
+
+		if (!(content_file_fn = realpath(logfile, NULL))) {
+			log_err_printf("Failed to realpath '%s': %s (%i)\n",
+			              logfile, strerror(errno), errno);
+			close(content_file_fd);
+			connect_fd = -1;
+			return -1;
+		}
+	}
+	else{
+		asprintf(&content_file_fn, "%s", logfile);
+	}
+
+
+
+
+
+	return 0;
+}
+
+static int
+pcap_dump_file_reopencb(void)
+{
+	close(content_file_fd);
+	content_file_fd = open(content_file_fn,
+	                       O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	if (content_file_fd == -1) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               content_file_fn, strerror(errno), errno);
+		return -1;
+	}
+	return 0;
+}
+
+static void
+pcap_dump_file_closecb(void *fh)
+{
+	log_content_ctx_t *ctx = fh;
+	void *iohandle = ctx->u.pcap.request->mirror ? content_file_fn : content_file_fd;
+
+	if(ctx->u.pcap.request->seq > 0 && ctx->u.pcap.request->ack > 0){
+
+		if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_FIN | TH_ACK, NULL, 0) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+		}
+		ctx->u.pcap.response->ack += 1;
+		if(build_ip_packet(iohandle, ctx->u.pcap.response, TH_ACK, NULL, 0) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+		}
+		if(build_ip_packet(iohandle, ctx->u.pcap.response, TH_FIN | TH_ACK, NULL, 0) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+		}
+		ctx->u.pcap.request->ack += 1;
+		ctx->u.pcap.request->seq += 1;
+
+		if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_ACK, NULL, 0) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+		}
+	}
+	else{
+/*		if(build_ip_packet(content_file_fd, ctx->u.pcap.response, TH_FIN | TH_ACK, NULL, 0) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+			return -1;
+		}
+	*/
+	}
+
+	if (ctx->u.pcap.request) {
+		free(ctx->u.pcap.request);
+	}
+	if (ctx->u.pcap.response) {
+		free(ctx->u.pcap.response);
+	}
+
+	free(ctx);
+}
+
+static ssize_t
+pcap_dump_file_writecb(void *fh, const void *buf, size_t sz)
+{
+	log_content_ctx_t *ctx = fh;
+	char flags = TH_PUSH | TH_ACK;
+	void *iohandle = ctx->u.pcap.request->mirror ? content_file_fn : content_file_fd;
+	int sendsize = 0;
+
+	if(ctx->is_request){
+		if(ctx->u.pcap.request->seq == 0){
+			if(ctx->is_request){
+				if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_SYN, NULL, 0) == -1){
+					log_err_printf("Warning: Failed to write to content log: %s\n",
+					               strerror(errno));
+					return -1;
+				}
+
+				ctx->u.pcap.response->ack = ctx->u.pcap.request->seq + 1;
+
+				if(build_ip_packet(iohandle, ctx->u.pcap.response, TH_SYN | TH_ACK, NULL, 0) == -1){
+					log_err_printf("Warning: Failed to write to content log: %s\n",
+					               strerror(errno));
+					return -1;
+				}
+
+				ctx->u.pcap.request->ack = ctx->u.pcap.response->seq + 1;
+				ctx->u.pcap.request->seq += 1;
+				if(build_ip_packet(iohandle, ctx->u.pcap.request, TH_ACK, NULL, 0) == -1){
+						log_err_printf("Warning: Failed to write to content log: %s\n",
+								               strerror(errno));
+						return -1;
+				}
+
+				ctx->u.pcap.response->seq += 1;
+			}
+		}
+
+		if(write_payload(iohandle, ctx->u.pcap.request, ctx->u.pcap.response, flags, buf, sz) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+			return -1;
+		}
+	}
+	else{
+		if(write_payload(iohandle, ctx->u.pcap.response, ctx->u.pcap.request, flags, buf, sz) == -1){
+			log_err_printf("Warning: Failed to write to content log: %s\n",
+			               strerror(errno));
+			return -1;
+		}
+	}
+
+	return sz;
+}
+
+static logbuf_t *
+pcap_dump_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
+{
+	log_content_ctx_t *ctx = fh;
+	int is_request = !!(prepflags & PREPFLAG_REQUEST);
+	time_t epoch;
+	struct tm *utc;
+	pcap_log_t *pcap = NULL;
+	logbuf_t *head = NULL;
+
+	ctx->is_request = is_request;
+
+/*	head = logbuf_new_alloc(sizeof(pcap_log_t), lb->fh, lb);
+	if (!head) {
+		log_err_printf("Failed to allocate memory\n");
+		logbuf_free(lb);
+		return NULL;
+	}
+
+	memcpy(head->buf, pcap, sizeof(pcap_log_t));
+
+	lb = head;
+*/
+out:
+
+	return lb;
+}
 
 /*
  * Certificate writer for -w/-W options.
@@ -929,26 +1139,38 @@ log_preinit(opts_t *opts)
 	logger_prep_func_t prepcb;
 
 	if (opts->contentlog) {
-		if (opts->contentlog_isdir) {
-			reopencb = NULL;
-			opencb = log_content_dir_opencb;
-			closecb = log_content_dir_closecb;
-			writecb = log_content_dir_writecb;
-			prepcb = NULL;
-		} else if (opts->contentlog_isspec) {
-			reopencb = NULL;
-			opencb = log_content_spec_opencb;
-			closecb = log_content_spec_closecb;
-			writecb = log_content_spec_writecb;
-			prepcb = NULL;
-		} else {
-			if (log_content_file_preinit(opts->contentlog) == -1)
+		if(!opts->contentlog_pcap){
+			if (opts->contentlog_isdir) {
+				reopencb = NULL;
+				opencb = log_content_dir_opencb;
+				closecb = log_content_dir_closecb;
+				writecb = log_content_dir_writecb;
+				prepcb = NULL;
+			} else if (opts->contentlog_isspec) {
+				reopencb = NULL;
+				opencb = log_content_spec_opencb;
+				closecb = log_content_spec_closecb;
+				writecb = log_content_spec_writecb;
+				prepcb = NULL;
+			} else {
+				if (log_content_file_preinit(opts->contentlog) == -1)
+					goto out;
+				reopencb = log_content_file_reopencb;
+				opencb = NULL;
+				closecb = log_content_file_closecb;
+				writecb = log_content_file_writecb;
+				prepcb = log_content_file_prepcb;
+			}
+		}
+		else{
+
+			if (pcap_dump_file_preinit(opts->contentlog, opts->contentlog_mirror) == -1)
 				goto out;
-			reopencb = log_content_file_reopencb;
+			reopencb = opts->contentlog_mirror == 0 ? pcap_dump_file_reopencb : NULL;
 			opencb = NULL;
-			closecb = log_content_file_closecb;
-			writecb = log_content_file_writecb;
-			prepcb = log_content_file_prepcb;
+			closecb = pcap_dump_file_closecb;
+			writecb = pcap_dump_file_writecb;
+			prepcb = pcap_dump_file_prepcb;
 		}
 		if (!(content_log = logger_new(reopencb, opencb, closecb,
 		                               writecb, prepcb,

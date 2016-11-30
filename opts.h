@@ -32,6 +32,7 @@
 #include "nat.h"
 #include "ssl.h"
 #include "attrib.h"
+#include "arpop.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -78,6 +79,8 @@ typedef struct opts {
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlog_isdir : 1;
 	unsigned int contentlog_isspec : 1;
+	unsigned int contentlog_pcap:1;
+	unsigned int contentlog_mirror:1;
 #ifdef HAVE_LOCAL_PROCINFO
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -92,6 +95,8 @@ typedef struct opts {
 	char *connectlog;
 	char *contentlog;
 	char *contentlog_basedir; /* static part of logspec, for privsep srv */
+	char *mirrortarget;
+	char target_mac[MAC_LEN];
 	CONST_SSL_METHOD *(*sslmethod)(void);
 	X509 *cacrt;
 	EVP_PKEY *cakey;

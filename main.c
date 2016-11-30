@@ -25,6 +25,20 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* INFO BEFORE RUN
+ 
+ iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8080
+ iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports 8443
+ 
+ sysctl -w net.ipv4.ip_forward=1
+ 
+ sudo /mnt/hgfs/sslsplit/sslsplit -u root -D -l connections.log -j ./tmp -X ./logs -k /mnt/hgfs/sslsplit/ca.key -c /mnt/hgfs/sslsplit/ca.crt   ssl 0.0.0.0 8443 tcp 0.0.0.0 8080
+ 
+ sudo /mnt/hgfs/sslsplit/sslsplit -u root -D -l connections.log -j ./tmp -M eth1 -k /mnt/hgfs/sslsplit/ca.key -c /mnt/hgfs/sslsplit/ca.crt   ssl 0.0.0.0 8443 tcp 0.0.0.0 8080
+ 
+ */
+
+
 /* silence daemon(3) deprecation warning on Mac OS X */
 #if __APPLE__
 #define daemon xdaemon
@@ -41,6 +55,7 @@
 #include "log.h"
 #include "version.h"
 #include "defaults.h"
+#include "pcapfile.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -173,6 +188,10 @@ main_usage(void)
 "  -p pidfile  write pid to pidfile (default: no pid file)\n"
 "  -l logfile  connect log: log one line summary per connection to logfile\n"
 "  -L logfile  content log: full data to file or named pipe (excludes -S/-F)\n"
+"  -X pcapfile Pcap Dump: full packet to file (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
+"  -M Interface Network Interface for mirroring (some TCP/IP fields set as emulated value) (excludes -S/-F)\n"
+"  -T Ip Addr  all traffic will be mirrored to this ip address.\n"
+"              This parameter is used with -M option.\n"
 "  -S logdir   content log: full data to separate files in dir (excludes -L/-F)\n"
 "  -F pathspec content log: full data to sep files with %% subst (excl. -L/-S):\n"
 "              %%T - initial connection time as an ISO 8601 UTC timestamp\n"
@@ -303,7 +322,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:X:M:T:L:S:F:dDVhW:w:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -553,6 +572,21 @@ main(int argc, char *argv[])
 				opts->contentlog_isdir = 0;
 				opts->contentlog_isspec = 0;
 				break;
+			case 'M':
+				opts->contentlog_mirror = MIRROR_TO_INTERFACE;
+			case 'X':
+				if (opts->contentlog)
+					free(opts->contentlog);
+				opts->contentlog = strdup(optarg);
+				if (!opts->contentlog)
+					oom_die(argv0);
+				opts->contentlog_isdir = 0;
+				opts->contentlog_isspec = 0;
+				opts->contentlog_pcap = 1;
+				break;
+			case 'T':
+				opts->mirrortarget = strdup(optarg);
+				break;
 			case 'S':
 				if (!sys_isdir(optarg)) {
 					fprintf(stderr, "%s: '%s' is not a "
@@ -689,8 +723,23 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	opts->spec = proxyspec_parse(&argc, &argv, natengine);
-
 	/* usage checks before defaults */
+
+	if(opts->mirrortarget != NULL && opts->contentlog_mirror != 0){
+		do{
+			rv = get_macaddr_of_mirror_ip(opts->mirrortarget, opts->target_mac, opts->contentlog);
+			if(rv == -1){
+				log_err_printf("Target Mirroring error. Arp Response couldnt read!!\n");
+				sleep(5);
+			}
+		}while(rv == -1);
+	}
+	else if (opts->mirrortarget != NULL && opts->contentlog_mirror == 0){
+		fprintf(stderr, "When target ip address is specified with -T option, "
+						"mirroring interface should be specified with -M option\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
 		                argv0);

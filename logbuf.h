@@ -29,6 +29,7 @@
 #define LOGBUF_H
 
 #include "attrib.h"
+#include "pcapfile.h"
 
 #include <stdlib.h>
 #include <unistd.h>
