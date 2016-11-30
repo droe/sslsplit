@@ -25,6 +25,20 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* INFO BEFORE RUN
+ 
+ iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8080
+ iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports 8443
+ 
+ sysctl -w net.ipv4.ip_forward=1
+ 
+ sudo /mnt/hgfs/sslsplit/sslsplit -u root -D -l connections.log -j ./tmp -X ./logs -k /mnt/hgfs/sslsplit/ca.key -c /mnt/hgfs/sslsplit/ca.crt   ssl 0.0.0.0 8443 tcp 0.0.0.0 8080
+ 
+ sudo /mnt/hgfs/sslsplit/sslsplit -u root -D -l connections.log -j ./tmp -M eth1 -k /mnt/hgfs/sslsplit/ca.key -c /mnt/hgfs/sslsplit/ca.crt   ssl 0.0.0.0 8443 tcp 0.0.0.0 8080
+ 
+ */
+
+
 /* silence daemon(3) deprecation warning on Mac OS X */
 #if __APPLE__
 #define daemon xdaemon
