@@ -93,6 +93,12 @@ where a protocol starts on a plain text TCP connection and is later upgraded to
 SSL/TLS through protocol-specific means, such as the STARTTLS command in SMTP.
 SSLsplit supports generic upgrading of TCP connections to SSL.
 .LP
+In order to maximize the chances that a connection can be successfully split,
+SSLsplit does not verify upstream server certificates.  Instead, all
+certificates including self-signed are accepted and if the expected hostname
+signalled in SNI is missing from the server certificate, it will be added to
+dynamically forged certificates.
+.LP
 SSLsplit does not automagically redirect any network traffic.  To actually
 implement an attack, you also need to redirect the traffic to the system
 running \fBsslsplit\fP.  Your options include running \fBsslsplit\fP on a
