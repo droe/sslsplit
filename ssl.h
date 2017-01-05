@@ -171,7 +171,7 @@ int ssl_x509_v3ext_add(X509V3_CTX *, X509 *, char *, char *) NONNULL(1,2,3,4);
 int ssl_x509_v3ext_copy_by_nid(X509 *, X509 *, int) NONNULL(1,2);
 #endif /* !OPENSSL_NO_TLSEXT */
 int ssl_x509_serial_copyrand(X509 *, X509 *) NONNULL(1,2);
-X509 * ssl_x509_forge(X509 *, EVP_PKEY *, X509 *, const char *, EVP_PKEY *)
+X509 * ssl_x509_forge(X509 *, EVP_PKEY *, X509 *, const char *, EVP_PKEY *, const char *)
        NONNULL(1,2,3,5) MALLOC;
 X509 * ssl_x509_load(const char *) NONNULL(1) MALLOC;
 char * ssl_x509_subject(X509 *) NONNULL(1) MALLOC;

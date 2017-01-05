@@ -775,7 +775,7 @@ ssl_x509_serial_copyrand(X509 *dstcrt, X509 *srccrt)
  */
 X509 *
 ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
-               const char *extraname, EVP_PKEY *key)
+               const char *extraname, EVP_PKEY *key, const char *crlurl)
 {
 	X509_NAME *subject, *issuer;
 	GENERAL_NAMES *names;
@@ -815,6 +815,14 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 	    ssl_x509_v3ext_add(&ctx, crt, "authorityKeyIdentifier",
 	                                  "keyid,issuer:always") == -1)
 		goto errout;
+
+	if (crlurl) {
+        char *crlurlval;
+        if (asprintf(&crlurlval, "URI:%s", crlurl) < 0)
+            goto errout;
+        if (ssl_x509_v3ext_add(&ctx, crt, "crlDistributionPoints", crlurlval) == -1) goto errout;
+    }
+
 
 	if (!extraname) {
 		/* no extraname provided: copy original subjectAltName ext */
