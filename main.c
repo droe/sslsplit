@@ -414,11 +414,11 @@ main(int argc, char *argv[])
 				if (!opts->tgcrtdir)
 					oom_die(argv0);
 				break;
-            case 'q':
-                if (opts->crlurl)
-                    free(opts->crlurl);
-                opts->crlurl = strdup(optarg);
-                break;
+			case 'q':
+				if (opts->crlurl)
+					free(opts->crlurl);
+				opts->crlurl = strdup(optarg);
+				break;
 			case 'O':
 				opts->deny_ocsp = 1;
 				break;
