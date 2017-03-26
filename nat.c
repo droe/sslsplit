@@ -118,85 +118,14 @@ nat_pf_fini(void)
 static int
 nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
                  evutil_socket_t s,
-                 struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
+                 UNUSED struct sockaddr *src_addr, UNUSED socklen_t src_addrlen)
 {
-#ifdef __APPLE__
-#define sport sxport.port
-#define dport dxport.port
-#define rdport rdxport.port
-#endif /* __APPLE__ */
-	struct sockaddr_storage our_addr;
-	socklen_t our_addrlen;
-	struct pfioc_natlook nl;
-
-	our_addrlen = sizeof(struct sockaddr_storage);
-	if (getsockname(s, (struct sockaddr *)&our_addr, &our_addrlen) == -1) {
+	if (getsockname(s, dst_addr, dst_addrlen) == -1) {
 		log_err_printf("Error from getsockname(): %s\n",
 		               strerror(errno));
 		return -1;
 	}
-
-	memset(&nl, 0, sizeof(struct pfioc_natlook));
-	nl.af = src_addr->sa_family;
-	if (nl.af == AF_INET) {
-		struct sockaddr_in *src_sai = (struct sockaddr_in *)src_addr;
-		struct sockaddr_in *our_sai = (struct sockaddr_in *)&our_addr;
-		nl.saddr.v4.s_addr = src_sai->sin_addr.s_addr;
-		nl.sport = src_sai->sin_port;
-		nl.daddr.v4.s_addr = our_sai->sin_addr.s_addr;
-		nl.dport = our_sai->sin_port;
-	}
-	if (nl.af == AF_INET6) {
-		struct sockaddr_in6 *src_sai = (struct sockaddr_in6 *)src_addr;
-		struct sockaddr_in6 *our_sai = (struct sockaddr_in6 *)&our_addr;
-		memcpy(&nl.saddr.v6.s6_addr, &src_sai->sin6_addr.s6_addr, 16);
-		nl.sport = src_sai->sin6_port;
-		memcpy(&nl.daddr.v6.s6_addr, &our_sai->sin6_addr.s6_addr, 16);
-		nl.dport = our_sai->sin6_port;
-	}
-	nl.proto = IPPROTO_TCP;
-	nl.direction = PF_OUT;
-
-	if (ioctl(nat_pf_fd, DIOCNATLOOK, &nl)) {
-		if (errno != ENOENT) {
-			log_err_printf("Error from ioctl(DIOCNATLOOK): %s\n",
-			               strerror(errno));
-		}
-		return -1;
-	}
-
-	if ((nl.dport == nl.rdport) &&
-	    ((nl.af == AF_INET && nl.daddr.v4.s_addr == nl.rdaddr.v4.s_addr) ||
-	     (nl.af == AF_INET6 &&
-	      !memcmp(nl.daddr.v6.s6_addr, nl.rdaddr.v6.s6_addr, 16)))) {
-		/* no destination address/port translation in place */
-		return -1;
-	}
-
-	/* copy original destination address */
-	if (nl.af == AF_INET) {
-		struct sockaddr_in *dst_sai = (struct sockaddr_in *)dst_addr;
-		memset(dst_sai, 0, sizeof(struct sockaddr_in));
-		dst_sai->sin_addr.s_addr = nl.rdaddr.v4.s_addr;
-		dst_sai->sin_port = nl.rdport;
-		dst_sai->sin_family = nl.af;
-		*dst_addrlen = sizeof(struct sockaddr_in);
-	}
-	if (nl.af == AF_INET6) {
-		struct sockaddr_in6 *dst_sai = (struct sockaddr_in6 *)dst_addr;
-		memset(dst_sai, 0, sizeof(struct sockaddr_in6));
-		memcpy(dst_sai->sin6_addr.s6_addr, nl.rdaddr.v6.s6_addr, 16);
-		dst_sai->sin6_port = nl.rdport;
-		dst_sai->sin6_family = nl.af;
-		*dst_addrlen = sizeof(struct sockaddr_in6);
-	}
-
 	return 0;
-#ifdef __APPLE__
-#undef sport
-#undef dport
-#undef rdport
-#endif /* __APPLE__ */
 }
 #endif /* HAVE_PF */
 
