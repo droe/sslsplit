@@ -66,6 +66,8 @@
 #include <limits.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netfilter_ipv6.h>
+#include <linux/if.h>
+#include <linux/netfilter_ipv6/ip6_tables.h>
 #endif /* HAVE_NETFILTER */
 
 
@@ -312,14 +314,6 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
  */
 
 #ifdef HAVE_NETFILTER
-/*
- * It seems that SO_ORIGINAL_DST only works for IPv4 and that there
- * is no IPv6 equivalent yet.  Someone please port pf to Linux...
- *
- * http://lists.netfilter.org/pipermail/netfilter/2007-July/069259.html
- *
- * It looks like TPROXY is the only way to go on Linux with IPv6.
- */
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
                         evutil_socket_t s,
@@ -327,13 +321,11 @@ nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 {
 	int rv;
 
-	if (src_addr->sa_family != AF_INET) {
-		log_err_printf("The netfilter NAT engine only "
-		               "supports IPv4 state lookups\n");
-		return -1;
+	if (src_addr->sa_family == AF_INET) {
+		rv = getsockopt(s, SOL_IP, SO_ORIGINAL_DST, dst_addr, dst_addrlen);
+	} else {
+		rv = getsockopt(s, SOL_IPV6, IP6T_SO_ORIGINAL_DST, dst_addr, dst_addrlen);
 	}
-
-	rv = getsockopt(s, SOL_IP, SO_ORIGINAL_DST, dst_addr, dst_addrlen);
 	if (rv == -1) {
 		log_err_printf("Error from getsockopt(SO_ORIGINAL_DST): %s\n",
 		               strerror(errno));
@@ -431,7 +423,7 @@ struct engine engines[] = {
 #endif /* HAVE_IPFILTER */
 #ifdef HAVE_NETFILTER
 	{
-		"netfilter", 0, 0,
+		"netfilter", 1, 0,
 		NULL, NULL, NULL,
 		nat_netfilter_lookup_cb, NULL
 	},
