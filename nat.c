@@ -314,6 +314,11 @@ nat_ipfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
  */
 
 #ifdef HAVE_NETFILTER
+/*
+ * Linux commit 121d1e0941e05c64ee4223064dd83eb24e871739 adding
+ * IP6T_SO_ORIGINAL_DST was first released as part of Linux v3.8-rc1 in 2012.
+ * Before that, this interface only supported IPv4.
+ */
 static int
 nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
                         evutil_socket_t s,
@@ -322,13 +327,28 @@ nat_netfilter_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 	int rv;
 
 	if (src_addr->sa_family == AF_INET) {
-		rv = getsockopt(s, SOL_IP, SO_ORIGINAL_DST, dst_addr, dst_addrlen);
+		rv = getsockopt(s, SOL_IP, SO_ORIGINAL_DST,
+		                dst_addr, dst_addrlen);
+		if (rv == -1) {
+			log_err_printf("Error from getsockopt("
+			               "SO_ORIGINAL_DST): %s\n",
+			               strerror(errno));
+		}
 	} else {
-		rv = getsockopt(s, SOL_IPV6, IP6T_SO_ORIGINAL_DST, dst_addr, dst_addrlen);
-	}
-	if (rv == -1) {
-		log_err_printf("Error from getsockopt(SO_ORIGINAL_DST): %s\n",
-		               strerror(errno));
+#ifdef IP6T_SO_ORIGINAL_DST
+		rv = getsockopt(s, SOL_IPV6, IP6T_SO_ORIGINAL_DST,
+		                dst_addr, dst_addrlen);
+		if (rv == -1) {
+			log_err_printf("Error from getsockopt("
+			               "IP6T_SO_ORIGINAL_DST): %s\n",
+			               strerror(errno));
+		}
+#else /* !IP6T_SO_ORIGINAL_DST */
+		log_err_printf("The netfilter NAT engine only "
+		               "supports IPv4 state lookups on "
+		               "this version of Linux\n");
+		return -1;
+#endif /* !IP6T_SO_ORIGINAL_DST */
 	}
 	return rv;
 }
@@ -423,7 +443,11 @@ struct engine engines[] = {
 #endif /* HAVE_IPFILTER */
 #ifdef HAVE_NETFILTER
 	{
+#ifdef IP6T_SO_ORIGINAL_DST
 		"netfilter", 1, 0,
+#else /* !IP6T_SO_ORIGINAL_DST */
+		"netfilter", 0, 0,
+#endif /* !IP6T_SO_ORIGINAL_DST */
 		NULL, NULL, NULL,
 		nat_netfilter_lookup_cb, NULL
 	},
@@ -632,16 +656,11 @@ nat_version(void)
 #else /* !IP_TRANSPARENT */
 	fprintf(stderr, " !IP_TRANSPARENT");
 #endif /* !IP_TRANSPARENT */
-#ifdef SOL_IPV6
-	fprintf(stderr, " SOL_IPV6");
-#else /* !SOL_IPV6 */
-	fprintf(stderr, " !SOL_IPV6");
-#endif /* !SOL_IPV6 */
-#ifdef IPV6_ORIGINAL_DST
-	fprintf(stderr, " IPV6_ORIGINAL_DST");
-#else /* !IPV6_ORIGINAL_DST */
-	fprintf(stderr, " !IPV6_ORIGINAL_DST");
-#endif /* !IPV6_ORIGINAL_DST */
+#ifdef IP6T_SO_ORIGINAL_DST
+	fprintf(stderr, " IP6T_SO_ORIGINAL_DST");
+#else /* !IP6T_SO_ORIGINAL_DST */
+	fprintf(stderr, " !IP6T_SO_ORIGINAL_DST");
+#endif /* !IP6T_SO_ORIGINAL_DST */
 	fprintf(stderr, "\n");
 #endif /* HAVE_NETFILTER */
 }
