@@ -551,7 +551,8 @@ Assuming inbound interface \fBbge0\fP:
 .TP
 .B netfilter
 Linux netfilter using the iptables REDIRECT target.
-Only supports IPv4 due to limitations in the SO_ORIGINAL_DST getsockopt(2)
+Fully supported including IPv6 since Linux v3.8-rc1; on older kernels only
+supports IPv4 due to limitations in the SO_ORIGINAL_DST getsockopt(2)
 interface.
 .LP
 .RS
@@ -562,6 +563,7 @@ interface.
 \fBiptables -t nat -A PREROUTING -s 192.0.2.0/24 \\
          -p tcp --dport 443 \\
          -j REDIRECT --to-ports 10443\fP
+\fB# please contribute a tested ip6tables config\fP
 .fi
 .LP
 Note that SSLsplit is only able to accept incoming connections if it binds
@@ -719,8 +721,8 @@ SSLsplit was written by Daniel Roethlisberger <daniel@roe.ch>.
 The following individuals have contributed code or documentation, in
 chronological order of their first contribution:
 Steve Wills, Landon Fuller, Wayne Jensen, Rory McNamara, Alexander Neumann,
-Adam Jacob Muller, Richard Poole, Maciej Kotowicz, Eun Soo Park and Christian
-Groschupp.
+Adam Jacob Muller, Richard Poole, Maciej Kotowicz, Eun Soo Park, Christian
+Groschupp and Petr Vanek.
 .SH BUGS
 Use Github for submission of bug reports or patches:
 .LP
