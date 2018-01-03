@@ -617,7 +617,7 @@ connection data into separate files under \fB/tmp\fP (add \fB-e\fP
 available on your system):
 .LP
 .nf
-\fBsslsplit -k ca.key -c ca.crt -l connect.log -L /tmp \\
+\fBsslsplit -k ca.key -c ca.crt -l connect.log -S /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
@@ -630,7 +630,7 @@ connections.
 Intercepting IMAP/IMAPS using the same settings:
 .LP
 .nf
-\fBsslsplit -k ca.key -c ca.crt -l connect.log -L /tmp \\
+\fBsslsplit -k ca.key -c ca.crt -l connect.log -S /tmp \\
          ssl ::1 10993  ssl 127.0.0.1 10993 \\
          tcp ::1 10143  tcp 127.0.0.1 10143\fP
 .fi
@@ -640,7 +640,7 @@ A more targetted setup, HTTPS only, using certificate/chain/key files from
 instead of querying a NAT engine:
 .LP
 .nf
-\fBsslsplit -t /path/to/cert.d -l connect.log -L /tmp \\
+\fBsslsplit -t /path/to/cert.d -l connect.log -S /tmp \\
          https ::1       10443 www.example.org 443 \\
          https 127.0.0.1 10443 www.example.org 443\fP
 .fi
@@ -656,7 +656,7 @@ suites they consider weak.
 .LP
 .nf
 \fBsslsplit -Z -s NULL:RC4:AES128:-DHE -K leaf.key \\
-         -k ca.key -c ca.crt -l connect.log -L /tmp \\
+         -k ca.key -c ca.crt -l connect.log -S /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
@@ -666,7 +666,7 @@ writing a PID file:
 .LP
 .nf
 \fBsslsplit -d -p /var/run/sslsplit.pid -u sslsplit \\
-         -k ca.key -c ca.crt -l connect.log -L /tmp \\
+         -k ca.key -c ca.crt -l connect.log -S /tmp \\
          https ::1 10443  https 127.0.0.1 10443 \\
          http  ::1 10080  http  127.0.0.1 10080\fP
 .fi
