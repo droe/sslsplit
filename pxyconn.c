@@ -2098,8 +2098,10 @@ connected:
 			                evbuffer_get_length(
 			                    bufferevent_get_output(bev)),
 			                evbuffer_get_length(
+			                    other->closed ? 0 :
 			                    bufferevent_get_input(other->bev)),
 			                evbuffer_get_length(
+			                    other->closed ? 0 :
 			                    bufferevent_get_output(other->bev))
 			                );
 		}
