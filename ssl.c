@@ -50,6 +50,7 @@
 #include <openssl/ocsp.h>
 
 
+
 /*
  * Collection of helper functions on top of the OpenSSL API.
  */
@@ -479,26 +480,25 @@ ssl_sha1_to_str(unsigned char *rawhash, int colons)
 /*
  * Format SSL state into newly allocated string.
  * Returns pointer to string that must be freed by caller, or NULL on error.
+ * Now uses OpenSSL 1.1 API
+ * Simplify to match OpenSSL 1.1 API
  */
 char *
 ssl_ssl_state_to_str(SSL *ssl)
 {
 	char *str = NULL;
 	int rv;
+	int state = SSL_get_state(ssl);
+	
 
-	rv = asprintf(&str, "%08x = %s%s%s%04x = %s (%s) [%s]",
-	              ssl->state,
-	              (ssl->state & SSL_ST_CONNECT) ? "SSL_ST_CONNECT|" : "",
-	              (ssl->state & SSL_ST_ACCEPT) ? "SSL_ST_ACCEPT|" : "",
-	              (ssl->state & SSL_ST_BEFORE) ? "SSL_ST_BEFORE|" : "",
-	              ssl->state & SSL_ST_MASK,
+	rv = asprintf(&str, "%08x = %s (%s)",
+	              state,
 	              SSL_state_string(ssl),
-	              SSL_state_string_long(ssl),
-	              (ssl->type == SSL_ST_CONNECT) ? "connect socket"
-	                                            : "accept socket");
+	              SSL_state_string_long(ssl));
 
 	return (rv < 0) ? NULL : str;
 }
+
 
 #ifndef OPENSSL_NO_DH
 static unsigned char dh_g[] = { 0x02 };
@@ -597,6 +597,8 @@ DH *
 ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 {
 	DH *dh;
+	BIGNUM *bn_p;
+	BIGNUM *bn_g;
 
 	if (!(dh = DH_new())) {
 		log_err_printf("DH_new() failed\n");
@@ -604,16 +606,16 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 	}
 	switch (keylength) {
 		case 512:
-			dh->p = BN_bin2bn(dh512_p, sizeof(dh512_p), NULL);
+			bn_p = BN_bin2bn(dh512_p, sizeof(dh512_p), NULL);
 			break;
 		case 1024:
-			dh->p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL);
+			bn_p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL);
 			break;
 		case 2048:
-			dh->p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL);
+			bn_p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL);
 			break;
 		case 4096:
-			dh->p = BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL);
+			bn_p = BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL);
 			break;
 		default:
 			log_err_printf("Unhandled DH keylength %i%s\n",
@@ -622,12 +624,13 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 			DH_free(dh);
 			return NULL;
 	}
-	dh->g = BN_bin2bn(dh_g, sizeof(dh_g), NULL);
-	if (!dh->p || !dh->g) {
+	bn_g = BN_bin2bn(dh_g, sizeof(dh_g), NULL);
+	if (bn_p || bn_g) {
 		log_err_printf("Failed to load DH p and g from memory\n");
 		DH_free(dh);
 		return NULL;
 	}
+
 
 	return(dh);
 }
@@ -851,7 +854,7 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 			if (!gn)
 				goto errout2;
 			gn->type = GEN_DNS;
-			gn->d.dNSName = M_ASN1_IA5STRING_new();
+			gn->d.dNSName =  ASN1_STRING_type_new(V_ASN1_IA5STRING);
 			if (!gn->d.dNSName)
 				goto errout3;
 			ASN1_STRING_set(gn->d.dNSName,
@@ -875,10 +878,11 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 #endif /* DEBUG_CERTIFICATE */
 
 	const EVP_MD *md;
-	switch (EVP_PKEY_type(cakey->type)) {
+
+	switch (EVP_PKEY_base_id(cakey)) {
 #ifndef OPENSSL_NO_RSA
 	case EVP_PKEY_RSA:
-		switch (OBJ_obj2nid(origcrt->sig_alg->algorithm)) {
+		switch ( X509_get_signature_nid(origcrt) ) {
 		case NID_md5WithRSAEncryption:
 			md = EVP_md5();
 			break;
@@ -907,12 +911,12 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 #endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA
 	case EVP_PKEY_DSA:
-		md = EVP_dss1();
+		md = EVP_PKEY_meth_find(EVP_PKEY_DSA);
 		break;
 #endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
 	case EVP_PKEY_EC:
-		md = EVP_ecdsa();
+		md = EVP_PKEY_meth_find(EVP_PKEY_EC);
 		break;
 #endif /* !OPENSSL_NO_ECDSA */
 	default:
@@ -1010,6 +1014,15 @@ leave1:
 	return -1;
 }
 
+/* From https://github.com/cernekee/openconnect/blob/master/openssl.c to fix opaque in OpenSSL 1.1 API
+ * As per OpenSSL 1.1 API changes wiki
+ */
+#ifndef SSL_CTX_get_extra_chain_certs_only
+#define SSL_CTX_get_extra_chain_certs_only(ctx, st) \
+	do { *(st) = (ctx)->extra_certs; } while(0)
+#endif
+
+
 /*
  * Use a X509 certificate chain for an SSL context.
  * Copies the certificate stack to the SSL_CTX internal data structures
@@ -1022,10 +1035,14 @@ ssl_x509chain_use(SSL_CTX *sslctx, X509 *crt, STACK_OF(X509) *chain)
 
 	for (int i = 0; i < sk_X509_num(chain); i++) {
 		X509 *tmpcrt;
+		STACK_OF(X509) *extra_certs;
 
 		tmpcrt = sk_X509_value(chain, i);
 		ssl_x509_refcount_inc(tmpcrt);
-		sk_X509_push(sslctx->extra_certs, tmpcrt);
+
+		
+		SSL_CTX_get_extra_chain_certs_only(sslctx, extra_certs);
+		sk_X509_push(extra_certs, tmpcrt);
 		SSL_CTX_add_extra_chain_cert(sslctx, tmpcrt);
 	}
 }
@@ -1127,15 +1144,21 @@ int
 ssl_key_identifier_sha1(EVP_PKEY *key, unsigned char *keyid)
 {
 	X509_PUBKEY *pubkey = NULL;
-	ASN1_BIT_STRING *pk;
+	const unsigned char *pk;
+	int length;
 
 	/* X509_PUBKEY_set() will attempt to free pubkey if != NULL */
 	if (X509_PUBKEY_set(&pubkey, key) != 1 || !pubkey)
 		return -1;
-	if (!(pk = pubkey->public_key))
+	
+	X509_PUBKEY_get0_param(NULL, &pk, &length, NULL, pubkey);
+	
+	if (!(pk))
 		goto errout;
-	if (!EVP_Digest(pk->data, pk->length, keyid, NULL, EVP_sha1(), NULL))
+
+	if (!EVP_Digest(pk, length, keyid, NULL, EVP_sha1(), NULL))
 		goto errout;
+	
 	X509_PUBKEY_free(pubkey);
 	return 0;
 
@@ -1232,7 +1255,10 @@ void
 ssl_dh_refcount_inc(DH *dh)
 {
 #ifdef OPENSSL_THREADS
-	CRYPTO_add(&dh->references, 1, CRYPTO_LOCK_DH);
+	/* CRYPTO_add(&dh->references, 1, CRYPTO_LOCK_DH);
+	Deprecated in 1.1
+	*/
+	DH_up_ref(dh); 
 #else /* !OPENSSL_THREADS */
 	dh->references++;
 #endif /* !OPENSSL_THREADS */
@@ -1247,7 +1273,8 @@ void
 ssl_key_refcount_inc(EVP_PKEY *key)
 {
 #ifdef OPENSSL_THREADS
-	CRYPTO_add(&key->references, 1, CRYPTO_LOCK_EVP_PKEY);
+	/* CRYPTO_add(&key->references, 1, CRYPTO_LOCK_EVP_PKEY); */
+	EVP_PKEY_up_ref(key);
 #else /* !OPENSSL_THREADS */
 	key->references++;
 #endif /* !OPENSSL_THREADS */
@@ -1262,7 +1289,10 @@ void
 ssl_x509_refcount_inc(X509 *crt)
 {
 #ifdef OPENSSL_THREADS
-	CRYPTO_add(&crt->references, 1, CRYPTO_LOCK_X509);
+	/* CRYPTO_add(&crt->references, 1, CRYPTO_LOCK_X509);
+	 * Deprecated in 1.1
+	*/
+	X509_up_ref(crt);
 #else /* !OPENSSL_THREADS */
 	crt->references++;
 #endif /* !OPENSSL_THREADS */
