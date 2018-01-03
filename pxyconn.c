@@ -1532,13 +1532,13 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			               ctx->evbase, ctx->dst.bev, ctx->dst.ssl,
 			               BUFFEREVENT_SSL_CONNECTING,
 			               BEV_OPT_DEFER_CALLBACKS);
+			if (!ctx->dst.bev) {
+				return 0;
+			}
 			bufferevent_setcb(ctx->dst.bev, pxy_bev_readcb,
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
 			bufferevent_enable(ctx->dst.bev, EV_READ|EV_WRITE);
-			if (!ctx->dst.bev) {
-				return 0;
-			}
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_err_printf("Replaced dst bufferevent, new "
 				               "one is %p\n",
@@ -1846,10 +1846,15 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			               ctx->evbase, ctx->src.bev, ctx->src.ssl,
 			               BUFFEREVENT_SSL_ACCEPTING,
 			               BEV_OPT_DEFER_CALLBACKS);
-			bufferevent_setcb(ctx->src.bev, pxy_bev_readcb,
-			                  pxy_bev_writecb, pxy_bev_eventcb,
-			                  ctx);
-			bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
+			if (ctx->src.bev) {
+				bufferevent_setcb(ctx->src.bev,
+				                  pxy_bev_readcb,
+				                  pxy_bev_writecb,
+				                  pxy_bev_eventcb,
+				                  ctx);
+				bufferevent_enable(ctx->src.bev,
+				                   EV_READ|EV_WRITE);
+			}
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
 			                                     ctx->src.ssl);
