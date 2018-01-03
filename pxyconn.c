@@ -1847,10 +1847,13 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			               BUFFEREVENT_SSL_ACCEPTING,
 			               BEV_OPT_DEFER_CALLBACKS);
 			if (ctx->src.bev) {
-				bufferevent_setcb(ctx->src.bev, pxy_bev_readcb,
-			                  pxy_bev_writecb, pxy_bev_eventcb,
-			                  ctx);
-				bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
+				bufferevent_setcb(ctx->src.bev,
+				                  pxy_bev_readcb,
+				                  pxy_bev_writecb,
+				                  pxy_bev_eventcb,
+				                  ctx);
+				bufferevent_enable(ctx->src.bev,
+				                   EV_READ|EV_WRITE);
 			}
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
