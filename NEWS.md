@@ -2,6 +2,7 @@
 ### SSLsplit develop
 
 -   Add IPv6 support to netfilter NAT engine (pull req #179 by @armakar).
+-   Fix potential segfaults in src.bev/dst.bev (pull req #174 by @sonertari).
 -   No longer assume an out of memory condition when a certificate contains
     neither a CN nor a subjectAltName extension.
 -   Extend -L content logging with EOF message to allow log parsers to figure
