@@ -8,19 +8,9 @@ TravisCI for continuous integration.
 
 ## Reporting bugs
 
-Please use the Github issue tracker for bug reports.  Including the following
-information will allow faster analysis of the problem:
-
--   Output of `sslsplit -V`
--   Output of `uname -a`
--   Exact command line arguments used to run SSLsplit
--   Relevant part of debug mode (`-D`) output, if applicable
--   The NAT redirection rules you are using, if applicable
--   For build problems, the full output of `make`
-
-Before submitting a bug report, please check whether the bug is also present
-in the `develop` branch and whether running `make test` produces failed unit
-tests on your system.
+Please use the Github issue tracker for bug reports.  Before submitting a bug
+report, please check whether the bug is also present in the `develop` branch
+and whether running `make test` produces failed unit tests on your system.
 
 
 ## Contributing patches
