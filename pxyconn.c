@@ -871,8 +871,9 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 				log_dbg_printf("Certificate cache: MISS\n");
 			cert->crt = ssl_x509_forge(ctx->opts->cacrt,
 			                           ctx->opts->cakey,
-			                           ctx->origcrt, NULL,
+			                           ctx->origcrt,
 			                           ctx->opts->key,
+			                           NULL,
 			                           ctx->opts->crlurl);
 			cachemgr_fkcrt_set(ctx->origcrt, cert->crt);
 		}
@@ -1020,7 +1021,8 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			               "(SNI mismatch)\n");
 		}
 		newcrt = ssl_x509_forge(ctx->opts->cacrt, ctx->opts->cakey,
-		                        sslcrt, sn, ctx->opts->key, ctx->opts->crlurl);
+		                        sslcrt, ctx->opts->key,
+		                        sn, ctx->opts->crlurl);
 		if (!newcrt) {
 			ctx->enomem = 1;
 			return SSL_TLSEXT_ERR_NOACK;

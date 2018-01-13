@@ -139,7 +139,7 @@ main_usage(void)
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
-"  -q crlurl   use this URL as CRL distrib point for all forged certs\n"
+"  -q crlurl   use URL as CRL distribution point for all forged certs\n"
 "  -w gendir   write leaf key and only generated certificates to gendir\n"
 "  -W gendir   write leaf key and all certificates to gendir\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"

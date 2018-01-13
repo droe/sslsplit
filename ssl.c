@@ -774,8 +774,8 @@ ssl_x509_serial_copyrand(X509 *dstcrt, X509 *srccrt)
  * The optional argument extraname is added to subjectAltNames if provided.
  */
 X509 *
-ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
-               const char *extraname, EVP_PKEY *key, const char *crlurl)
+ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
+               const char *extraname, const char *crlurl)
 {
 	X509_NAME *subject, *issuer;
 	GENERAL_NAMES *names;
