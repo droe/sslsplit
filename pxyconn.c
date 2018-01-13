@@ -1945,6 +1945,7 @@ connected:
 
 		if (OPTS_DEBUG(ctx->opts)) {
 			if (this->ssl) {
+				char *keystr;
 				/* for SSL, we get two connect events */
 				log_dbg_printf("SSL connected %s [%s]:%s"
 				               " %s %s\n",
@@ -1958,6 +1959,11 @@ connected:
 				               ctx->srcport_str,
 				               SSL_get_version(this->ssl),
 				               SSL_get_cipher(this->ssl));
+				keystr = ssl_ssl_masterkey_to_str(this->ssl);
+				if (keystr) {
+					log_dbg_printf("%s\n", keystr);
+					free(keystr);
+				}
 			} else {
 				/* for TCP, we get only a dst connect event,
 				 * since src was already connected from the

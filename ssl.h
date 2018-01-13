@@ -148,6 +148,7 @@ void ssl_fini(void);
 char * ssl_sha1_to_str(unsigned char *, int) NONNULL(1) MALLOC;
 
 char * ssl_ssl_state_to_str(SSL *) NONNULL(1) MALLOC;
+char * ssl_ssl_masterkey_to_str(SSL *) NONNULL(1) MALLOC;
 
 #ifndef OPENSSL_NO_DH
 DH * ssl_tmp_dh_callback(SSL *, int, int) NONNULL(1) MALLOC;

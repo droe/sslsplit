@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Dump master key in NSS key log format in debug mode, allowing decryption of
+    SSL connections using Wireshark (issue #121 by @Neoptolemus).
 -   Copy basicConstraints, keyUsage and extendedKeyUsage X509v3 extensions from
     the original certificate and only generate them anew if they were not
     present (issue #73).

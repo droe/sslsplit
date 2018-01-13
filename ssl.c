@@ -500,6 +500,45 @@ ssl_ssl_state_to_str(SSL *ssl)
 	return (rv < 0) ? NULL : str;
 }
 
+/*
+ * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format
+ */
+char *
+ssl_ssl_masterkey_to_str(SSL *ssl)
+{
+	char *str = NULL;
+	int rv;
+	unsigned char *k, *r;
+
+	k = ssl->session->master_key;
+	r = ssl->s3->client_random;
+	rv = asprintf(&str,
+	              "CLIENT_RANDOM "
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              " "
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X"
+	              "%02X%02X%02X%02X%02X%02X%02X%02X",
+	              r[ 0], r[ 1], r[ 2], r[ 3], r[ 4], r[ 5], r[ 6], r[ 7],
+	              r[ 8], r[ 9], r[10], r[11], r[12], r[13], r[14], r[15],
+	              r[16], r[17], r[18], r[19], r[20], r[21], r[22], r[23],
+	              r[24], r[25], r[26], r[27], r[28], r[29], r[30], r[31],
+	              k[ 0], k[ 1], k[ 2], k[ 3], k[ 4], k[ 5], k[ 6], k[ 7],
+	              k[ 8], k[ 9], k[10], k[11], k[12], k[13], k[14], k[15],
+	              k[16], k[17], k[18], k[19], k[20], k[21], k[22], k[23],
+	              k[24], k[25], k[26], k[27], k[28], k[29], k[30], k[31],
+	              k[32], k[33], k[34], k[35], k[36], k[37], k[38], k[39],
+	              k[40], k[41], k[42], k[43], k[44], k[45], k[46], k[47]);
+
+	return (rv < 0) ? NULL : str;
+}
+
 #ifndef OPENSSL_NO_DH
 static unsigned char dh_g[] = { 0x02 };
 static unsigned char dh512_p[] = {
