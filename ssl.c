@@ -820,9 +820,13 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt,
 		char *crlurlval;
 		if (asprintf(&crlurlval, "URI:%s", crlurl) < 0)
 			goto errout;
-		if (ssl_x509_v3ext_add(&ctx, crt, "crlDistributionPoints", crlurlval) == -1) goto errout;
+		if (ssl_x509_v3ext_add(&ctx, crt, "crlDistributionPoints",
+		                       crlurlval) == -1) {
+			free(crlurlval);
+			goto errout;
+		}
+		free(crlurlval);
 	}
-
 
 	if (!extraname) {
 		/* no extraname provided: copy original subjectAltName ext */
