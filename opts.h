@@ -104,6 +104,7 @@ typedef struct opts {
 	char *ecdhcurve;
 #endif /* !OPENSSL_NO_ECDH */
 	proxyspec_t *spec;
+	char *crlurl;
 } opts_t;
 
 opts_t *opts_new(void) MALLOC;
