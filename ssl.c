@@ -791,6 +791,7 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 	GENERAL_NAMES *names;
 	GENERAL_NAME *gn;
 	X509 *crt;
+	int rv;
 
 	subject = X509_get_subject_name(origcrt);
 	issuer = X509_get_subject_name(cacrt);
@@ -811,19 +812,38 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 		goto errout;
 
 	/* add standard v3 extensions; cf. RFC 2459 */
+
 	X509V3_CTX ctx;
 	X509V3_set_ctx(&ctx, cacrt, crt, NULL, NULL, 0);
-	if (ssl_x509_v3ext_add(&ctx, crt, "basicConstraints",
-	                                  "CA:FALSE") == -1 ||
-	    ssl_x509_v3ext_add(&ctx, crt, "keyUsage",
-	                                  "digitalSignature,"
-	                                  "keyEncipherment") == -1 ||
-	    ssl_x509_v3ext_add(&ctx, crt, "extendedKeyUsage",
-	                                  "serverAuth") == -1 ||
-	    ssl_x509_v3ext_add(&ctx, crt, "subjectKeyIdentifier",
+	if (ssl_x509_v3ext_add(&ctx, crt, "subjectKeyIdentifier",
 	                                  "hash") == -1 ||
 	    ssl_x509_v3ext_add(&ctx, crt, "authorityKeyIdentifier",
 	                                  "keyid,issuer:always") == -1)
+		goto errout;
+
+	rv = ssl_x509_v3ext_copy_by_nid(crt, origcrt,
+	                                NID_basic_constraints);
+	if (rv == 0)
+		rv = ssl_x509_v3ext_add(&ctx, crt, "basicConstraints",
+		                                   "CA:FALSE");
+	if (rv == -1)
+		goto errout;
+
+	rv = ssl_x509_v3ext_copy_by_nid(crt, origcrt,
+	                                NID_key_usage);
+	if (rv == 0)
+		rv = ssl_x509_v3ext_add(&ctx, crt, "keyUsage",
+		                                   "digitalSignature,"
+		                                   "keyEncipherment");
+	if (rv == -1)
+		goto errout;
+
+	rv = ssl_x509_v3ext_copy_by_nid(crt, origcrt,
+	                                NID_ext_key_usage);
+	if (rv == 0)
+		rv = ssl_x509_v3ext_add(&ctx, crt, "extendedKeyUsage",
+		                                   "serverAuth");
+	if (rv == -1)
 		goto errout;
 
 	if (crlurl) {

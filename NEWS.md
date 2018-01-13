@@ -1,6 +1,9 @@
 
 ### SSLsplit develop
 
+-   Copy basicConstraints, keyUsage and extendedKeyUsage X509v3 extensions from
+    the original certificate and only generate them anew if they were not
+    present (issue #73).
 -   Add -q to set the CRL distribution point on all forged certificates
     (pull req #159 by @antalos).
 -   Add IPv6 support to netfilter NAT engine (pull req #179 by @armakar).
