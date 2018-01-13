@@ -148,19 +148,22 @@ START_TEST(sys_mkpath_01)
 }
 END_TEST
 
-void
+int
 sys_dir_eachfile_cb(UNUSED const char *fn, void *arg)
 {
 	*((int*)arg) += 1;
 	/* fprintf(stderr, "%s\n", fn); */
+	return 0;
 }
 
 START_TEST(sys_dir_eachfile_01)
 {
 	int flag = 0;
+	int rv;
 
-	sys_dir_eachfile(TARGETDIR, sys_dir_eachfile_cb, &flag);
+	rv = sys_dir_eachfile(TARGETDIR, sys_dir_eachfile_cb, &flag);
 
+	fail_unless(rv == 0, "Did not return success");
 	fail_unless(flag == 2, "Iterated wrong number of files");
 }
 END_TEST
