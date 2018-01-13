@@ -29,11 +29,11 @@ sslsplit \-\- transparent SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKqwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKqwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
@@ -235,6 +235,13 @@ Passthrough mode currently does not apply to SSL/TLS errors in the connection
 from the client, since the connection from the client cannot easily be retried.
 Specifically, \fB-P\fP does not currently work for clients that do not accept
 forged certificates.
+.TP
+.B \-q \fIcrlurl\fP
+Set CRL distribution point (CDP) \fIcrlurl\fP on forged leaf certificates.
+Some clients, such as some .NET applications, reject certificates that do not
+carry a CDP.  When using \fB-q\fP, you will need to generate an empty CRL
+signed by the CA certificate and key provided with \fB-c\fP and \fB-k\fP, and
+make it available at \fIcrlurl\fP.
 .TP
 .B \-r \fIproto\fP
 Force SSL/TLS protocol version on both client and server side to \fIproto\fP
