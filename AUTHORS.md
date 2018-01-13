@@ -16,6 +16,7 @@ patches or pull requests, in chronological order of their first contribution:
 -   Maciej Kotowicz ([mak](https://github.com/mak))
 -   Eun Soo Park ([eunsoopark](https://github.com/eunsoopark))
 -   Christian Groschupp ([cgroschupp](https://github.com/cgroschupp))
+-   Alexander Savchenkov ([antalos](https://github.com/antalos))
 -   Soner Tari ([sonertari](https://github.com/sonertari))
 -   Petr Vaněk ([arkamar](https://github.com/arkamar))
 

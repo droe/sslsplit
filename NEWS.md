@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Add -q to set the CRL distribution point on all forged certificates
+    (pull req #159 by @antalos).
 -   Add IPv6 support to netfilter NAT engine (pull req #179 by @armakar).
 -   Fix potential segfaults in src.bev/dst.bev (pull req #174 by @sonertari).
 -   No longer assume an out of memory condition when a certificate contains
