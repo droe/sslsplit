@@ -86,6 +86,9 @@ opts_free(opts_t *opts)
 	if (opts->tgcrtdir) {
 		free(opts->tgcrtdir);
 	}
+	if (opts->crlurl) {
+		free(opts->crlurl);
+	}
 	if (opts->dropuser) {
 		free(opts->dropuser);
 	}
