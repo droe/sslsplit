@@ -872,7 +872,8 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 			cert->crt = ssl_x509_forge(ctx->opts->cacrt,
 			                           ctx->opts->cakey,
 			                           ctx->origcrt, NULL,
-			                           ctx->opts->key);
+			                           ctx->opts->key,
+			                           ctx->opts->crlurl);
 			cachemgr_fkcrt_set(ctx->origcrt, cert->crt);
 		}
 		cert_set_key(cert, ctx->opts->key);
@@ -1019,7 +1020,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			               "(SNI mismatch)\n");
 		}
 		newcrt = ssl_x509_forge(ctx->opts->cacrt, ctx->opts->cakey,
-		                        sslcrt, sn, ctx->opts->key);
+		                        sslcrt, sn, ctx->opts->key, ctx->opts->crlurl);
 		if (!newcrt) {
 			ctx->enomem = 1;
 			return SSL_TLSEXT_ERR_NOACK;

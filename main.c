@@ -139,6 +139,7 @@ main_usage(void)
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
 "              matching the common names (non-matching: generate if CA)\n"
+"  -q crlurl   use this URL as CRL distrib point for all forged certs\n"
 "  -w gendir   write leaf key and only generated certificates to gendir\n"
 "  -W gendir   write leaf key and all certificates to gendir\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
@@ -303,7 +304,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:q:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -412,6 +413,11 @@ main(int argc, char *argv[])
 				opts->tgcrtdir = strdup(optarg);
 				if (!opts->tgcrtdir)
 					oom_die(argv0);
+				break;
+			case 'q':
+				if (opts->crlurl)
+					free(opts->crlurl);
+				opts->crlurl = strdup(optarg);
 				break;
 			case 'O':
 				opts->deny_ocsp = 1;
