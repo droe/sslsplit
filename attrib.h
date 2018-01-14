@@ -54,14 +54,6 @@
 #define NONNULL(...)    __attribute__((nonnull(__VA_ARGS__)))
 #define PURE            __attribute__((pure))
 
-
-/*
- * Mark return value as deliberately unused.
- */
-inline void unused_result(int __attribute__((unused)) arg, ...) {}
-#define UNRES(X) unused_result(0, (X))
-
-
 /*
  * Branch prediction macros.
  * These serve to tell the compiler which of the branches is more likely.

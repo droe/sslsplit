@@ -536,7 +536,7 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 #endif /* DEBUG_PRIVSEP_SERVER */
 		} while (rv == -1 && errno == EINTR);
 		if (rv == -1) {
-			log_err_printf("Select failed: %s (%i)\n",
+			log_err_printf("select() failed: %s (%i)\n",
 			               strerror(errno), errno);
 			return -1;
 		}
@@ -546,9 +546,16 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 
 		if (FD_ISSET(sigpipe, &readfds)) {
 			char buf[16];
+			ssize_t n;
 			/* first drain the signal pipe, then deal with
 			 * all the individual signal flags */
-			UNRES(read(sigpipe, buf, sizeof(buf)));
+			n = read(sigpipe, buf, sizeof(buf));
+			if (n == -1) {
+				log_err_printf("read(sigpipe) failed:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
+				return -1;
+			}
 			if (received_sigquit) {
 				if (kill(childpid, SIGQUIT) == -1) {
 					log_err_printf("kill(%i,SIGQUIT) "
