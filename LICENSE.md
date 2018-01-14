@@ -2,7 +2,7 @@
 
 ## Copyright
 
-Copyright (c) 2009-2016, Daniel Roethlisberger and contributors.
+Copyright (c) 2009-2018, Daniel Roethlisberger and contributors.
 All rights reserved.
 Licensed under the 2-clause BSD license contained herein.
 
@@ -15,7 +15,7 @@ All rights reserved.
 Licensed under the MIT license.
 
 `xnu/xnu-*`:
-Copyright (c) 1988-2015, Apple Inc. and original copyright holders.
+Copyright (c) 1988-2017, Apple Inc. and original copyright holders.
 All rights reserved.
 Licensed under the APSL.
 
