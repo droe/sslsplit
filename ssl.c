@@ -186,36 +186,41 @@ ssl_openssl_version(void)
 	                SSL_PROTO_SUPPORT_S);
 
 	fprintf(stderr, "SSL/TLS algorithm availability:");
+#ifndef OPENSSL_NO_SHA0
+	fprintf(stderr, " SHA0");
+#else /* !OPENSSL_NO_SHA0 */
+	fprintf(stderr, " !SHA0");
+#endif /* !OPENSSL_NO_SHA0 */
 #ifndef OPENSSL_NO_RSA
 	fprintf(stderr, " RSA");
-#else /* OPENSSL_NO_RSA */
+#else /* !OPENSSL_NO_RSA */
 	fprintf(stderr, " !RSA");
-#endif /* OPENSSL_NO_RSA */
+#endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA
 	fprintf(stderr, " DSA");
-#else /* OPENSSL_NO_DSA */
+#else /* !OPENSSL_NO_DSA */
 	fprintf(stderr, " !DSA");
-#endif /* OPENSSL_NO_DSA */
+#endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
 	fprintf(stderr, " ECDSA");
-#else /* OPENSSL_NO_ECDSA */
+#else /* !OPENSSL_NO_ECDSA */
 	fprintf(stderr, " !ECDSA");
-#endif /* OPENSSL_NO_ECDSA */
+#endif /* !OPENSSL_NO_ECDSA */
 #ifndef OPENSSL_NO_DH
 	fprintf(stderr, " DH");
-#else /* OPENSSL_NO_DH */
+#else /* !OPENSSL_NO_DH */
 	fprintf(stderr, " !DH");
-#endif /* OPENSSL_NO_DH */
+#endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
 	fprintf(stderr, " ECDH");
-#else /* OPENSSL_NO_ECDH */
+#else /* !OPENSSL_NO_ECDH */
 	fprintf(stderr, " !ECDH");
-#endif /* OPENSSL_NO_ECDH */
+#endif /* !OPENSSL_NO_ECDH */
 #ifndef OPENSSL_NO_EC
 	fprintf(stderr, " EC");
-#else /* OPENSSL_NO_EC */
+#else /* !OPENSSL_NO_EC */
 	fprintf(stderr, " !EC");
-#endif /* OPENSSL_NO_EC */
+#endif /* !OPENSSL_NO_EC */
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "OpenSSL option availability:");
@@ -1023,7 +1028,11 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 		case NID_sha512WithRSAEncryption:
 			md = EVP_sha512();
 			break;
+#ifndef OPENSSL_NO_SHA0
 		case NID_shaWithRSAEncryption:
+			md = EVP_sha();
+			break;
+#endif /* !OPENSSL_NO_SHA0 */
 		case NID_sha1WithRSAEncryption:
 		default:
 			md = EVP_sha1();
@@ -1033,20 +1042,46 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 #endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA
 	case EVP_PKEY_DSA:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-		md = EVP_dss1();
-#else
-		md = EVP_sha1();
-#endif
+		switch (X509_get_signature_nid(origcrt)) {
+		case NID_dsa_with_SHA224:
+			md = EVP_sha224();
+			break;
+		case NID_dsa_with_SHA256:
+			md = EVP_sha256();
+			break;
+#ifndef OPENSSL_NO_SHA0
+		case NID_dsaWithSHA:
+			md = EVP_sha();
+			break;
+#endif /* !OPENSSL_NO_SHA0 */
+		case NID_dsaWithSHA1:
+		case NID_dsaWithSHA1_2:
+		default:
+			md = EVP_sha1();
+			break;
+		}
 		break;
 #endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
 	case EVP_PKEY_EC:
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-		md = EVP_ecdsa();
-#else
-		md = EVP_sha1();
-#endif
+		switch (X509_get_signature_nid(origcrt)) {
+		case NID_ecdsa_with_SHA224:
+			md = EVP_sha224();
+			break;
+		case NID_ecdsa_with_SHA256:
+			md = EVP_sha256();
+			break;
+		case NID_ecdsa_with_SHA384:
+			md = EVP_sha384();
+			break;
+		case NID_ecdsa_with_SHA512:
+			md = EVP_sha512();
+			break;
+		case NID_ecdsa_with_SHA1:
+		default:
+			md = EVP_sha1();
+			break;
+		}
 		break;
 #endif /* !OPENSSL_NO_ECDSA */
 	default:
