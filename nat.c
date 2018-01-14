@@ -126,6 +126,10 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 #define sport sxport.port
 #define dport dxport.port
 #define rdport rdxport.port
+#ifdef v4addr /* XNU 4570.1.46 and newer */
+#define v4 v4addr
+#define v6 v6addr
+#endif /* XNU 4570.1.46 and newer */
 #endif /* __APPLE__ */
 	struct sockaddr_storage our_addr;
 	socklen_t our_addrlen;
@@ -198,6 +202,10 @@ nat_pf_lookup_cb(struct sockaddr *dst_addr, socklen_t *dst_addrlen,
 #undef sport
 #undef dport
 #undef rdport
+#ifdef v4addr /* XNU 4570.1.46 and newer */
+#undef v4
+#undef v6
+#endif /* XNU 4570.1.46 and newer */
 #endif /* __APPLE__ */
 }
 #endif /* HAVE_PF */
