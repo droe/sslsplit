@@ -1,4 +1,9 @@
 
+### SSLsplit develop
+
+-   Minor bugfixes and improvements.
+
+
 ### SSLsplit 0.5.1 2018-01-14
 
 -   Dump master key in NSS key log format in debug mode, allowing decryption of
