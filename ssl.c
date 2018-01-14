@@ -532,6 +532,12 @@ ssl_ssl_state_to_str(SSL *ssl)
 }
 
 /*
+ * Generates a NSS key log format compatible string containing the client
+ * random and the master key, intended to be used to decrypt externally
+ * captured network traffic using tools like Wireshark.
+ *
+ * Only supports the CLIENT_RANDOM method (SSL 3.0 - TLS 1.2).
+ *
  * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format
  */
 char *
@@ -540,9 +546,16 @@ ssl_ssl_masterkey_to_str(SSL *ssl)
 	char *str = NULL;
 	int rv;
 	unsigned char *k, *r;
-
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	unsigned char kbuf[48], rbuf[32];
+	k = &kbuf[0];
+	r = &rbuf[0];
+	SSL_SESSION_get_master_key(SSL_get0_session(ssl), k, sizeof(kbuf));
+	SSL_get_client_random(ssl, r, sizeof(rbuf));
+#else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	k = ssl->session->master_key;
 	r = ssl->s3->client_random;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	rv = asprintf(&str,
 	              "CLIENT_RANDOM "
 	              "%02X%02X%02X%02X%02X%02X%02X%02X"
