@@ -1,6 +1,6 @@
 # SSLsplit - transparent SSL/TLS interception [![Build Status](https://travis-ci.org/droe/sslsplit.svg?branch=master)](https://travis-ci.org/droe/sslsplit)
 Copyright (C) 2009-2018, [Daniel Roethlisberger](//daniel.roe.ch/).  
-http://www.roe.ch/SSLsplit
+https://www.roe.ch/SSLsplit
 
 
 ## Overview
