@@ -1,33 +1,34 @@
 
 ### SSLsplit develop
 
--   Fix build with OpenSSL 1.1.0 and later (pull req #154 by @hillu, #156 by
-    @pduldig-at-tw and issue #148 by @DigiAngel).
 -   Dump master key in NSS key log format in debug mode, allowing decryption of
     SSL connections using Wireshark (issue #121 by @Neoptolemus).
+-   Add support for DSA and ECDSA certificates using hash algorithms other than
+    SHA-1.
 -   Copy basicConstraints, keyUsage and extendedKeyUsage X509v3 extensions from
     the original certificate and only generate them anew if they were not
     present (issue #73).
 -   Add -q to set the CRL distribution point on all forged certificates
     (pull req #159 by @antalos).
 -   Add IPv6 support to netfilter NAT engine (pull req #179 by @armakar).
--   Fix potential segfaults in src.bev/dst.bev (pull req #174 by @sonertari).
--   No longer assume an out of memory condition when a certificate contains
-    neither a CN nor a subjectAltName extension.
 -   Extend -L content logging with EOF message to allow log parsers to figure
     out when a connection ends (issue #128 by @mattes).  Note that log parsers
     need to be adjusted to handle the new EOF message.
--   Add missing authors Maciej Kotowicz and Eun Soo Park to manual page.
+-   Fix potential segfaults in src.bev/dst.bev (pull req #174 by @sonertari).
+-   Fix SSL connections that result from autossl to shutdown cleanly.
+-   Fix data processing when EOF is received before all incoming data has been
+    processed.
 -   Fix multiple signal handling issues in the privilege separation parent
     which led to the parent process being killed ungracefully (SIGTERM) or
     being stuck in wait() while still having signals (SIGQUIT etc) queued up
     for forwarding to the child process (issue #137).
--   Fix SSL connections that result from autossl to shutdown cleanly.
--   Fix data processing when EOF is received before all incoming data has been
-    processed.
+-   No longer assume an out of memory condition when a certificate contains
+    neither a CN nor a subjectAltName extension.
 -   Fix parallel make build (-j) for the test target (issue #140).
 -   Do not set owner and group if install target is called by unprivileged
     user (pull req #141 by @cgroschupp).
+-   Fix build with OpenSSL 1.1.0 and later (pull req #154 by @hillu, #156 by
+    @pduldig-at-tw and issue #148 by @DigiAngel).
 -   Add XNU headers for Mac OS X El Capitan 10.11.3 to 10.11.6, Sierra 10.12
     to 10.12.6 and High Sierra 10.13; fix headers for Mac OS X 10.6 to 10.6.8.
 -   Minor bugfixes and improvements.
