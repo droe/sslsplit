@@ -377,6 +377,12 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
+	/*
+	 * The following ifdef's within asprintf arguments list generates
+	 * warnings with -Wembedded-directive on some compilers.
+	 * Not fixing the code in order to avoid more code duplication.
+	 */
+
 	if (!ctx->src.ssl) {
 		rv = asprintf(&msg, "%s %s %s %s %s"
 #ifdef HAVE_LOCAL_PROCINFO
@@ -473,6 +479,12 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 		}
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
+
+	/*
+	 * The following ifdef's within asprintf arguments list generates
+	 * warnings with -Wembedded-directive on some compilers.
+	 * Not fixing the code in order to avoid more code duplication.
+	 */
 
 	if (!ctx->spec->ssl) {
 		rv = asprintf(&msg, "http %s %s %s %s %s %s %s %s %s"

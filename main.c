@@ -122,16 +122,7 @@ static void
 main_usage(void)
 {
 	const char *dflt, *warn;
-
-	if (!(dflt = nat_getdefaultname())) {
-		dflt = "n/a";
-		warn = "\nWarning: no supported NAT engine on this platform!\n"
-		       "Only static and SNI proxyspecs are supported.\n";
-	} else {
-		warn = "";
-	}
-
-	fprintf(stderr,
+	const char *usagefmt =
 "Usage: %s [options...] [proxyspecs...]\n"
 "  -c pemfile  use CA cert (and key) from pemfile to sign forged certs\n"
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
@@ -211,7 +202,17 @@ main_usage(void)
 "              autossl ::1 10025                # autossl/6; STARTTLS et al\n"
 "Example:\n"
 "  %s -k ca.key -c ca.pem -P  https 127.0.0.1 8443  https ::1 8443\n"
-	"%s", BNAME, dflt, BNAME, warn);
+"%s";
+
+	if (!(dflt = nat_getdefaultname())) {
+		dflt = "n/a";
+		warn = "\nWarning: no supported NAT engine on this platform!\n"
+		       "Only static and SNI proxyspecs are supported.\n";
+	} else {
+		warn = "";
+	}
+
+	fprintf(stderr, usagefmt, BNAME, dflt, BNAME, warn);
 }
 
 /*
