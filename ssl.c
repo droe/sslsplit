@@ -88,6 +88,38 @@ ssl_ssl_cert_get(SSL *s)
 }
 #endif /* OpenSSL 0.9.8y, 1.0.0k or 1.0.1e */
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+int
+DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+    /* If the fields p and g in d are NULL, the corresponding input
+     * parameters MUST be non-NULL.  q may remain NULL.
+     */
+    if ((dh->p == NULL && p == NULL)
+        || (dh->g == NULL && g == NULL))
+        return 0;
+
+    if (p != NULL) {
+        BN_free(dh->p);
+        dh->p = p;
+    }
+    if (q != NULL) {
+        BN_free(dh->q);
+        dh->q = q;
+    }
+    if (g != NULL) {
+        BN_free(dh->g);
+        dh->g = g;
+    }
+
+    if (q != NULL) {
+        dh->length = BN_num_bits(q);
+    }
+
+    return 1;
+}
+#endif
+
 
 /*
  * Print OpenSSL version and build-time configuration to standard error and
@@ -153,36 +185,41 @@ ssl_openssl_version(void)
 	                SSL_PROTO_SUPPORT_S);
 
 	fprintf(stderr, "SSL/TLS algorithm availability:");
+#ifndef OPENSSL_NO_SHA0
+	fprintf(stderr, " SHA0");
+#else /* !OPENSSL_NO_SHA0 */
+	fprintf(stderr, " !SHA0");
+#endif /* !OPENSSL_NO_SHA0 */
 #ifndef OPENSSL_NO_RSA
 	fprintf(stderr, " RSA");
-#else /* OPENSSL_NO_RSA */
+#else /* !OPENSSL_NO_RSA */
 	fprintf(stderr, " !RSA");
-#endif /* OPENSSL_NO_RSA */
+#endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA
 	fprintf(stderr, " DSA");
-#else /* OPENSSL_NO_DSA */
+#else /* !OPENSSL_NO_DSA */
 	fprintf(stderr, " !DSA");
-#endif /* OPENSSL_NO_DSA */
+#endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
 	fprintf(stderr, " ECDSA");
-#else /* OPENSSL_NO_ECDSA */
+#else /* !OPENSSL_NO_ECDSA */
 	fprintf(stderr, " !ECDSA");
-#endif /* OPENSSL_NO_ECDSA */
+#endif /* !OPENSSL_NO_ECDSA */
 #ifndef OPENSSL_NO_DH
 	fprintf(stderr, " DH");
-#else /* OPENSSL_NO_DH */
+#else /* !OPENSSL_NO_DH */
 	fprintf(stderr, " !DH");
-#endif /* OPENSSL_NO_DH */
+#endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
 	fprintf(stderr, " ECDH");
-#else /* OPENSSL_NO_ECDH */
+#else /* !OPENSSL_NO_ECDH */
 	fprintf(stderr, " !ECDH");
-#endif /* OPENSSL_NO_ECDH */
+#endif /* !OPENSSL_NO_ECDH */
 #ifndef OPENSSL_NO_EC
 	fprintf(stderr, " EC");
-#else /* OPENSSL_NO_EC */
+#else /* !OPENSSL_NO_EC */
 	fprintf(stderr, " !EC");
-#endif /* OPENSSL_NO_EC */
+#endif /* !OPENSSL_NO_EC */
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "OpenSSL option availability:");
@@ -226,7 +263,7 @@ ssl_openssl_version(void)
  */
 static int ssl_initialized = 0;
 
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 struct CRYPTO_dynlock_value {
 	pthread_mutex_t mutex;
 };
@@ -334,7 +371,7 @@ ssl_init(void)
 	OpenSSL_add_all_algorithms();
 
 	/* thread-safety */
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	ssl_mutex_num = CRYPTO_num_locks();
 	ssl_mutex = malloc(ssl_mutex_num * sizeof(*ssl_mutex));
 	for (int i = 0; i < ssl_mutex_num; i++) {
@@ -403,7 +440,7 @@ ssl_reinit(void)
 	if (!ssl_initialized)
 		return 0;
 
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	for (int i = 0; i < ssl_mutex_num; i++) {
 		if (pthread_mutex_init(&ssl_mutex[i], NULL)) {
 			return -1;
@@ -424,9 +461,11 @@ ssl_fini(void)
 	if (!ssl_initialized)
 		return;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	ERR_remove_state(0); /* current thread */
+#endif
 
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_set_locking_callback(NULL);
 	CRYPTO_set_dynlock_create_callback(NULL);
 	CRYPTO_set_dynlock_lock_callback(NULL);
@@ -486,21 +525,25 @@ ssl_ssl_state_to_str(SSL *ssl)
 	char *str = NULL;
 	int rv;
 
-	rv = asprintf(&str, "%08x = %s%s%s%04x = %s (%s) [%s]",
-	              ssl->state,
-	              (ssl->state & SSL_ST_CONNECT) ? "SSL_ST_CONNECT|" : "",
-	              (ssl->state & SSL_ST_ACCEPT) ? "SSL_ST_ACCEPT|" : "",
-	              (ssl->state & SSL_ST_BEFORE) ? "SSL_ST_BEFORE|" : "",
-	              ssl->state & SSL_ST_MASK,
+	rv = asprintf(&str, "%08x = %s%s%04x = %s (%s) [%s]",
+	              SSL_get_state(ssl),
+	              (SSL_get_state(ssl) & SSL_ST_CONNECT) ? "SSL_ST_CONNECT|" : "",
+	              (SSL_get_state(ssl) & SSL_ST_ACCEPT) ? "SSL_ST_ACCEPT|" : "",
+	              SSL_get_state(ssl) & SSL_ST_MASK,
 	              SSL_state_string(ssl),
 	              SSL_state_string_long(ssl),
-	              (ssl->type == SSL_ST_CONNECT) ? "connect socket"
-	                                            : "accept socket");
+	              SSL_is_server(ssl) ? "accept socket" : "connect socket");
 
 	return (rv < 0) ? NULL : str;
 }
 
 /*
+ * Generates a NSS key log format compatible string containing the client
+ * random and the master key, intended to be used to decrypt externally
+ * captured network traffic using tools like Wireshark.
+ *
+ * Only supports the CLIENT_RANDOM method (SSL 3.0 - TLS 1.2).
+ *
  * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format
  */
 char *
@@ -509,9 +552,16 @@ ssl_ssl_masterkey_to_str(SSL *ssl)
 	char *str = NULL;
 	int rv;
 	unsigned char *k, *r;
-
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	unsigned char kbuf[48], rbuf[32];
+	k = &kbuf[0];
+	r = &rbuf[0];
+	SSL_SESSION_get_master_key(SSL_get0_session(ssl), k, sizeof(kbuf));
+	SSL_get_client_random(ssl, r, sizeof(rbuf));
+#else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	k = ssl->session->master_key;
 	r = ssl->s3->client_random;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	rv = asprintf(&str,
 	              "CLIENT_RANDOM "
 	              "%02X%02X%02X%02X%02X%02X%02X%02X"
@@ -636,38 +686,49 @@ DH *
 ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 {
 	DH *dh;
+	int rv = 0;
 
 	if (!(dh = DH_new())) {
 		log_err_printf("DH_new() failed\n");
 		return NULL;
 	}
 	switch (keylength) {
-		case 512:
-			dh->p = BN_bin2bn(dh512_p, sizeof(dh512_p), NULL);
-			break;
-		case 1024:
-			dh->p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL);
-			break;
-		case 2048:
-			dh->p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL);
-			break;
-		case 4096:
-			dh->p = BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL);
-			break;
-		default:
-			log_err_printf("Unhandled DH keylength %i%s\n",
-			               keylength,
-			               (is_export ? " (export)" : ""));
-			DH_free(dh);
-			return NULL;
+	case 512:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh512_p, sizeof(dh512_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	case 1024:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	case 2048:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	case 4096:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	default:
+		log_err_printf("Unhandled DH keylength %i%s\n",
+		               keylength,
+		               (is_export ? " (export)" : ""));
+		DH_free(dh);
+		return NULL;
 	}
-	dh->g = BN_bin2bn(dh_g, sizeof(dh_g), NULL);
-	if (!dh->p || !dh->g) {
+	if (!rv) {
 		log_err_printf("Failed to load DH p and g from memory\n");
 		DH_free(dh);
 		return NULL;
 	}
-
 	return(dh);
 }
 
@@ -766,13 +827,15 @@ ssl_rand(void *p, size_t sz)
 {
 	int rv;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	rv = RAND_pseudo_bytes((unsigned char*)p, sz);
-	if (rv == -1) {
-		rv = RAND_bytes((unsigned char*)p, sz);
-		if (rv != 1)
-			return -1;
-	}
-	return 0;
+	if (rv == 1)
+		return 0;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
+	rv = RAND_bytes((unsigned char*)p, sz);
+	if (rv == 1)
+		return 0;
+	return -1;
 }
 
 /*
@@ -922,7 +985,7 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 			if (!gn)
 				goto errout2;
 			gn->type = GEN_DNS;
-			gn->d.dNSName = M_ASN1_IA5STRING_new();
+			gn->d.dNSName = ASN1_IA5STRING_new();
 			if (!gn->d.dNSName)
 				goto errout3;
 			ASN1_STRING_set(gn->d.dNSName,
@@ -946,10 +1009,10 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 #endif /* DEBUG_CERTIFICATE */
 
 	const EVP_MD *md;
-	switch (EVP_PKEY_type(cakey->type)) {
+	switch (EVP_PKEY_type(EVP_PKEY_base_id(cakey))) {
 #ifndef OPENSSL_NO_RSA
 	case EVP_PKEY_RSA:
-		switch (OBJ_obj2nid(origcrt->sig_alg->algorithm)) {
+		switch (X509_get_signature_nid(origcrt)) {
 		case NID_md5WithRSAEncryption:
 			md = EVP_md5();
 			break;
@@ -968,7 +1031,11 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 		case NID_sha512WithRSAEncryption:
 			md = EVP_sha512();
 			break;
+#ifndef OPENSSL_NO_SHA0
 		case NID_shaWithRSAEncryption:
+			md = EVP_sha();
+			break;
+#endif /* !OPENSSL_NO_SHA0 */
 		case NID_sha1WithRSAEncryption:
 		default:
 			md = EVP_sha1();
@@ -978,12 +1045,46 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 #endif /* !OPENSSL_NO_RSA */
 #ifndef OPENSSL_NO_DSA
 	case EVP_PKEY_DSA:
-		md = EVP_dss1();
+		switch (X509_get_signature_nid(origcrt)) {
+		case NID_dsa_with_SHA224:
+			md = EVP_sha224();
+			break;
+		case NID_dsa_with_SHA256:
+			md = EVP_sha256();
+			break;
+#ifndef OPENSSL_NO_SHA0
+		case NID_dsaWithSHA:
+			md = EVP_sha();
+			break;
+#endif /* !OPENSSL_NO_SHA0 */
+		case NID_dsaWithSHA1:
+		case NID_dsaWithSHA1_2:
+		default:
+			md = EVP_sha1();
+			break;
+		}
 		break;
 #endif /* !OPENSSL_NO_DSA */
 #ifndef OPENSSL_NO_ECDSA
 	case EVP_PKEY_EC:
-		md = EVP_ecdsa();
+		switch (X509_get_signature_nid(origcrt)) {
+		case NID_ecdsa_with_SHA224:
+			md = EVP_sha224();
+			break;
+		case NID_ecdsa_with_SHA256:
+			md = EVP_sha256();
+			break;
+		case NID_ecdsa_with_SHA384:
+			md = EVP_sha384();
+			break;
+		case NID_ecdsa_with_SHA512:
+			md = EVP_sha512();
+			break;
+		case NID_ecdsa_with_SHA1:
+		default:
+			md = EVP_sha1();
+			break;
+		}
 		break;
 #endif /* !OPENSSL_NO_ECDSA */
 	default:
@@ -1096,7 +1197,6 @@ ssl_x509chain_use(SSL_CTX *sslctx, X509 *crt, STACK_OF(X509) *chain)
 
 		tmpcrt = sk_X509_value(chain, i);
 		ssl_x509_refcount_inc(tmpcrt);
-		sk_X509_push(sslctx->extra_certs, tmpcrt);
 		SSL_CTX_add_extra_chain_cert(sslctx, tmpcrt);
 	}
 }
@@ -1178,12 +1278,26 @@ leave1:
 EVP_PKEY *
 ssl_key_genrsa(const int keysize)
 {
-	EVP_PKEY * pkey;
-	RSA * rsa;
+	EVP_PKEY *pkey;
+	RSA *rsa;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	BIGNUM *bn;
+	int rv;
+	rsa = RSA_new();
+	bn = BN_new();
+	BN_dec2bn(&bn, "3");
+	rv = RSA_generate_key_ex(rsa, keysize, bn, NULL);
+	BN_free(bn);
+	if (rv != 1) {
+		RSA_free(rsa);
+		return NULL;
+	}
+#else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	rsa = RSA_generate_key(keysize, 3, NULL, NULL);
 	if (!rsa)
 		return NULL;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	pkey = EVP_PKEY_new();
 	EVP_PKEY_assign_RSA(pkey, rsa); /* does not increment refcount */
 	return pkey;
@@ -1198,14 +1312,15 @@ int
 ssl_key_identifier_sha1(EVP_PKEY *key, unsigned char *keyid)
 {
 	X509_PUBKEY *pubkey = NULL;
-	ASN1_BIT_STRING *pk;
+	const unsigned char *pk;
+	int length;
 
 	/* X509_PUBKEY_set() will attempt to free pubkey if != NULL */
 	if (X509_PUBKEY_set(&pubkey, key) != 1 || !pubkey)
 		return -1;
-	if (!(pk = pubkey->public_key))
+	if (!X509_PUBKEY_get0_param(NULL, &pk, &length, NULL, pubkey))
 		goto errout;
-	if (!EVP_Digest(pk->data, pk->length, keyid, NULL, EVP_sha1(), NULL))
+	if (!EVP_Digest(pk, length, keyid, NULL, EVP_sha1(), NULL))
 		goto errout;
 	X509_PUBKEY_free(pubkey);
 	return 0;
@@ -1302,10 +1417,10 @@ ssl_x509_fingerprint(X509 *crt, int colons)
 void
 ssl_dh_refcount_inc(DH *dh)
 {
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_add(&dh->references, 1, CRYPTO_LOCK_DH);
 #else /* !OPENSSL_THREADS */
-	dh->references++;
+	DH_up_ref(dh);
 #endif /* !OPENSSL_THREADS */
 }
 #endif /* !OPENSSL_NO_DH */
@@ -1317,10 +1432,10 @@ ssl_dh_refcount_inc(DH *dh)
 void
 ssl_key_refcount_inc(EVP_PKEY *key)
 {
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_add(&key->references, 1, CRYPTO_LOCK_EVP_PKEY);
 #else /* !OPENSSL_THREADS */
-	key->references++;
+	EVP_PKEY_up_ref(key);
 #endif /* !OPENSSL_THREADS */
 }
 
@@ -1332,10 +1447,10 @@ ssl_key_refcount_inc(EVP_PKEY *key)
 void
 ssl_x509_refcount_inc(X509 *crt)
 {
-#ifdef OPENSSL_THREADS
+#if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_add(&crt->references, 1, CRYPTO_LOCK_X509);
 #else /* !OPENSSL_THREADS */
-	crt->references++;
+	X509_up_ref(crt);
 #endif /* !OPENSSL_THREADS */
 }
 

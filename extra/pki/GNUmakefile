@@ -12,7 +12,8 @@ CRT_DAYS?=	365
 CRT_EXT:=	v3_crt
 CONFIG:=	x509v3ca.cnf
 PASSWORD:=	test
-DIGEST:=	-$(shell echo test | openssl dgst -sha256 2>/dev/null | grep -q f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2 && echo sha256 || echo sha1)
+DIGEST:=	-$(shell echo test | $(OPENSSL) dgst -sha256 2>/dev/null | grep -q f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2 && echo sha256 || echo sha1)
+NO_SSL2:=	$(shell $(OPENSSL) s_server -h 2>&1|awk '/-no_ssl2/ {print $1}')
 
 all: rsa dsa ec targets server pwd
 
@@ -63,7 +64,7 @@ ec.key:
 	$(OPENSSL) req -new -nodes -x509 $(DIGEST) -out $@ -key $< \
 		-config $(CONFIG) -extensions $(CA_EXT) \
 		-subj $(CA_SUBJECT) \
-		-set_serial 0 -days $(CA_DAYS)
+		-set_serial 1 -days $(CA_DAYS)
 
 server.key:
 	$(OPENSSL) genrsa -out $@ 2048
@@ -112,7 +113,7 @@ targets/wildcard.roe.ch.pem: rsa.crt
 
 # localhost network connectivity is required
 session.pem: server.pem
-	openssl s_server -accept 46143 -cert server.pem -quiet -no_ssl2 & \
+	$(OPENSSL) s_server -accept 46143 -cert server.pem -quiet $(NO_SSL2) & \
 		pid=$$! ; \
 		sleep 1 ; \
 		echo q | $(OPENSSL) s_client -connect localhost:46143 \

@@ -37,25 +37,43 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+#if (OPENSSL_VERSION_NUMBER < 0x10000000L) && !defined(OPENSSL_NO_THREADID)
+#define OPENSSL_NO_THREADID
+#endif
+
+#if (OPENSSL_VERSION_NUMBER < 0x0090806FL) && !defined(OPENSSL_NO_TLSEXT)
+#define OPENSSL_NO_TLSEXT
+#endif
+
 /*
  * ECDH is disabled when building against OpenSSL < 1.0.0e due to issues with
  * thread-safety and security in server mode ephemereal ECDH cipher suites.
  * http://www.openssl.org/news/secadv_20110906.txt
  */
-#if (OPENSSL_VERSION_NUMBER < 0x10000000L) && !defined(OPENSSL_NO_THREADID)
-#define OPENSSL_NO_THREADID
-#endif
-#if (OPENSSL_VERSION_NUMBER < 0x0090806FL) && !defined(OPENSSL_NO_TLSEXT)
-#define OPENSSL_NO_TLSEXT
-#endif
 #if (OPENSSL_VERSION_NUMBER < 0x1000005FL) && !defined(OPENSSL_NO_ECDH)
 #define OPENSSL_NO_ECDH
 #endif
+
 #if (OPENSSL_VERSION_NUMBER < 0x0090802FL) && !defined(OPENSSL_NO_ECDSA)
 #define OPENSSL_NO_ECDSA
 #endif
+
 #if (OPENSSL_VERSION_NUMBER < 0x0090802FL) && !defined(OPENSSL_NO_EC)
 #define OPENSSL_NO_EC
+#endif
+
+/*
+ * SHA0 was removed in OpenSSL 1.1.0, including OPENSSL_NO_SHA0.
+ */
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(OPENSSL_NO_SHA0)
+#define OPENSSL_NO_SHA0
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define ASN1_STRING_get0_data(value) ASN1_STRING_data(value)
+#define SSL_is_server(ssl) (ssl->type != SSL_ST_CONNECT)
+#define X509_get_signature_nid(x509) (OBJ_obj2nid(x509->sig_alg->algorithm))
+int DH_set0_pqg(DH *, BIGNUM *, BIGNUM *, BIGNUM *);
 #endif
 
 /*
