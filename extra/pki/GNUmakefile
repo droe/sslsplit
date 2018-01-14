@@ -125,3 +125,5 @@ clean:
 
 .PHONY: all clean rsa dsa ec dh session targets
 
+.PRECIOUS: %.pem %.crt %.key %.param
+
