@@ -2,7 +2,7 @@
 ### SSLsplit develop
 
 -   Dump master key in NSS key log format in debug mode, allowing decryption of
-    SSL connections using Wireshark (issue #121 by @Neoptolemus).
+    SSL connections using Wireshark (issue #121).
 -   Add support for DSA and ECDSA certificates using hash algorithms other than
     SHA-1.
 -   Copy basicConstraints, keyUsage and extendedKeyUsage X509v3 extensions from
@@ -28,7 +28,7 @@
 -   Do not set owner and group if install target is called by unprivileged
     user (pull req #141 by @cgroschupp).
 -   Fix build with OpenSSL 1.1.0 and later (pull req #154 by @hillu, #156 by
-    @pduldig-at-tw and issue #148 by @DigiAngel).
+    @pduldig-at-tw and issue #148).
 -   Add XNU headers for Mac OS X El Capitan 10.11.3 to 10.11.6, Sierra 10.12
     to 10.12.6 and High Sierra 10.13; fix headers for Mac OS X 10.6 to 10.6.8.
 -   Minor bugfixes and improvements.
