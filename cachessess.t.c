@@ -68,7 +68,7 @@ cachemgr_teardown(void)
 START_TEST(cache_ssess_01)
 {
 	SSL_SESSION *s1, *s2;
-	char* session_id;
+	const unsigned char* session_id;
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
@@ -88,7 +88,7 @@ END_TEST
 START_TEST(cache_ssess_02)
 {
 	SSL_SESSION *s1, *s2;
-	char* session_id;
+	const unsigned char* session_id;
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
@@ -105,7 +105,7 @@ END_TEST
 START_TEST(cache_ssess_03)
 {
 	SSL_SESSION *s1, *s2;
-	char* session_id;
+	const unsigned char* session_id;
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
@@ -125,7 +125,7 @@ END_TEST
 START_TEST(cache_ssess_04)
 {
 	SSL_SESSION *s1, *s2;
-	char* session_id;
+	const unsigned char* session_id;
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);

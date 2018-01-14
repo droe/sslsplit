@@ -53,12 +53,23 @@ sys_isdir_setup(void)
 		perror("mkdtemp");
 		exit(EXIT_FAILURE);
 	}
-	asprintf(&file, "%s/file", basedir);
-	asprintf(&lfile, "%s/lfile", basedir);
-	asprintf(&dir, "%s/dir", basedir);
-	asprintf(&ldir, "%s/ldir", basedir);
-	asprintf(&notexist, "%s/DOES_NOT_EXIST", basedir);
-	if (!file || !lfile || !dir || !ldir || !notexist) {
+	if (asprintf(&file, "%s/file", basedir) == -1) {
+		perror("asprintf");
+		exit(EXIT_FAILURE);
+	}
+	if (asprintf(&lfile, "%s/lfile", basedir) == -1) {
+		perror("asprintf");
+		exit(EXIT_FAILURE);
+	}
+	if (asprintf(&dir, "%s/dir", basedir) == -1) {
+		perror("asprintf");
+		exit(EXIT_FAILURE);
+	}
+	if (asprintf(&ldir, "%s/ldir", basedir) == -1) {
+		perror("asprintf");
+		exit(EXIT_FAILURE);
+	}
+	if (asprintf(&notexist, "%s/DOES_NOT_EXIST", basedir) == -1) {
 		perror("asprintf");
 		exit(EXIT_FAILURE);
 	}
@@ -127,9 +138,10 @@ static void
 sys_mkpath_teardown(void)
 {
 	char *cmd;
+	int rv;
 
-	asprintf(&cmd, "rm -r '%s'", basedir);
-	if (cmd) {
+	rv = asprintf(&cmd, "rm -r '%s'", basedir);
+	if ((rv != -1) && cmd) {
 		system(cmd);
 	}
 }
@@ -137,10 +149,11 @@ sys_mkpath_teardown(void)
 START_TEST(sys_mkpath_01)
 {
 	char *dir;
+	int rv;
 
-	asprintf(&dir, "%s/a/bb/ccc/dddd/eeeee/ffffff/ggggggg/hhhhhhhh",
-	         basedir);
-	fail_unless(!!dir, "asprintf failed");
+	rv = asprintf(&dir, "%s/a/bb/ccc/dddd/eeeee/ffffff/ggggggg/hhhhhhhh",
+	              basedir);
+	fail_unless((rv != -1) && !!dir, "asprintf failed");
 	fail_unless(!sys_isdir(dir), "dir already sys_isdir()");
 	fail_unless(!sys_mkpath(dir, DFLT_DIRMODE), "sys_mkpath failed");
 	fail_unless(sys_isdir(dir), "dir not sys_isdir()");
