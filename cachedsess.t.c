@@ -120,6 +120,7 @@ START_TEST(cache_dsess_03)
 }
 END_TEST
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 START_TEST(cache_dsess_04)
 {
 	SSL_SESSION *s1, *s2;
@@ -145,6 +146,7 @@ START_TEST(cache_dsess_04)
 	SSL_SESSION_free(s2);
 }
 END_TEST
+#endif
 
 Suite *
 cachedsess_suite(void)
@@ -159,7 +161,9 @@ cachedsess_suite(void)
 	tcase_add_test(tc, cache_dsess_01);
 	tcase_add_test(tc, cache_dsess_02);
 	tcase_add_test(tc, cache_dsess_03);
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 	tcase_add_test(tc, cache_dsess_04);
+#endif
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -89,6 +89,7 @@ START_TEST(cache_fkcrt_03)
 }
 END_TEST
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 START_TEST(cache_fkcrt_04)
 {
 	X509 *c1, *c2;
@@ -116,6 +117,7 @@ START_TEST(cache_fkcrt_04)
 	fail_unless(cachemgr_preinit() != -1, "reinit");
 }
 END_TEST
+#endif
 
 Suite *
 cachefkcrt_suite(void)
@@ -130,7 +132,9 @@ cachefkcrt_suite(void)
 	tcase_add_test(tc, cache_fkcrt_01);
 	tcase_add_test(tc, cache_fkcrt_02);
 	tcase_add_test(tc, cache_fkcrt_03);
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 	tcase_add_test(tc, cache_fkcrt_04);
+#endif
 	suite_add_tcase(s, tc);
 
 	return s;
