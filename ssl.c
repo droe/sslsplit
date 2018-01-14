@@ -680,42 +680,49 @@ DH *
 ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 {
 	DH *dh;
-	int success = 0;
+	int rv = 0;
 
 	if (!(dh = DH_new())) {
 		log_err_printf("DH_new() failed\n");
 		return NULL;
 	}
 	switch (keylength) {
-		case 512:
-			success = DH_set0_pqg(dh, BN_bin2bn(dh512_p, sizeof(dh512_p), NULL), NULL,
-				    BN_bin2bn(dh_g, sizeof(dh_g), NULL));
-			break;
-		case 1024:
-			success = DH_set0_pqg(dh, BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL), NULL,
-				    BN_bin2bn(dh_g, sizeof(dh_g), NULL));
-			break;
-		case 2048:
-			success = DH_set0_pqg(dh, BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL), NULL,
-				    BN_bin2bn(dh_g, sizeof(dh_g), NULL));
-			break;
-		case 4096:
-			success = DH_set0_pqg(dh, BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL), NULL,
-				    BN_bin2bn(dh_g, sizeof(dh_g), NULL));
-			break;
-		default:
-			log_err_printf("Unhandled DH keylength %i%s\n",
-			               keylength,
-			               (is_export ? " (export)" : ""));
-			DH_free(dh);
-			return NULL;
+	case 512:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh512_p, sizeof(dh512_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	case 1024:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	case 2048:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	case 4096:
+		rv = DH_set0_pqg(dh,
+		                 BN_bin2bn(dh4096_p, sizeof(dh4096_p), NULL),
+		                 NULL,
+		                 BN_bin2bn(dh_g, sizeof(dh_g), NULL));
+		break;
+	default:
+		log_err_printf("Unhandled DH keylength %i%s\n",
+		               keylength,
+		               (is_export ? " (export)" : ""));
+		DH_free(dh);
+		return NULL;
 	}
-	if (!success) {
+	if (!rv) {
 		log_err_printf("Failed to load DH p and g from memory\n");
 		DH_free(dh);
 		return NULL;
 	}
-
 	return(dh);
 }
 
