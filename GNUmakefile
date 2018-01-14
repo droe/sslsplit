@@ -95,17 +95,22 @@ ifeq ($(shell uname),Darwin)
 ifneq ($(wildcard /usr/include/libproc.h),)
 FEATURES+=	-DHAVE_DARWIN_LIBPROC
 endif
-XNU_VERSION?=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
-OSX_VERSION?=	$(shell sw_vers -productVersion)
+OSX_VERSION=	$(shell sw_vers -productVersion)
+ifneq ($(XNU_VERSION),)
+XNU_METHOD=	override
+XNU_HAVE=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
+else
 XNU_METHOD=	uname
+XNU_VERSION=	$(shell uname -a|sed 's/^.*root:xnu-//g'|sed 's/~.*$$//')
 XNU_HAVE:=	$(XNU_VERSION)
-ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
-XNU_VERSION=	$(shell awk '/^XNU_RELS.*\# $(OSX_VERSION)$$/ {print $$2}' xnu/GNUmakefile)
-XNU_METHOD=	sw_vers
 endif
 ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
-XNU_VERSION=	$(shell awk '/^XNU_RELS/ {print $$2}' xnu/GNUmakefile|tail -1)
+XNU_METHOD=	sw_vers
+XNU_VERSION=	$(shell awk '/^XNU_RELS.*\# $(OSX_VERSION)$$/ {print $$2}' xnu/GNUmakefile)
+endif
+ifeq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 XNU_METHOD=	fallback
+XNU_VERSION=	$(shell awk '/^XNU_RELS/ {print $$2}' xnu/GNUmakefile|tail -1)
 endif
 ifneq ($(wildcard xnu/xnu-$(XNU_VERSION)),)
 FEATURES+=	-DHAVE_PF
