@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Fix build with OpenSSL 1.1.0 and later (pull req #154 by @hillu, #156 by
+    @pduldig-at-tw and issue #148 by @DigiAngel).
 -   Dump master key in NSS key log format in debug mode, allowing decryption of
     SSL connections using Wireshark (issue #121 by @Neoptolemus).
 -   Copy basicConstraints, keyUsage and extendedKeyUsage X509v3 extensions from

@@ -19,6 +19,8 @@ patches or pull requests, in chronological order of their first contribution:
 -   Alexander Savchenkov ([antalos](https://github.com/antalos))
 -   Soner Tari ([sonertari](https://github.com/sonertari))
 -   Petr Vaněk ([arkamar](https://github.com/arkamar))
+-   Hilko Bengen ([hillu](https://github.com/hillu))
+-   Philip Duldig ([pduldig-at-tw](https://github.com/pduldig-at-tw))
 
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.
