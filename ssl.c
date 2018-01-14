@@ -88,10 +88,9 @@ ssl_ssl_cert_get(SSL *s)
 }
 #endif /* OpenSSL 0.9.8y, 1.0.0k or 1.0.1e */
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000
-#define SSL_is_server(ssl) (ssl->type != SSL_ST_CONNECT)
-#define X509_get_signature_nid(x509) (OBJ_obj2nid(x509->sig_alg->algorithm))
-static int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+int
+DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 {
     /* If the fields p and g in d are NULL, the corresponding input
      * parameters MUST be non-NULL.  q may remain NULL.
@@ -462,7 +461,9 @@ ssl_fini(void)
 	if (!ssl_initialized)
 		return;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	ERR_remove_state(0); /* current thread */
+#endif
 
 #if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_set_locking_callback(NULL);
@@ -826,13 +827,15 @@ ssl_rand(void *p, size_t sz)
 {
 	int rv;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	rv = RAND_pseudo_bytes((unsigned char*)p, sz);
-	if (rv == -1) {
-		rv = RAND_bytes((unsigned char*)p, sz);
-		if (rv != 1)
-			return -1;
-	}
-	return 0;
+	if (rv == 1)
+		return 0;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
+	rv = RAND_bytes((unsigned char*)p, sz);
+	if (rv == 1)
+		return 0;
+	return -1;
 }
 
 /*
@@ -1275,12 +1278,26 @@ leave1:
 EVP_PKEY *
 ssl_key_genrsa(const int keysize)
 {
-	EVP_PKEY * pkey;
-	RSA * rsa;
+	EVP_PKEY *pkey;
+	RSA *rsa;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	BIGNUM *bn;
+	int rv;
+	rsa = RSA_new();
+	bn = BN_new();
+	BN_dec2bn(&bn, "3");
+	rv = RSA_generate_key_ex(rsa, keysize, bn, NULL);
+	BN_free(bn);
+	if (rv != 1) {
+		RSA_free(rsa);
+		return NULL;
+	}
+#else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	rsa = RSA_generate_key(keysize, 3, NULL, NULL);
 	if (!rsa)
 		return NULL;
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	pkey = EVP_PKEY_new();
 	EVP_PKEY_assign_RSA(pkey, rsa); /* does not increment refcount */
 	return pkey;

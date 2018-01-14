@@ -498,10 +498,6 @@ START_TEST(ssl_tls_clienthello_parse_10)
 }
 END_TEST
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000
-#define ASN1_STRING_get0_data(value) ASN1_STRING_data(value)
-#endif
-
 START_TEST(ssl_key_identifier_sha1_01)
 {
 	X509 *c;

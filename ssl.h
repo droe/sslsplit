@@ -69,6 +69,13 @@
 #define OPENSSL_NO_SHA0
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define ASN1_STRING_get0_data(value) ASN1_STRING_data(value)
+#define SSL_is_server(ssl) (ssl->type != SSL_ST_CONNECT)
+#define X509_get_signature_nid(x509) (OBJ_obj2nid(x509->sig_alg->algorithm))
+int DH_set0_pqg(DH *, BIGNUM *, BIGNUM *, BIGNUM *);
+#endif
+
 /*
  * The constructors returning a SSL_METHOD * were changed to return
  * a const SSL_METHOD * between 0.9.8 and 1.0.0.
