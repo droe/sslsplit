@@ -548,7 +548,7 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 			char buf[16];
 			/* first drain the signal pipe, then deal with
 			 * all the individual signal flags */
-			read(sigpipe, buf, sizeof(buf));
+			UNRES(read(sigpipe, buf, sizeof(buf)));
 			if (received_sigquit) {
 				if (kill(childpid, SIGQUIT) == -1) {
 					log_err_printf("kill(%i,SIGQUIT) "
