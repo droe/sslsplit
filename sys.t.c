@@ -74,9 +74,18 @@ sys_isdir_setup(void)
 		exit(EXIT_FAILURE);
 	}
 	close(open(file, O_CREAT|O_WRONLY|O_APPEND, DFLT_FILEMODE));
-	symlink(file, lfile);
-	mkdir(dir, 0700);
-	symlink(dir, ldir);
+	if (symlink(file, lfile) == -1) {
+		perror("symlink");
+		exit(EXIT_FAILURE);
+	}
+	if (mkdir(dir, 0700) == -1) {
+		perror("mkdir");
+		exit(EXIT_FAILURE);
+	}
+	if (symlink(dir, ldir) == -1) {
+		perror("symlink");
+		exit(EXIT_FAILURE);
+	}
 }
 
 static void
@@ -142,7 +151,11 @@ sys_mkpath_teardown(void)
 
 	rv = asprintf(&cmd, "rm -r '%s'", basedir);
 	if ((rv != -1) && cmd) {
-		system(cmd);
+		rv = system(cmd);
+		if (rv == -1) {
+			perror("system");
+			exit(EXIT_FAILURE);
+		}
 	}
 }
 
