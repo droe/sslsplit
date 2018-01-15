@@ -29,15 +29,15 @@ sslsplit \-\- transparent SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKqwWOPZdDgGsrReumjplLSFiM\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrReumjplLSFi\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKqwWOPZdDgGsrReumjplLSFiM\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZwWdDgGsrReumjplLSFi\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZwWdDgGsrReumjplLSFiM\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -209,6 +209,14 @@ SIGUSR1 will cause \fIlogfile\fP to be re-opened.
 .B \-m
 When dropping privileges using \fB-u\fP, override the target primary group
 to be set to \fIgroup\fP.
+.TP
+.B \-M \fIlogfile\fP
+Log master keys to \fIlogfile\fP in SSLKEYLOGFILE format as defined by Mozilla.
+Logging master keys in this format allows for decryption of SSL/TLS traffic
+using Wireshark.
+Note that unlike browsers implementing this feature, setting the SSLKEYLOGFILE
+environment variable has no effect on SSLsplit.
+SIGUSR1 will cause \fIlogfile\fP to be re-opened.
 .TP
 .B \-O
 Deny all Online Certificate Status Protocol (OCSP) requests on all

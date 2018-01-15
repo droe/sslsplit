@@ -113,6 +113,9 @@ opts_free(opts_t *opts)
 	if (opts->contentlog_basedir) {
 		free(opts->contentlog_basedir);
 	}
+	if (opts->masterkeylog) {
+		free(opts->masterkeylog);
+	}
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }

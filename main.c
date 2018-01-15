@@ -189,6 +189,7 @@ main_usage(void)
 "      e.g.    \"/var/log/sslsplit/%%T-%%s-%%d.log\"\n"
 #define OPT_i 
 #endif /* HAVE_LOCAL_PROCINFO */
+"  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
@@ -305,7 +306,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:dDVhW:w:q:")) != -1) {
+	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:")) != -1) {
 		switch (ch) {
 			case 'c':
 				if (opts->cacrt)
@@ -673,6 +674,13 @@ main(int argc, char *argv[])
 				opts->lprocinfo = 1;
 				break;
 #endif /* HAVE_LOCAL_PROCINFO */
+			case 'M':
+				if (opts->masterkeylog)
+					free(opts->masterkeylog);
+				opts->masterkeylog = strdup(optarg);
+				if (!opts->masterkeylog)
+					oom_die(argv0);
+				break;
 			case 'd':
 				opts->detach = 1;
 				break;

@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Add -M for writing an SSLKEYLOGFILE compatible log file (issue #184).
 -   Minor bugfixes and improvements.
 
 

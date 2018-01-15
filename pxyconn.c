@@ -1960,10 +1960,24 @@ connected:
 			pxy_log_connect_nonhttp(ctx);
 		}
 
-		/* write SSL certificates to gendir */
-		if (this->ssl && (bev == ctx->src.bev) &&
-		    ctx->opts->certgendir) {
-			pxy_srccert_write(ctx);
+		if (this->ssl) {
+			/* write SSL certificates to gendir */
+			if ((bev == ctx->src.bev) && ctx->opts->certgendir) {
+				pxy_srccert_write(ctx);
+			}
+
+			/* log master key */
+			if (ctx->opts->masterkeylog) {
+				char *keystr;
+				keystr = ssl_ssl_masterkey_to_str(this->ssl);
+				if ((keystr == NULL) ||
+				    (log_masterkey_print_free(keystr) == -1)) {
+					if (errno == ENOMEM)
+						ctx->enomem = 1;
+					pxy_conn_terminate_free(ctx, 1);
+					return;
+				}
+			}
 		}
 
 		if (OPTS_DEBUG(ctx->opts)) {
@@ -1984,8 +1998,7 @@ connected:
 				               SSL_get_cipher(this->ssl));
 				keystr = ssl_ssl_masterkey_to_str(this->ssl);
 				if (keystr) {
-					log_dbg_printf("%s\n", keystr);
-					free(keystr);
+					log_dbg_print_free(keystr);
 				}
 			} else {
 				/* for TCP, we get only a dst connect event,
