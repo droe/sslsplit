@@ -40,15 +40,19 @@
 
 /*
  * Create new logbuf from provided, pre-allocated buffer, set fd and next.
- * The provided buffer will be freed by logbuf_free() if non-NULL.
+ * The provided buffer will be freed by logbuf_free() if non-NULL, and by
+ * logbuf_new() in case it fails returning NULL.
  */
 logbuf_t *
 logbuf_new(void *buf, size_t sz, void *fh, logbuf_t *next)
 {
 	logbuf_t *lb;
 
-	if (!(lb = malloc(sizeof(logbuf_t))))
+	if (!(lb = malloc(sizeof(logbuf_t)))) {
+		if (buf)
+			free(buf);
 		return NULL;
+	}
 	lb->buf = buf;
 	lb->sz = sz;
 	lb->fh = fh;
