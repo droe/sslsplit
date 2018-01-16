@@ -35,7 +35,7 @@ import sys
 import datetime
 import random
 from scapy.utils import PcapWriter
-from scapy.all import *
+from scapy.all import Ether, IP, TCP
 
 import logreader
 
