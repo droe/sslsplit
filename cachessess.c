@@ -42,13 +42,11 @@ static inline khint_t
 kh_dynbuf_hash_func(dynbuf_t *b)
 {
 	khint_t *p = (khint_t *)b->buf;
-	khint_t h;
+	khint_t h = 0;
 	int rem;
 
 	if ((rem = b->sz % sizeof(khint_t))) {
 		memcpy(&h, b->buf + b->sz - rem, rem);
-	} else {
-		h = 0;
 	}
 
 	while (p < (khint_t*)(b->buf + b->sz - rem)) {

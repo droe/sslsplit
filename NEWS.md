@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Fix session cache misses and failed unit tests on MIPS by fixing undefined
+    behaviour in session cache hash functions (Debian #848919 and #851271).
 -   Synthesize MAC addresses to avoid the requirement for root privileges and
     waiting for ARP timeouts on some platforms in log2pcap.py (issue #169).
 -   Add -M for writing an SSLKEYLOGFILE compatible log file (issue #184).
