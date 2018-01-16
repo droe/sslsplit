@@ -34,10 +34,16 @@
 import sys
 import datetime
 import random
+import scapy
 from scapy.utils import PcapWriter
 from scapy.all import Ether, IP, TCP
 
 import logreader
+
+# avoid requiring root and waiting for on-the-wire timeouts (issue #169)
+def getmacbyip(ip, chainCC=0):
+    return "11:22:33:44:55:66"
+scapy.layers.l2.getmacbyip = getmacbyip
 
 def parse_timestamp(s):
     return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S %Z')

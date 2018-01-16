@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Synthesize MAC addresses to avoid the requirement for root privileges and
+    waiting for ARP timeouts on some platforms in log2pcap.py (issue #169).
 -   Add -M for writing an SSLKEYLOGFILE compatible log file (issue #184).
 -   Minor bugfixes and improvements.
 
