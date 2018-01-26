@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Fix error handling for Darwin libproc functions (-i).
 -   Fix session cache misses and failed unit tests on MIPS by fixing undefined
     behaviour in session cache hash functions (Debian #848919 and #851271).
 -   Synthesize MAC addresses to avoid the requirement for root privileges and

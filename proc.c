@@ -316,19 +316,23 @@ proc_darwin_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 
 	/* iterate over all pids to find a matching socket */
 	int pid_count = proc_listallpids(NULL, 0);
+	if (pid_count <= 0)
+		goto errout1;
 	pids = malloc(sizeof(pid_t) * pid_count);
 	if (!pids) {
 		goto errout1;
 	}
 
 	pid_count = proc_listallpids(pids, sizeof(pid_t) * pid_count);
+	if (pid_count <= 0)
+		goto errout2;
 
 	for (int i = 0; i < pid_count; i++) {
 		pid_t pid = pids[i];
 
 		/* fetch fd info for this pid */
 		int fd_count = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, NULL, 0);
-		if (fd_count == -1) {
+		if (fd_count <= 0) {
 			/* failed to fetch pidinfo; process may have exited */
 			continue;
 		}
@@ -355,7 +359,7 @@ proc_darwin_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 			if (proc_pidfdinfo(pid, fd->proc_fd,
 			                   PROC_PIDFDSOCKETINFO,
 			                   &sinfo,
-			                   sizeof(struct socket_fdinfo)) == -1) {
+			                   sizeof(struct socket_fdinfo)) <= 0) {
 				/* process may have exited or socket may have
 				 * been released. */
 				continue;
@@ -419,7 +423,7 @@ proc_darwin_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 	/* fetch process structure */
 	struct proc_bsdinfo bsd_info;
 	if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd_info,
-	                 sizeof(bsd_info)) == -1) {
+	                 sizeof(bsd_info)) <= 0) {
 		return -1;
 	}
 
@@ -432,8 +436,9 @@ proc_darwin_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 		return -1;
 	}
 	int path_len = proc_pidpath(pid, *path, PROC_PIDPATHINFO_MAXSIZE);
-	if (path_len == -1) {
+	if (path_len <= 0) {
 		free(*path);
+		*path = NULL;
 		return -1;
 	}
 
