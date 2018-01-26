@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# vim: set list et ts=8 sts=4 sw=4 ft=python:
+# vim: set ft=python list et ts=8 sts=4 sw=4:
 
 # SSLsplit contributed code:  Converts sslsplit -L log to PCAP.
 # This script reads the log from standard input and converts it to a
