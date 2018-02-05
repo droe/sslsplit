@@ -672,18 +672,14 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 	SSL_CTX_set_options(sslctx, SSL_OP_NO_TICKET);
 #endif /* SSL_OP_NO_TICKET */
 
-	/*
-	 * Do not use HAVE_SSLV2 because we need to set SSL_OP_NO_SSLv2 if it
-	 * is available and WITH_SSLV2 was not used.
-	 */
 #ifdef SSL_OP_NO_SSLv2
-#ifdef WITH_SSLV2
+#ifdef HAVE_SSLV2
 	if (ctx->opts->no_ssl2) {
-#endif /* WITH_SSLV2 */
+#endif /* HAVE_SSLV2 */
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_SSLv2);
-#ifdef WITH_SSLV2
+#ifdef HAVE_SSLV2
 	}
-#endif /* WITH_SSLV2 */
+#endif /* HAVE_SSLV2 */
 #endif /* !SSL_OP_NO_SSLv2 */
 #ifdef HAVE_SSLV3
 	if (ctx->opts->no_ssl3) {
