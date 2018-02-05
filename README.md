@@ -89,19 +89,21 @@ For more build options see `GNUmakefile`.
 
 ## Documentation
 
+See the manual page `sslsplit.1` for user documentation.
 See `NEWS.md` for release notes listing significant changes between releases.
-See `HACKING.md` for information on development and how to submit bug reports.
-See `AUTHORS.md` for the list of contributors.
 
 
 ## License
 
 SSLsplit is provided under a 2-clause BSD license.
 SSLsplit contains components licensed under the MIT and APSL licenses.
-See `LICENSE.md` and the respective source file headers for details.
+See `LICENSE`, `LICENSE.contrib` and `LICENSE.third` as well as the respective
+source file headers for details.
 
 
 ## Credits
+
+See `AUTHORS.md` for the list of contributors.
 
 SSLsplit was inspired by `mitm-ssl` by Claes M. Nyberg and `sslsniff` by Moxie
 Marlinspike, but shares no source code with them.

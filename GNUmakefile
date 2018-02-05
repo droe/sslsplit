@@ -461,6 +461,9 @@ mantest: $(TARGET).1
 	$(MAN) -M . 1 $(TARGET)
 	$(RM) man1
 
+copyright: *.c *.h *.1
+	extra/dev/copyright.py $^
+
 $(TARGET)-$(VERSION).1.txt: $(TARGET).1
 	$(RM) -f man1
 	$(LN) -sf . man1
@@ -507,6 +510,6 @@ endif
 
 FORCE:
 
-.PHONY: all config clean test travis lint install deinstall manlint \
+.PHONY: all config clean test travis lint install deinstall copyright manlint \
         mantest man manclean fetchdeps dist disttest distclean realclean
 
