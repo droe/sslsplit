@@ -1,6 +1,9 @@
 
 ### SSLsplit develop
 
+-   Add support for SSLv2 ClientHello handshake format for SSLv3/TLS
+    connections and while there, exxentially fixing autossl for clients using
+    SSLv2 ClientHelle handshake format with SSLv3/TLS (#185).
 -   Fix error handling for Darwin libproc functions (-i).
 -   Fix session cache misses and failed unit tests on MIPS by fixing undefined
     behaviour in session cache hash functions (Debian #848919 and #851271).
