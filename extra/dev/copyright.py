@@ -21,11 +21,11 @@ def license(outfile, filetype):
         for line in lines:
             outfile.write(commentline(' *', line))
     elif filetype == 'script':
-        outfile.write('#-')
+        outfile.write('#-\n')
         for line in lines:
             outfile.write(commentline('#', line))
     elif filetype == 'man':
-        outfile.write('.\\"-')
+        outfile.write('.\\"-\n')
         for line in lines:
             outfile.write(commentline('.\\"', line))
     else:
