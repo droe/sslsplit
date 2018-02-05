@@ -350,9 +350,9 @@ START_TEST(ssl_tls_clienthello_parse_01)
 	rv = ssl_tls_clienthello_parse(clienthello01,
 	                               sizeof(clienthello01) - 1,
 	                               0, &ch, &sni);
-	fail_unless(rv == 1, "rv not 1");
-	fail_unless(ch == NULL, "ch not NULL");
-	fail_unless(sni == (void*)0xDEADBEEF, "sni was modified");
+	fail_unless(rv == 0, "rv not 0");
+	fail_unless(ch != NULL, "ch is NULL");
+	fail_unless(sni == NULL, "sni not NULL");
 }
 END_TEST
 

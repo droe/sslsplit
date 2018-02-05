@@ -1927,12 +1927,11 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
  * message beginning at offsets >= 0, whereas if search is zero, only
  * ClientHello messages starting at offset 0 will be considered.
  *
- * Note that this code currently only supports SSL 3.0 and TLS 1.0-1.2 and that
- * it expects the ClientHello message to be unfragmented in a single record.
- *
- * TODO - implement SSL 2.0 ClientHello parsing to support old STARTTLS clients
+ * This code currently supports SSL 2.0, SSL 3.0 and TLS 1.0-1.2.
  *
  * References:
+ * draft-hickman-netscape-ssl-00: The SSL Protocol
+ * RFC 6101: The Secure Sockets Layer (SSL) Protocol Version 3.0
  * RFC 2246: The TLS Protocol Version 1.0
  * RFC 3546: Transport Layer Security (TLS) Extensions
  * RFC 4346: The Transport Layer Security (TLS) Protocol Version 1.1
@@ -1973,8 +1972,8 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 		}
 
 		if (search) {
-			/* Search for the beginning of a potential ClientHello */
-			while ((n > 0) && (*p != 22)) {
+			/* Search for a potential ClientHello */
+			while ((n > 0) && (*p != 0x16) && (*p != 0x80)) {
 				p++; n--;
 			}
 			if (n <= 0) {
@@ -1982,7 +1981,8 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 				 * clienthello to NULL to indicate to the
 				 * caller that this buffer does not need to be
 				 * retried */
-				DBG_printf("===> No match: rv 1, *clienthello NULL\n");
+				DBG_printf("===> No match:"
+				           " rv 1, *clienthello NULL\n");
 				*clienthello = NULL;
 				return 1;
 			}
@@ -1991,9 +1991,68 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 		DBG_printf("candidate at offset %td\n", p - buf);
 
 		DBG_printf("byte 0: %02x\n", *p);
-		/* +0 0x80 +2 0x01 SSLv2 clientHello;
-		 * +0 0x22 +1 0x03 SSLv3/TLSv1.x clientHello */
-		if (*p != 22) { /* record type: handshake protocol */
+		/* +0 0x80 +2 0x01 SSLv2 short header, clientHello;
+		 * +0 0x16 +1 0x03 SSLv3/TLSv1.x handshake, clientHello */
+		if (*p == 0x80) {
+			/* SSLv2 handled here */
+			p++; n--;
+
+			if (n < 10) { /* length + 9 */
+				DBG_printf("===> [SSLv2] Truncated:"
+				           " rv 1, *clienthello set\n");
+				return 1;
+			}
+
+			DBG_printf("length: %02x\n", p[0]);
+			if (n - 1 < p[0]) {
+				DBG_printf("===> [SSLv2] Truncated:"
+				           " rv 1, *clienthello set\n");
+				return 1;
+			}
+			p++; n--;
+
+			DBG_printf("msgtype: %02x\n", p[0]);
+			if (*p != 0x01)
+				continue;
+			p++; n--;
+
+			DBG_printf("version: %02x %02x\n", p[0], p[1]);
+			/* byte order is actually swapped for SSLv2 */
+			if (!(
+#ifdef HAVE_SSLV2
+			      (p[0] == 0x00 && p[1] == 0x02) ||
+#endif /* HAVE_SSLV2 */
+			      (p[0] == 0x03 && p[1] <= 0x03)))
+				continue;
+			p += 2; n -= 2;
+
+			DBG_printf("cipher-spec-len: %02x %02x\n", p[0], p[1]);
+			ssize_t cipherspec_len = p[0] << 8 | p[1];
+			p += 2; n -= 2;
+
+			DBG_printf("session-id-len: %02x %02x\n", p[0], p[1]);
+			ssize_t sessionid_len = p[0] << 8 | p[1];
+			p += 2; n -= 2;
+
+			DBG_printf("challenge-len: %02x %02x\n", p[0], p[1]);
+			ssize_t challenge_len = p[0] << 8 | p[1];
+			p += 2; n -= 2;
+			if (challenge_len < 16 || challenge_len > 32)
+				continue;
+
+			if (n < cipherspec_len
+			      + sessionid_len
+			      + challenge_len) {
+				DBG_printf("===> [SSLv2] Truncated:"
+				           " rv 1, *clienthello set\n");
+				return 1;
+			}
+
+			p += cipherspec_len + sessionid_len + challenge_len;
+			n -= cipherspec_len + sessionid_len + challenge_len;
+			goto done_parsing;
+		} else
+		if (*p != 0x16) {
 			/* this can only happen if search is 0 */
 			DBG_printf("===> No match: rv 1, *clienthello NULL\n");
 			*clienthello = NULL;
@@ -2191,6 +2250,8 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 			n -= extlen;
 		} /* while have more extensions */
 
+done_parsing:
+		;
 #ifdef DEBUG_CLIENTHELLO_PARSER
 		if (n > 0) {
 			DBG_printf("unparsed next bytes %02x %02x %02x %02x\n",
