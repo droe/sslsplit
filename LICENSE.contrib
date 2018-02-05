@@ -5,6 +5,6 @@ of the software the irrevocable, transferable right to relicense the software
 as a whole or in part, including their contributions, under different open
 source licenses than the one currently used.
 
-Third-party components included in the software as documented in `LICENSE.3rd`
-do not constitute contribution in this sense and retain their original
-copyright and license terms.
+Third-party components included as documented in `LICENSE.third` and the
+respective source files do not constitute contribution in this sense and retain
+their original copyright and license terms.
