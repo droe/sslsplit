@@ -246,7 +246,7 @@ static unsigned char clienthello01[] =
 	"\x0a\x00\x00\x15\x00\x00\x12\x00\xfe\xfe\x00\x00\x09\x00\x00\x64"
 	"\x00\x00\x62\x00\x00\x03\x00\x00\x06\xa8\xb8\x93\xbb\x90\xe9\x2a"
 	"\xa2\x4d\x6d\xcc\x1c\xe7\x2a\x80\x21";
-	/* SSL 2.0, no TLS extensions */
+	/* SSL 3.0 in SSL 2.0 record, no TLS extensions */
 
 static unsigned char clienthello02[] =
 	"\x16\x03\x00\x00\x73\x01\x00\x00\x6f\x03\x00\x00\x34\x01\x1e\x67"
@@ -344,7 +344,7 @@ static unsigned char clienthello06[] =
 START_TEST(ssl_tls_clienthello_parse_01)
 {
 	int rv;
-	const unsigned char *ch = (void *)0xDEADBEEF;
+	const unsigned char *ch = NULL;
 	char *sni = (void *)0xDEADBEEF;
 
 	rv = ssl_tls_clienthello_parse(clienthello01,
@@ -359,8 +359,8 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_02)
 {
 	int rv;
-	const unsigned char *ch;
-	char *sni;
+	const unsigned char *ch = NULL;
+	char *sni = (void *)0xDEADBEEF;
 
 	rv = ssl_tls_clienthello_parse(clienthello02,
 	                                sizeof(clienthello02) - 1,
@@ -374,8 +374,8 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_03)
 {
 	int rv;
-	const unsigned char *ch;
-	char *sni;
+	const unsigned char *ch = NULL;
+	char *sni = NULL;
 
 	rv = ssl_tls_clienthello_parse(clienthello03,
 	                                sizeof(clienthello03) - 1,
@@ -390,8 +390,8 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_04)
 {
 	int rv;
-	const unsigned char *ch;
-	char *sni;
+	const unsigned char *ch = NULL;
+	char *sni = NULL;
 
 	rv = ssl_tls_clienthello_parse(clienthello04,
 	                                sizeof(clienthello04) - 1,
@@ -407,7 +407,7 @@ START_TEST(ssl_tls_clienthello_parse_05)
 {
 	for (size_t i = 0; i < sizeof(clienthello04) - 1; i++) {
 		int rv;
-		const unsigned char *ch;
+		const unsigned char *ch = NULL;
 		char *sni = (void*)0xDEADBEEF;
 		ssize_t sz;
 
@@ -423,8 +423,8 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_06)
 {
 	int rv;
-	const unsigned char *ch;
-	char *sni;
+	const unsigned char *ch = NULL;
+	char *sni = NULL;
 
 	rv = ssl_tls_clienthello_parse(clienthello05,
 	                                sizeof(clienthello05) - 1,
@@ -440,7 +440,7 @@ START_TEST(ssl_tls_clienthello_parse_07)
 {
 	for (size_t i = 0; i < sizeof(clienthello05) - 1; i++) {
 		int rv;
-		const unsigned char *ch;
+		const unsigned char *ch = NULL;
 		char *sni = (void*)0xDEADBEEF;
 		ssize_t sz;
 
@@ -456,7 +456,7 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_08)
 {
 	int rv;
-	const unsigned char *ch;
+	const unsigned char *ch = (void *)0xDEADBEEF;
 	char *sni = (void *)0xDEADBEEF;
 
 	rv = ssl_tls_clienthello_parse(clienthello06,
@@ -471,8 +471,8 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_09)
 {
 	int rv;
-	const unsigned char *ch;
-	char *sni;
+	const unsigned char *ch = NULL;
+	char *sni = NULL;
 
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
@@ -488,7 +488,7 @@ END_TEST
 START_TEST(ssl_tls_clienthello_parse_10)
 {
 	int rv;
-	const unsigned char *ch;
+	const unsigned char *ch = NULL;
 
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
