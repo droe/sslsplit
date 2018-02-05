@@ -238,6 +238,12 @@ START_TEST(ssl_dnsname_match_16)
 }
 END_TEST
 
+static unsigned char clienthello00[] =
+	"\x01\x00\x02\x00\x12\x00\x00\x00\x10\x07\x00\xc0\x03\x00\x80\x01"
+	"\x00\x80\x06\x00\x40\x04\x00\x80\x02\x00\x80\xe0\xc3\x4a\xc6\xa4"
+	"\x89\x23\x21\xb1\xbb\x51\xc7\x9c\x06\xa5\xff";
+	/* SSL 2.0 */
+
 static unsigned char clienthello01[] =
 	"\x80\x67\x01\x03\x00\x00\x4e\x00\x00\x00\x10\x01\x00\x80\x03\x00"
 	"\x80\x07\x00\xc0\x06\x00\x40\x02\x00\x80\x04\x00\x80\x00\x00\x39"
@@ -246,7 +252,7 @@ static unsigned char clienthello01[] =
 	"\x0a\x00\x00\x15\x00\x00\x12\x00\xfe\xfe\x00\x00\x09\x00\x00\x64"
 	"\x00\x00\x62\x00\x00\x03\x00\x00\x06\xa8\xb8\x93\xbb\x90\xe9\x2a"
 	"\xa2\x4d\x6d\xcc\x1c\xe7\x2a\x80\x21";
-	/* SSL 3.0 in SSL 2.0 record, no TLS extensions */
+	/* SSL 3.0 in SSL 2.0 record */
 
 static unsigned char clienthello02[] =
 	"\x16\x03\x00\x00\x73\x01\x00\x00\x6f\x03\x00\x00\x34\x01\x1e\x67"
@@ -340,6 +346,27 @@ static unsigned char clienthello06[] =
 	"\x01\x03\x02\x03\x03\x02\x01\x02\x02\x02\x03\x01\x01\x00\x0f\x00"
 	"\x01\x01";
 	/* TLS 1.2, SNI extension with hostname "daniel.roe.ch" */
+
+START_TEST(ssl_tls_clienthello_parse_00)
+{
+	int rv;
+	const unsigned char *ch = NULL;
+	char *sni = (void *)0xDEADBEEF;
+
+	rv = ssl_tls_clienthello_parse(clienthello00,
+	                               sizeof(clienthello00) - 1,
+	                               0, &ch, &sni);
+#ifdef HAVE_SSLV2
+	fail_unless(rv == 0, "rv not 0");
+	fail_unless(ch != NULL, "ch is NULL");
+	fail_unless(sni == NULL, "sni not NULL");
+#else /* !HAVE_SSLV2 */
+	fail_unless(rv == 1, "rv not 1");
+	fail_unless(ch == NULL, "ch not NULL");
+	fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
+#endif /* !HAVE_SSLV2 */
+}
+END_TEST
 
 START_TEST(ssl_tls_clienthello_parse_01)
 {
@@ -719,6 +746,7 @@ ssl_suite(void)
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_tls_clienthello_parse");
+	tcase_add_test(tc, ssl_tls_clienthello_parse_00);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_01);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_02);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_03);
