@@ -2069,7 +2069,7 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 		 * updated for TLS 1.3 once that is standardized and still
 		 * compatible with this parser; remember to also update the
 		 * inner version check below */
-		if (p[0] != 0x03 && p[1] > 0x03)
+		if (p[0] != 0x03 || p[1] > 0x03)
 			continue;
 		p += 2; n -= 2;
 
@@ -2266,7 +2266,7 @@ done_parsing:
 			*servername = sn;
 		return 0;
 continue_search:
-	;
+		;
 	} while (search && n > 0);
 
 	/* No valid ClientHello messages found, not even a truncated one */
