@@ -390,9 +390,6 @@ stream, then automatic upgrade to SSL/TLS interception.
 This is generic, protocol-independent STARTTLS support, that may erroneously
 trigger on byte sequences that look like Client Hello messages even though
 there was no actual STARTTLS command issued.
-This is an experimental feature and may in its current state miss some Client
-Hello messages depending on circumstances.  YMMV.
-Testing and patches highly welcome.
 .TP
 .I listenaddr port
 IPv4 or IPv6 address and port or service name to listen on.  This is the
