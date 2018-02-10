@@ -1,8 +1,13 @@
 
+### SSLsplit develop
+
+-   Minor bugfixes and improvements.
+
+
 ### SSLsplit 0.5.2 2018-02-10
 
 -   Add support for SSLv2 ClientHello handshake format for SSLv3/TLS
-    connections and while there, exxentially fixing autossl for clients using
+    connections and while there, essentially fixing autossl for clients using
     SSLv2 ClientHello handshake format with SSLv3/TLS (#185).
 -   Suppress Upgrade header in order to prevent upgrading connections to
     WebSockets or HTTP/2 (#91).
