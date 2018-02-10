@@ -65,7 +65,8 @@ See NAT ENGINES and PROXY SPECIFICATIONS below for specifics on the different
 modes of operation.
 .LP
 SSLsplit supports plain TCP, plain SSL, HTTP and HTTPS connections over both
-IPv4 and IPv6.
+IPv4 and IPv6.  It also has the ability to dynamically upgrade plain TCP to SSL
+in order to generically support SMTP STARTTLS and similar upgrade mechanisms.
 SSLsplit fully supports Server Name Indication (SNI) and is able to work with
 RSA, DSA and ECDSA keys and DHE and ECDHE cipher suites.  Depending on the
 version of OpenSSL, SSLsplit supports SSL 3.0, TLS 1.0, TLS 1.1 and TLS 1.2,
@@ -82,17 +83,13 @@ certificate verification vulnerabilities in SSL/TLS stacks.
 SSLsplit implements a number of defences against mechanisms which would
 normally prevent MitM attacks or make them more difficult.
 SSLsplit can deny OCSP requests in a generic way.
-For HTTP and HTTPS connections, SSLsplit removes response headers
-for HPKP in order to prevent server-instructed public key pinning,
-for HSTS to avoid the strict transport security restrictions,
-and Alternate Protocols to prevent switching to QUIC/SPDY.
+For HTTP and HTTPS connections, SSLsplit mangles headers to
+prevent server-instructed public key pinning (HPKP),
+avoid strict transport security restrictions (HSTS),
+and prevent switching to QUIC/SPDY, HTTP/2 or WebSockets (Upgrade,
+Alternate Protocols).
 HTTP compression, encodings and keep-alive are disabled to make the logs more
 readable.
-.LP
-As an experimental feature, SSLsplit supports STARTTLS and similar mechanisms,
-where a protocol starts on a plain text TCP connection and is later upgraded to
-SSL/TLS through protocol-specific means, such as the STARTTLS command in SMTP.
-SSLsplit supports generic upgrading of TCP connections to SSL.
 .LP
 In order to maximize the chances that a connection can be successfully split,
 SSLsplit does not verify upstream server certificates.  Instead, all
@@ -370,7 +367,8 @@ SNI DNS lookup):
 .TP
 \fBhttps\fP
 SSL/TLS interception with HTTP protocol decoding, including the removal of
-HPKP, HSTS and Alternate Protocol response headers.
+HPKP, HSTS, Upgrade and Alternate Protocol response headers.
+This mode currently suppresses WebSockets and HTTP/2.
 .TP
 \fBssl\fP
 SSL/TLS interception without any lower level protocol decoding; decrypted
@@ -378,7 +376,8 @@ connection content is treated as opaque stream of bytes and not modified.
 .TP
 \fBhttp\fP
 Plain TCP connection without SSL/TLS, with HTTP protocol decoding, including
-the removal of HPKP, HSTS and Alternate Protocol response headers.
+the removal of HPKP, HSTS, Upgrade and Alternate Protocol response headers.
+This mode currently suppresses WebSockets and HTTP/2.
 .TP
 \fBtcp\fP
 Plain TCP connection without SSL/TLS and without any lower level protocol

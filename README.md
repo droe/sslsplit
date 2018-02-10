@@ -18,14 +18,16 @@ by SNI as upstream destination.  SSLsplit is purely a transparent proxy and
 cannot act as a HTTP or SOCKS proxy configured in a browser.
 
 SSLsplit supports plain TCP, plain SSL, HTTP and HTTPS connections over both
-IPv4 and IPv6.  SSLsplit fully supports Server Name Indication (SNI) and is
-able to work with RSA, DSA and ECDSA keys and DHE and ECDHE cipher suites.
-Depending on the version of OpenSSL built against, SSLsplit supports SSL 3.0,
-TLS 1.0, TLS 1.1 and TLS 1.2, and optionally SSL 2.0 as well.
+IPv4 and IPv6.  It also has the ability to dynamically upgrade plain TCP to SSL
+in order to generically support SMTP STARTTLS and similar upgrade mechanisms.
+SSLsplit fully supports Server Name Indication (SNI) and is able to work with
+RSA, DSA and ECDSA keys and DHE and ECDHE cipher suites.  Depending on the
+version of OpenSSL built against, SSLsplit supports SSL 3.0, TLS 1.0, TLS 1.1
+and TLS 1.2, and optionally SSL 2.0 as well.
 
 For SSL and HTTPS connections, SSLsplit generates and signs forged X509v3
 certificates on-the-fly, mimicking the original server certificate's subject
-DN, subjectAltName extension and other  characteristics.  SSLsplit has the
+DN, subjectAltName extension and other characteristics.  SSLsplit has the
 ability to use existing certificates of which the private key is available,
 instead of generating forged ones.  SSLsplit supports NULL-prefix CN
 certificates but otherwise does not implement exploits against specific
@@ -34,15 +36,11 @@ certificate verification vulnerabilities in SSL/TLS stacks.
 SSLsplit implements a number of defences against mechanisms which would
 normally prevent MitM attacks or make them more difficult.  SSLsplit can deny
 OCSP requests in a generic way.  For HTTP and HTTPS connections, SSLsplit
-removes response headers for HPKP in order to prevent server-instructed public
-key pinning, for HSTS to avoid the strict transport security restrictions, and
-Alternate Protocols to prevent switching to QUIC/SPDY.  HTTP compression,
-encodings and keep-alive are disabled to make the logs more readable.
-
-As an experimental feature, SSLsplit supports STARTTLS and similar mechanisms,
-where a protocol starts on a plain text TCP connection and is later upgraded to
-SSL/TLS through protocol-specific means, such as the STARTTLS command in SMTP.
-SSLsplit supports generic upgrading of TCP connections to SSL.
+mangles headers to prevent server-instructed public key pinning (HPKP), avoid
+strict transport security restrictions (HSTS), and prevent switching to
+QUIC/SPDY, HTTP/2 or WebSockets (Upgrade, Alternate Protocols).  HTTP
+compression, encodings and keep-alive are disabled to make the logs more
+readable.
 
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.

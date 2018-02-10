@@ -1286,6 +1286,7 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				ctx->enomem = 1;
 				return NULL;
 			}
+		/* Override Connection: keepalive and Connection: upgrade */
 		} else if (!strncasecmp(line, "Connection:", 11)) {
 			ctx->sent_http_conn_close = 1;
 			if (!(newhdr = strdup("Connection: close"))) {
@@ -1293,7 +1294,10 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 				return NULL;
 			}
 			return newhdr;
-		} else if (!strncasecmp(line, "Accept-Encoding:", 16) ||
+		/* Suppress upgrading to SSL/TLS, WebSockets or HTTP/2,
+		 * unsupported encodings, and keep-alive */
+		} else if (!strncasecmp(line, "Upgrade:", 8) ||
+		           !strncasecmp(line, "Accept-Encoding:", 16) ||
 		           !strncasecmp(line, "Keep-Alive:", 11)) {
 			return NULL;
 		} else if (line[0] == '\0') {
@@ -1377,7 +1381,11 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		    !strncasecmp(line, "Strict-Transport-Security:", 26) ||
 		    /* Alternate Protocol
 		     * remove to prevent switching to QUIC, SPDY et al */
-		    !strncasecmp(line, "Alternate-Protocol:", 19)) {
+		    !strncasecmp(line, "Alternate-Protocol:", 19) ||
+		    /* Upgrade header
+		     * remove to prevent upgrading to HTTPS in unhandled ways,
+		     * and more importantly, WebSockets and HTTP/2 */
+		    !strncasecmp(line, "Upgrade:", 8)) {
 			return NULL;
 		} else if (line[0] == '\0') {
 			ctx->seen_resp_header = 1;
