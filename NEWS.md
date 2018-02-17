@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Fix build on FreeBSD 12 (patch-proc.c r436571 from FreeBSD ports).
 -   Minor bugfixes and improvements.
 
 

@@ -176,7 +176,11 @@ proc_freebsd_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 
 	struct xinpgen *xig, *exig, *txig;
 	struct xtcpcb *xtp;
+#if __FreeBSD_version >= 1200026
+	struct xinpcb *inp;
+#else
 	struct inpcb *inp;
+#endif
 	struct xsocket *so;
 
 	if (proc_freebsd_getfiles(&xfiles, &nxfiles) == -1) {
@@ -198,7 +202,11 @@ proc_freebsd_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 			return -1;
 		}
 		inp = &xtp->xt_inp;
+#if __FreeBSD_version >= 1200026
+		so = &inp->xi_socket;
+#else
 		so = &xtp->xt_socket;
+#endif
 
 		if (!(so->so_state & SS_ISCONNECTED))
 			/* we are only interested in connected sockets */
