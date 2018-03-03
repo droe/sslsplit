@@ -11,6 +11,9 @@ def commentline(prefix, line):
 
 def license(outfile, filetype):
     with open('LICENSE', 'r') as f:
+        # skip title
+        f.readline()
+        f.readline()
         text = f.read()
     text = ('SSLsplit - transparent SSL/TLS interception\n'
             'https://www.roe.ch/SSLsplit\n\n') + text.replace(
