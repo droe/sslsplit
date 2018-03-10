@@ -42,9 +42,6 @@
 # -R ssl2 to get the same result as not building in SSLv2 support at all.
 #FEATURES+=	-DWITH_SSLV2
 
-# Define to make SSLsplit set a session id context in server mode.
-#FEATURES+=	-DUSE_SSL_SESSION_ID_CONTEXT
-
 
 ### Debugging
 
