@@ -208,26 +208,9 @@ TSRCS:=		$(wildcard *.t.c)
 TOBJS:=		$(TSRCS:.t.c=.t.o)
 TOBJS+=		$(filter-out main.o,$(OBJS))
 
-VFILE:=		$(wildcard VERSION)
-GITDIR:=	$(wildcard .git)
-ifdef VFILE
-VERSION:=	$(shell $(CAT) VERSION)
-BUILD_INFO+=	V:FILE
-else
-ifndef GITDIR
-VERSION:=	$(shell $(BASENAME) $(PWD)|\
-			$(GREP) $(TARGET)-|\
-			$(SED) 's/.*$(TARGET)-\(.*\)/\1/g')
-NEWSSHA:=	$(shell $(OPENSSL) dgst -sha1 -r NEWS.md |\
-			$(CUT) -c -7)
-BUILD_INFO+=	V:DIR N:$(NEWSSHA)
-else
-VERSION:=	$(shell $(GIT) describe --tags --dirty --always)
-BUILD_INFO+=	V:GIT
-endif
-CFLAGS+=	$(DEBUG_CFLAGS)
-endif
-BUILD_DATE:=	$(shell date +%Y-%m-%d)
+PKGNAME:=	$(TARGET)
+include Mk/buildinfo.mk
+VERSION:=	$(BUILD_VERSION)
 
 # Autodetect dependencies known to pkg-config
 PKGS:=		
@@ -340,8 +323,10 @@ endif
 
 CPPDEFS+=	-D_GNU_SOURCE \
 		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
-		-D"VERSION=\"$(VERSION)\"" -D"BUILD_DATE=\"$(BUILD_DATE)\"" \
-		-D"FEATURES=\"$(FEATURES)\"" -D"BUILD_INFO=\"$(BUILD_INFO)\""
+		-D"BUILD_VERSION=\"$(BUILD_VERSION)\"" \
+		-D"BUILD_DATE=\"$(BUILD_DATE)\"" \
+		-D"BUILD_INFO=\"$(BUILD_INFO)\"" \
+		-D"BUILD_FEATURES=\"$(FEATURES)\""
 CPPCHECKFLAGS+=	$(CPPDEFS)
 FEATURES:=	$(sort $(FEATURES))
 
@@ -406,7 +391,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-version.o: version.c version.h GNUmakefile $(VFILE) FORCE
+build.o: build.c FORCE
 
 %.t.o: %.t.c $(HDRS) GNUmakefile
 ifdef CHECK_MISSING
@@ -462,7 +447,7 @@ mantest: $(TARGET).1
 	$(RM) man1
 
 copyright: *.c *.h *.1
-	extra/dev/copyright.py $^
+	Mk/bin/copyright.py $^
 
 $(TARGET)-$(VERSION).1.txt: $(TARGET).1
 	$(RM) -f man1

@@ -40,7 +40,7 @@
 #include "cachemgr.h"
 #include "sys.h"
 #include "log.h"
-#include "version.h"
+#include "build.h"
 #include "defaults.h"
 
 #include <stdlib.h>
@@ -70,8 +70,8 @@ extern int daemon(int, int);
 static void
 main_version(void)
 {
-	fprintf(stderr, "%s %s (built %s)\n", PNAME, version, build_date);
-	if (strlen(version) < 5) {
+	fprintf(stderr, "%s %s (built %s)\n", PNAME, build_version, build_date);
+	if (strlen(build_version) < 5) {
 		/*
 		 * Note to package maintainers:  If you break the version
 		 * string in your build, it will be impossible to provide
@@ -100,8 +100,8 @@ main_version(void)
 	if (build_info[0]) {
 		fprintf(stderr, "Build info: %s\n", build_info);
 	}
-	if (features[0]) {
-		fprintf(stderr, "Features: %s\n", features);
+	if (build_features[0]) {
+		fprintf(stderr, "Features: %s\n", build_features);
 	}
 	nat_version();
 	fprintf(stderr, "Local process info support: ");

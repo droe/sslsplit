@@ -26,14 +26,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef BUILD_H
+#define BUILD_H
 
-extern const char *version;
+extern const char *build_version;
 extern const char *build_date;
 extern const char *build_info;
-extern const char *features;
+extern const char *build_features;
 
-#endif /* !VERSION_H */
+#endif /* !BUILD_H */
 
 /* vim: set noet ft=c: */

@@ -28,7 +28,7 @@
 
 #include "attrib.h"
 #include "opts.h"
-#include "version.h"
+#include "build.h"
 
 #include <stdlib.h>
 #include <string.h>

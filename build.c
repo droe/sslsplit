@@ -26,15 +26,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "version.h"
+#include "build.h"
 
 /*
  * Volatile build-time information which can change between make runs.
  */
 
-const char *version = VERSION;
-const char *build_date = BUILD_DATE;
-const char *build_info = BUILD_INFO;
-const char *features = FEATURES;
+const char *build_version  = BUILD_VERSION;
+const char *build_date     = BUILD_DATE;
+const char *build_info     = BUILD_INFO;
+const char *build_features = BUILD_FEATURES;
 
 /* vim: set noet ft=c: */
