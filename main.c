@@ -70,7 +70,8 @@ extern int daemon(int, int);
 static void
 main_version(void)
 {
-	fprintf(stderr, "%s %s (built %s)\n", PNAME, build_version, build_date);
+	fprintf(stderr, "%s %s (built %s)\n",
+	                PKGLABEL, build_version, build_date);
 	if (strlen(build_version) < 5) {
 		/*
 		 * Note to package maintainers:  If you break the version
@@ -214,7 +215,7 @@ main_usage(void)
 		warn = "";
 	}
 
-	fprintf(stderr, usagefmt, BNAME, dflt, BNAME, warn);
+	fprintf(stderr, usagefmt, build_pkgname, dflt, build_pkgname, warn);
 }
 
 /*

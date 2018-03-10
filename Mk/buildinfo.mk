@@ -1,4 +1,5 @@
 # in: PKGNAME
+# in: FEATURES (optional)
 # in: BUILD_INFO (optional)
 
 ifndef PKGNAME
@@ -39,9 +40,15 @@ endif
 endif # GITDIR
 
 BUILD_DATE:=	$(shell date +%Y-%m-%d)
+BUILD_CDEFS+=	-D"BUILD_PKGNAME=\"$(PKGNAME)\"" \
+		-D"BUILD_VERSION=\"$(BUILD_VERSION)\"" \
+		-D"BUILD_DATE=\"$(BUILD_DATE)\"" \
+		-D"BUILD_INFO=\"$(BUILD_INFO)\"" \
+		-D"BUILD_FEATURES=\"$(FEATURES)\""
 
 # out: NEWS_FILE
 # out: VERSION_FILE
-# out: BUILD_DATE
 # out: BUILD_VERSION
+# out: BUILD_DATE
 # out: BUILD_INFO
+# out: BUILD_CDEFS

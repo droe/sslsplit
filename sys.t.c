@@ -42,7 +42,7 @@
 #include <check.h>
 
 #define TARGETDIR "extra/pki/targets"
-static char template[] = "/tmp/" BNAME ".test.XXXXXX";
+static char template[] = "/tmp/sslsplit.test.XXXXXX";
 static char *basedir;
 static char *file, *lfile, *dir, *ldir, *notexist;
 

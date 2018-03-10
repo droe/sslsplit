@@ -195,17 +195,18 @@ TAR?=		tar
 
 ### You should not need to touch anything below this line
 
-TARGET:=	sslsplit
-PNAME:=		SSLsplit
+PKGLABEL:=	SSLsplit
+PKGNAME:=	sslsplit
+TARGET:=	$(PKGNAME)
 SRCS:=		$(filter-out $(wildcard *.t.c),$(wildcard *.c))
 HDRS:=		$(wildcard *.h)
 OBJS:=		$(SRCS:.c=.o)
+FEATURES:=	$(sort $(FEATURES))
 
 TSRCS:=		$(wildcard *.t.c)
 TOBJS:=		$(TSRCS:.t.c=.t.o)
 TOBJS+=		$(filter-out main.o,$(OBJS))
 
-PKGNAME:=	$(TARGET)
 include Mk/buildinfo.mk
 VERSION:=	$(BUILD_VERSION)
 
@@ -319,13 +320,8 @@ TPKG_LIBS+=	$(shell $(PKGCONFIG) $(PCFLAGS) --libs-only-l $(TPKGS))
 endif
 
 CPPDEFS+=	-D_GNU_SOURCE \
-		-D"BNAME=\"$(TARGET)\"" -D"PNAME=\"$(PNAME)\"" \
-		-D"BUILD_VERSION=\"$(BUILD_VERSION)\"" \
-		-D"BUILD_DATE=\"$(BUILD_DATE)\"" \
-		-D"BUILD_INFO=\"$(BUILD_INFO)\"" \
-		-D"BUILD_FEATURES=\"$(FEATURES)\""
+		-D"PKGLABEL=\"$(PKGLABEL)\""
 CPPCHECKFLAGS+=	$(CPPDEFS)
-FEATURES:=	$(sort $(FEATURES))
 
 ifneq (ccc-analyzer,$(notdir $(CC)))
 PKG_CPPFLAGS:=	$(subst -I,-isystem,$(PKG_CPPFLAGS))
@@ -388,6 +384,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+build.o: CPPFLAGS+=$(BUILD_CDEFS)
 build.o: build.c FORCE
 
 %.t.o: %.t.c $(HDRS) GNUmakefile
@@ -446,45 +443,45 @@ mantest: $(TARGET).1
 copyright: *.c *.h *.1
 	Mk/bin/copyright.py $^
 
-$(TARGET)-$(VERSION).1.txt: $(TARGET).1
+$(PKGNAME)-$(VERSION).1.txt: $(TARGET).1
 	$(RM) -f man1
 	$(LN) -sf . man1
 	$(MAN) -M . 1 $(TARGET) | $(COL) -b >$@
 	$(RM) man1
 
-man: $(TARGET)-$(VERSION).1.txt
+man: $(PKGNAME)-$(VERSION).1.txt
 
 manclean:
-	$(RM) -f $(TARGET)-*.1.txt
+	$(RM) -f $(PKGNAME)-*.1.txt
 
 fetchdeps:
 	$(WGET) -O- $(KHASH_URL) >khash.h
 	#$(RM) -rf xnu/xnu-*
 	$(MAKE) -C xnu fetch
 
-dist: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
+dist: $(PKGNAME)-$(VERSION).tar.bz2 $(PKGNAME)-$(VERSION).tar.bz2.asc
 
 %.asc: %
 	$(GPG) -u $(GPGSIGNKEY) --armor --output $@ --detach-sig $<
 
-$(TARGET)-$(VERSION).tar.bz2:
-	$(MKDIR) -p $(TARGET)-$(VERSION)
-	echo $(VERSION) >$(TARGET)-$(VERSION)/VERSION
-	$(GIT) archive --prefix=$(TARGET)-$(VERSION)/ HEAD \
-		>$(TARGET)-$(VERSION).tar
-	$(TAR) -f $(TARGET)-$(VERSION).tar -r $(TARGET)-$(VERSION)/VERSION
-	$(BZIP2) <$(TARGET)-$(VERSION).tar >$(TARGET)-$(VERSION).tar.bz2
-	$(RM) $(TARGET)-$(VERSION).tar
-	$(RM) -r $(TARGET)-$(VERSION)
+$(PKGNAME)-$(VERSION).tar.bz2:
+	$(MKDIR) -p $(PKGNAME)-$(VERSION)
+	echo $(VERSION) >$(PKGNAME)-$(VERSION)/VERSION
+	$(GIT) archive --prefix=$(PKGNAME)-$(VERSION)/ HEAD \
+		>$(PKGNAME)-$(VERSION).tar
+	$(TAR) -f $(PKGNAME)-$(VERSION).tar -r $(PKGNAME)-$(VERSION)/VERSION
+	$(BZIP2) <$(PKGNAME)-$(VERSION).tar >$(PKGNAME)-$(VERSION).tar.bz2
+	$(RM) $(PKGNAME)-$(VERSION).tar
+	$(RM) -r $(PKGNAME)-$(VERSION)
 
-disttest: $(TARGET)-$(VERSION).tar.bz2 $(TARGET)-$(VERSION).tar.bz2.asc
+disttest: $(PKGNAME)-$(VERSION).tar.bz2 $(PKGNAME)-$(VERSION).tar.bz2.asc
 	$(GPG) --verify $<.asc $<
 	$(BZIP2) -d < $< | $(TAR) -x -f -
-	cd $(TARGET)-$(VERSION) && $(MAKE) && $(MAKE) test && ./$(TARGET) -V
-	$(RM) -r $(TARGET)-$(VERSION)
+	cd $(PKGNAME)-$(VERSION) && $(MAKE) && $(MAKE) test && ./$(TARGET) -V
+	$(RM) -r $(PKGNAME)-$(VERSION)
 
 distclean:
-	$(RM) -f $(TARGET)-*.tar.bz2*
+	$(RM) -f $(PKGNAME)-*.tar.bz2*
 
 realclean: distclean manclean clean
 	$(MAKE) -C extra/pki clean
