@@ -384,7 +384,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-build.o: CPPFLAGS+=$(BUILD_CDEFS)
+build.o: CPPFLAGS+=$(BUILD_CPPFLAGS)
 build.o: build.c FORCE
 
 %.t.o: %.t.c $(HDRS) GNUmakefile
