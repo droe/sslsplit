@@ -164,11 +164,16 @@ opts_has_dns_spec(opts_t *opts)
 void
 opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (opts->sslmethod != SSLv23_method) {
+#else /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+	if (opts->sslversion) {
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 		fprintf(stderr, "%s: cannot use -r multiple times\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 #ifdef HAVE_SSLV2
 	if (!strcmp(optarg, "ssl2")) {
 		opts->sslmethod = SSLv2_method;
@@ -194,6 +199,33 @@ opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
 		opts->sslmethod = TLSv1_2_method;
 	} else
 #endif /* HAVE_TLSV12 */
+#else /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+/*
+ * Support for SSLv2 and the corresponding SSLv2_method(),
+ * SSLv2_server_method() and SSLv2_client_method() functions were
+ * removed in OpenSSL 1.1.0.
+ */
+#ifdef HAVE_SSLV3
+	if (!strcmp(optarg, "ssl3")) {
+		opts->sslversion = SSL3_VERSION;
+	} else
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
+	if (!strcmp(optarg, "tls10") || !strcmp(optarg, "tls1")) {
+		opts->sslversion = TLS1_VERSION;
+	} else
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
+	if (!strcmp(optarg, "tls11")) {
+		opts->sslversion = TLS1_1_VERSION;
+	} else
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
+	if (!strcmp(optarg, "tls12")) {
+		opts->sslversion = TLS1_2_VERSION;
+	} else
+#endif /* HAVE_TLSV12 */
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	{
 		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
 		                argv0, optarg);
@@ -247,8 +279,9 @@ void
 opts_proto_dbg_dump(opts_t *opts)
 {
 	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 #ifdef HAVE_SSLV2
-	               (opts->sslmethod == SSLv2_method) ? "nossl2" :
+	               (opts->sslmethod == SSLv2_method) ? "ssl2" :
 #endif /* HAVE_SSLV2 */
 #ifdef HAVE_SSLV3
 	               (opts->sslmethod == SSLv3_method) ? "ssl3" :
@@ -262,6 +295,20 @@ opts_proto_dbg_dump(opts_t *opts)
 #ifdef HAVE_TLSV12
 	               (opts->sslmethod == TLSv1_2_method) ? "tls12" :
 #endif /* HAVE_TLSV12 */
+#else /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+#ifdef HAVE_SSLV3
+	               (opts->sslversion == SSL3_VERSION) ? "ssl3" :
+#endif /* HAVE_SSLV3 */
+#ifdef HAVE_TLSV10
+	               (opts->sslversion == TLS1_VERSION) ? "tls10" :
+#endif /* HAVE_TLSV10 */
+#ifdef HAVE_TLSV11
+	               (opts->sslversion == TLS1_1_VERSION) ? "tls11" :
+#endif /* HAVE_TLSV11 */
+#ifdef HAVE_TLSV12
+	               (opts->sslversion == TLS1_2_VERSION) ? "tls12" :
+#endif /* HAVE_TLSV12 */
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	               "negotiate",
 #ifdef HAVE_SSLV2
 	               opts->no_ssl2 ? " -ssl2" :
