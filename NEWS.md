@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Fix build with OpenSSL 1.1.1 (pull req #186 by @sonertari, issue #183).
 -   Fix build on FreeBSD 12 (patch-proc.c r436571 from FreeBSD ports).
 -   Minor bugfixes and improvements.
 
