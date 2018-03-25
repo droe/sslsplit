@@ -95,6 +95,9 @@ typedef struct opts {
 	char *contentlog_basedir; /* static part of logspec, for privsep srv */
 	char *masterkeylog;
 	CONST_SSL_METHOD *(*sslmethod)(void);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	int sslversion;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	X509 *cacrt;
 	EVP_PKEY *cakey;
 	EVP_PKEY *key;
