@@ -32,10 +32,9 @@ BUILD_VERSION:=	$(shell $(BASENAME) $(PWD)|\
 BUILD_INFO+=	V:DIR
 endif
 ifdef NEWS_FILE
-NEWSSHA:=	$(shell $(OPENSSL) dgst -sha1 -r $(NEWS_FILE) |\
+NEWS_SHA:=	$(shell $(OPENSSL) dgst -sha1 -r $(NEWS_FILE) |\
 			$(CUT) -c -7)
-BUILD_INFO+=	N:$(NEWSSHA)
-NEWSSHA:=
+BUILD_INFO+=	N:$(NEWS_SHA)
 endif
 endif # GITDIR
 
@@ -47,6 +46,7 @@ BUILD_CPPFLAGS+=-D"BUILD_PKGNAME=\"$(PKGNAME)\"" \
 		-D"BUILD_FEATURES=\"$(FEATURES)\""
 
 # out: NEWS_FILE
+# out: NEWS_SHA
 # out: VERSION_FILE
 # out: BUILD_VERSION
 # out: BUILD_DATE
