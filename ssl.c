@@ -1021,6 +1021,9 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 		case NID_ripemd160WithRSA:
 			md = EVP_ripemd160();
 			break;
+		case NID_sha1WithRSAEncryption:
+			md = EVP_sha1();
+			break;
 		case NID_sha224WithRSAEncryption:
 			md = EVP_sha224();
 			break;
@@ -1038,9 +1041,8 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 			md = EVP_sha();
 			break;
 #endif /* !OPENSSL_NO_SHA0 */
-		case NID_sha1WithRSAEncryption:
 		default:
-			md = EVP_sha1();
+			md = EVP_sha256();
 			break;
 		}
 		break;
@@ -1048,6 +1050,10 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 #ifndef OPENSSL_NO_DSA
 	case EVP_PKEY_DSA:
 		switch (X509_get_signature_nid(origcrt)) {
+		case NID_dsaWithSHA1:
+		case NID_dsaWithSHA1_2:
+			md = EVP_sha1();
+			break;
 		case NID_dsa_with_SHA224:
 			md = EVP_sha224();
 			break;
@@ -1059,10 +1065,8 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 			md = EVP_sha();
 			break;
 #endif /* !OPENSSL_NO_SHA0 */
-		case NID_dsaWithSHA1:
-		case NID_dsaWithSHA1_2:
 		default:
-			md = EVP_sha1();
+			md = EVP_sha256();
 			break;
 		}
 		break;
@@ -1070,6 +1074,9 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 #ifndef OPENSSL_NO_ECDSA
 	case EVP_PKEY_EC:
 		switch (X509_get_signature_nid(origcrt)) {
+		case NID_ecdsa_with_SHA1:
+			md = EVP_sha1();
+			break;
 		case NID_ecdsa_with_SHA224:
 			md = EVP_sha224();
 			break;
@@ -1082,9 +1089,8 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 		case NID_ecdsa_with_SHA512:
 			md = EVP_sha512();
 			break;
-		case NID_ecdsa_with_SHA1:
 		default:
-			md = EVP_sha1();
+			md = EVP_sha256();
 			break;
 		}
 		break;
