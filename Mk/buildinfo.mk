@@ -20,7 +20,6 @@ NEWS_FILE:=	$(firstword $(wildcard NEWS*))
 ifdef GITDIR
 BUILD_VERSION:=	$(shell $(GIT) describe --tags --dirty --always)
 BUILD_INFO+=	V:GIT
-GITDIR:=
 else
 ifdef VERSION_FILE
 BUILD_VERSION:=	$(shell $(CAT) VERSION)
@@ -48,6 +47,7 @@ BUILD_CPPFLAGS+=-D"BUILD_PKGNAME=\"$(PKGNAME)\"" \
 # out: NEWS_FILE
 # out: NEWS_SHA
 # out: VERSION_FILE
+# out: GITDIR
 # out: BUILD_VERSION
 # out: BUILD_DATE
 # out: BUILD_INFO

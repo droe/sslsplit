@@ -353,7 +353,7 @@ export WGET
 
 ifndef MAKE_RESTARTS
 $(info ------------------------------------------------------------------------------)
-$(info $(PNAME) $(VERSION))
+$(info $(PKGLABEL) $(VERSION))
 $(info ------------------------------------------------------------------------------)
 $(info Report bugs at https://github.com/droe/sslsplit/issues/new)
 $(info Please supply this header for diagnostics when reporting build issues)
@@ -371,6 +371,7 @@ ifdef CHECK_FOUND
 $(info CHECK_BASE:     $(strip $(CHECK_FOUND)))
 endif
 $(info Build options:  $(FEATURES))
+$(info Build info:     $(BUILD_INFO))
 ifeq ($(shell uname),Darwin)
 $(info OSX_VERSION:    $(OSX_VERSION))
 $(info XNU_VERSION:    $(XNU_VERSION) ($(XNU_METHOD), have $(XNU_HAVE)))
