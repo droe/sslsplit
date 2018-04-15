@@ -1,20 +1,33 @@
 # in: PKGNAME
 # in: FEATURES (optional)
 # in: BUILD_INFO (optional)
+# in: OPENSSL (optional)
+# in: OPENSSL_FOUND (optional)
 
 ifndef PKGNAME
 $(error PKGNAME not defined)
 endif
 
+ifndef OPENSSL
+ifdef OPENSSL_FOUND
+OPENSSL=$(OPENSSL_FOUND)/bin/openssl
+else
+OPENSSL=	openssl
+endif
+endif
+
 BASENAME?=	basename
 CUT?=		cut
+DIFF?=		diff
 GIT?=		git
 GREP?=		grep
-OPENSSL?=	openssl
 SED?=		sed
+TR?=		tr
+WC?=		wc
 
 GITDIR:=	$(wildcard .git)
 VERSION_FILE:=	$(wildcard VERSION)
+HASHES_FILE:=	$(wildcard HASHES)
 NEWS_FILE:=	$(firstword $(wildcard NEWS*))
 
 ifdef GITDIR
@@ -29,6 +42,13 @@ BUILD_VERSION:=	$(shell $(BASENAME) $(PWD)|\
 			$(GREP) $(PKGNAME)-|\
 			$(SED) 's/.*$(PKGNAME)-\(.*\)/\1/g')
 BUILD_INFO+=	V:DIR
+endif
+ifdef HASHES_FILE
+BUILD_INFO+=	HDIFF:$(shell $(OPENSSL) dgst -sha1 -r *.[hc]|\
+		sort -k 2 >HASHES~;\
+		$(DIFF) -u HASHES HASHES~|\
+		$(GREP) '^-[^-]'|$(WC) -l|$(TR) -d ' ';\
+		rm HASHES~)
 endif
 ifdef NEWS_FILE
 NEWS_SHA:=	$(shell $(OPENSSL) dgst -sha1 -r $(NEWS_FILE) |\

@@ -174,6 +174,7 @@ GREP?=		grep
 INSTALL?=	install
 MKDIR?=		mkdir
 SED?=		sed
+SORT?=		sort
 
 
 ### Variables only used for developer targets
@@ -468,9 +469,12 @@ dist: $(PKGNAME)-$(VERSION).tar.bz2 $(PKGNAME)-$(VERSION).tar.bz2.asc
 $(PKGNAME)-$(VERSION).tar.bz2:
 	$(MKDIR) -p $(PKGNAME)-$(VERSION)
 	echo $(VERSION) >$(PKGNAME)-$(VERSION)/VERSION
+	$(OPENSSL) dgst -sha1 -r *.[hc] | $(SORT) -k 2 \
+		>$(PKGNAME)-$(VERSION)/HASHES
 	$(GIT) archive --prefix=$(PKGNAME)-$(VERSION)/ HEAD \
 		>$(PKGNAME)-$(VERSION).tar
 	$(TAR) -f $(PKGNAME)-$(VERSION).tar -r $(PKGNAME)-$(VERSION)/VERSION
+	$(TAR) -f $(PKGNAME)-$(VERSION).tar -r $(PKGNAME)-$(VERSION)/HASHES
 	$(BZIP2) <$(PKGNAME)-$(VERSION).tar >$(PKGNAME)-$(VERSION).tar.bz2
 	$(RM) $(PKGNAME)-$(VERSION).tar
 	$(RM) -r $(PKGNAME)-$(VERSION)
