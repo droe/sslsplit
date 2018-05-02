@@ -57,7 +57,11 @@ BUILD_INFO+=	N:$(NEWS_SHA)
 endif
 endif # GITDIR
 
+ifdef SOURCE_DATE_EPOCH
+BUILD_DATE:=	$(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "+%Y-%m-%d" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "+%Y-%m-%d" 2>/dev/null || date -u "+%Y-%m-%d")
+else
 BUILD_DATE:=	$(shell date +%Y-%m-%d)
+endif
 BUILD_CPPFLAGS+=-D"BUILD_PKGNAME=\"$(PKGNAME)\"" \
 		-D"BUILD_VERSION=\"$(BUILD_VERSION)\"" \
 		-D"BUILD_DATE=\"$(BUILD_DATE)\"" \
