@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Respect `SOURCE_DATE_EPOCH` for reproducible builds (pull req #192 by
+    @anthraxx).
 -   Sign using SHA-256 instead of SHA-1 when key type of server and key type
     of used CA certificate differ (issue #189).
 -   Fix build with OpenSSL 1.1.1 (pull req #186 by @sonertari, issue #183).
