@@ -18,10 +18,13 @@ endif
 
 BASENAME?=	basename
 CUT?=		cut
+DATE?=		date
 DIFF?=		diff
 GIT?=		git
 GREP?=		grep
+RM?=		rm
 SED?=		sed
+SORT?=		sort
 TR?=		tr
 WC?=		wc
 
@@ -45,10 +48,10 @@ BUILD_INFO+=	V:DIR
 endif
 ifdef HASHES_FILE
 BUILD_INFO+=	HDIFF:$(shell $(OPENSSL) dgst -sha1 -r *.[hc]|\
-		sort -k 2 >HASHES~;\
+		$(SORT) -k 2 >HASHES~;\
 		$(DIFF) -u HASHES HASHES~|\
 		$(GREP) '^-[^-]'|$(WC) -l|$(TR) -d ' ';\
-		rm HASHES~)
+		$(RM) HASHES~)
 endif
 ifdef NEWS_FILE
 NEWS_SHA:=	$(shell $(OPENSSL) dgst -sha1 -r $(NEWS_FILE) |\
@@ -58,7 +61,10 @@ endif
 endif # GITDIR
 
 ifdef SOURCE_DATE_EPOCH
-BUILD_DATE:=	$(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "+%Y-%m-%d" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "+%Y-%m-%d" 2>/dev/null || date -u "+%Y-%m-%d")
+BUILD_DATE:=	$(shell \
+		$(DATE) -u -d "@$(SOURCE_DATE_EPOCH)" "+%Y-%m-%d" 2>/dev/null||\
+		$(DATE) -u -r "$(SOURCE_DATE_EPOCH)" "+%Y-%m-%d" 2>/dev/null||\
+		$(DATE) -u "+%Y-%m-%d")
 else
 BUILD_DATE:=	$(shell date +%Y-%m-%d)
 endif
