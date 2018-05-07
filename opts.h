@@ -90,6 +90,7 @@ typedef struct opts {
 	char *dropgroup;
 	char *jaildir;
 	char *pidfile;
+	char *conffile;
 	char *connectlog;
 	char *contentlog;
 	char *contentlog_basedir; /* static part of logspec, for privsep srv */
@@ -112,19 +113,55 @@ typedef struct opts {
 	char *crlurl;
 } opts_t;
 
+void NORET oom_die(const char *) NONNULL(1);
+
 opts_t *opts_new(void) MALLOC;
 void opts_free(opts_t *) NONNULL(1);
 int opts_has_ssl_spec(opts_t *) NONNULL(1) WUNRES;
 int opts_has_dns_spec(opts_t *) NONNULL(1) WUNRES;
-void opts_proto_force(opts_t *, const char *, const char *) NONNULL(1,2,3);
-void opts_proto_disable(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_proto_dbg_dump(opts_t *) NONNULL(1);
 #define OPTS_DEBUG(opts) unlikely((opts)->debug)
 
-proxyspec_t * proxyspec_parse(int *, char **[], const char *) MALLOC;
+void proxyspec_parse(int *, char **[], const char *, opts_t *);
 void proxyspec_free(proxyspec_t *) NONNULL(1);
 char * proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
 
+void opts_set_cacrt(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_cakey(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_chain(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_key(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_crl(opts_t *, const char *) NONNULL(1,2);
+void opts_set_tgcrtdir(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_certgendir_writeall(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_certgendir_writegencerts(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_deny_ocsp(opts_t *) NONNULL(1);
+void opts_set_passthrough(opts_t *) NONNULL(1);
+#ifndef OPENSSL_NO_DH
+void opts_set_dh(opts_t *, const char *, const char *) NONNULL(1,2,3);
+#endif /* !OPENSSL_NO_DH */
+#ifndef OPENSSL_NO_ECDH
+void opts_set_ecdhcurve(opts_t *, const char *, const char *) NONNULL(1,2,3);
+#endif /* !OPENSSL_NO_ECDH */
+void opts_unset_sslcomp(opts_t *) NONNULL(1);
+void opts_proto_force(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_proto_disable(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_ciphers(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_user(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_group(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_jaildir(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_pidfile(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_connectlog(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_contentlog(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_contentlogdir(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_contentlogpathspec(opts_t *, const char *, const char *) NONNULL(1,2,3);
+#ifdef HAVE_LOCAL_PROCINFO
+void opts_set_lprocinfo(opts_t *) NONNULL(1);
+#endif /* HAVE_LOCAL_PROCINFO */
+void opts_set_masterkeylog(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_daemon(opts_t *) NONNULL(1);
+void opts_set_debug(opts_t *) NONNULL(1);
+
+int load_conffile(opts_t *, const char *, const char *) NONNULL(1,2,3);
 #endif /* !OPTS_H */
 
 /* vim: set noet ft=c: */
