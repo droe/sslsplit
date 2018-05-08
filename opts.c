@@ -234,7 +234,7 @@ opts_proto_dbg_dump(opts_t *opts)
  * Parse proxyspecs using a simple state machine.
  */
 void
-proxyspec_parse(int *argc, char **argv[], const char *natengine, opts_t *opts)
+proxyspec_parse(int *argc, char **argv[], const char *natengine, proxyspec_t **opts_spec)
 {
 	proxyspec_t *spec = NULL;
 	char *addr = NULL;
@@ -248,8 +248,8 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine, opts_t *opts)
 				/* tcp | ssl | http | https | autossl */
 				spec = malloc(sizeof(proxyspec_t));
 				memset(spec, 0, sizeof(proxyspec_t));
-				spec->next = opts->spec;
-				opts->spec = spec;
+				spec->next = *opts_spec;
+				*opts_spec = spec;
 
 				// Defaults
 				spec->ssl = 0;
@@ -1270,7 +1270,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 				}
 			}
 			
-			proxyspec_parse(&argc, &argv, natengine, opts);
+			proxyspec_parse(&argc, &argv, natengine, &opts->spec);
 			free(save_argv);
 		} else {
 			fprintf(stderr, "Unknown option '%s' at %s line %d\n", name, opts->conffile, line_num);

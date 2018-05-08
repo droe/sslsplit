@@ -86,13 +86,11 @@ static char *argv14[] = {
 
 START_TEST(proxyspec_parse_01)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv01;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -106,19 +104,17 @@ START_TEST(proxyspec_parse_01)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_02)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv02;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -132,43 +128,43 @@ START_TEST(proxyspec_parse_02)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_03)
 {
+	proxyspec_t *spec = NULL;
 	int argc = 2;
 	char **argv = argv01;
-	opts_t *opts = opts_new();
 
 	close(2);
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	opts_free(opts);
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_04)
 {
+	proxyspec_t *spec = NULL;
 	int argc = 4;
 	char **argv = argv01;
-	opts_t *opts = opts_new();
 
 	close(2);
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	opts_free(opts);
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_05)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv03;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(!spec->ssl, "SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -182,19 +178,17 @@ START_TEST(proxyspec_parse_05)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_06)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv04;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(!spec->http, "HTTP");
@@ -208,19 +202,17 @@ START_TEST(proxyspec_parse_06)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_07)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv05;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(!spec->ssl, "SSL");
 	fail_unless(!spec->http, "HTTP");
@@ -234,19 +226,17 @@ START_TEST(proxyspec_parse_07)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_08)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv06;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -259,43 +249,43 @@ START_TEST(proxyspec_parse_08)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_09)
 {
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv07;
-	opts_t *opts = opts_new();
 
 	close(2);
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	opts_free(opts);
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_10)
 {
+	proxyspec_t *spec = NULL;
 	int argc = 4;
 	char **argv = argv06;
-	opts_t *opts = opts_new();
 
 	close(2);
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	opts_free(opts);
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_11)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 3;
 	char **argv = argv08;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -309,31 +299,30 @@ START_TEST(proxyspec_parse_11)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_12)
 {
+	proxyspec_t *spec = NULL;
 	int argc = 4;
 	char **argv = argv08;
-	opts_t *opts = opts_new();
 
 	close(2);
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	opts_free(opts);
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_13)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 10;
 	char **argv = argv09;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -358,19 +347,17 @@ START_TEST(proxyspec_parse_13)
 	fail_unless(!spec->next->natengine, "natengine is set");
 	fail_unless(!spec->next->natlookup, "natlookup() is set");
 	fail_unless(!spec->next->natsocket, "natsocket() is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_14)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 6;
 	char **argv = argv10;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -396,19 +383,17 @@ START_TEST(proxyspec_parse_14)
 	            "natengine mismatch");
 	fail_unless(!spec->next->natlookup, "natlookup() is set");
 	fail_unless(!spec->next->natsocket, "natsocket() is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_15)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 3;
 	char **argv = argv11;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(!spec->ssl, "SSL");
 	fail_unless(!spec->http, "HTTP");
@@ -421,19 +406,17 @@ START_TEST(proxyspec_parse_15)
 	fail_unless(!spec->natlookup, "natlookup() is set");
 	fail_unless(!spec->natsocket, "natsocket() is set");
 	fail_unless(!spec->next, "next is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_16)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 10;
 	char **argv = argv12;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(spec->ssl, "not SSL");
 	fail_unless(spec->http, "not HTTP");
@@ -458,31 +441,30 @@ START_TEST(proxyspec_parse_16)
 	fail_unless(!spec->next->natengine, "natengine is set");
 	fail_unless(!spec->next->natlookup, "natlookup() is set");
 	fail_unless(!spec->next->natsocket, "natsocket() is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_17)
 {
+	proxyspec_t *spec = NULL;
 	int argc = 5;
 	char **argv = argv13;
-	opts_t *opts = opts_new();
 
 	close(2);
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	opts_free(opts);
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	if (spec)
+		proxyspec_free(spec);
 }
 END_TEST
 
 START_TEST(proxyspec_parse_18)
 {
-	proxyspec_t *spec;
+	proxyspec_t *spec = NULL;
 	int argc = 8;
 	char **argv = argv14;
-	opts_t *opts = opts_new();
 
-	proxyspec_parse(&argc, &argv, NATENGINE, opts);
-	spec = opts->spec;
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	fail_unless(!!spec, "failed to parse spec");
 	fail_unless(!spec->ssl, "SSL");
 	fail_unless(!spec->http, "HTTP");
@@ -506,7 +488,7 @@ START_TEST(proxyspec_parse_18)
 	fail_unless(!!spec->next->natengine, "natengine is not set");
 	fail_unless(!spec->next->natlookup, "natlookup() is set");
 	fail_unless(!spec->next->natsocket, "natsocket() is set");
-	opts_free(opts);
+	proxyspec_free(spec);
 }
 END_TEST
 

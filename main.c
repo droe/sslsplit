@@ -428,7 +428,7 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
-	proxyspec_parse(&argc, &argv, natengine, opts);
+	proxyspec_parse(&argc, &argv, natengine, &opts->spec);
 	
 	if (opts->conffile) {
 		if (load_conffile(opts, argv0, natengine) == -1) {

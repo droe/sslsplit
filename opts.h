@@ -122,7 +122,7 @@ int opts_has_dns_spec(opts_t *) NONNULL(1) WUNRES;
 void opts_proto_dbg_dump(opts_t *) NONNULL(1);
 #define OPTS_DEBUG(opts) unlikely((opts)->debug)
 
-void proxyspec_parse(int *, char **[], const char *, opts_t *);
+void proxyspec_parse(int *, char **[], const char *, proxyspec_t **);
 void proxyspec_free(proxyspec_t *) NONNULL(1);
 char *proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
 
