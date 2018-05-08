@@ -1084,13 +1084,13 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 	char *line, *name;
 	char natengine[NATENGINE_SIZE];
 	
-	strncpy(natengine, prev_natengine, NATENGINE_SIZE);
-
 	f = fopen(opts->conffile, "r");
 	if (!f) {
 		fprintf(stderr, "Error opening conf file %s: %s\n", opts->conffile, strerror(errno));
 		return -1;
 	}
+
+	strncpy(natengine, prev_natengine, NATENGINE_SIZE);
 
 	line = NULL;
 	line_num = 0;
@@ -1101,7 +1101,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			break;
 		}
 		if (line == NULL) {
-			fprintf(stderr, "Error getline() buf=NULL");
+			fprintf(stderr, "Error in getline() line=NULL after line %d\n", line_num);
 			goto leave;
 		}
 		line_num++;
@@ -1130,7 +1130,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 
 		// No value
 		if (n == NULL) {
-			fprintf(stderr, "Conf error at line %d\n", line_num);
+			fprintf(stderr, "Error in conf file at line %d\n", line_num);
 			goto leave;
 		}
 		
