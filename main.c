@@ -352,10 +352,10 @@ main(int argc, char *argv[])
 				opts_set_ciphers(opts, argv0, optarg);
 				break;
 			case 'r':
-				opts_proto_force(opts, optarg, argv0);
+				opts_force_proto(opts, argv0, optarg);
 				break;
 			case 'R':
-				opts_proto_disable(opts, optarg, argv0);
+				opts_disable_proto(opts, argv0, optarg);
 				break;
 			case 'e':
 				if (natengine)

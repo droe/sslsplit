@@ -706,7 +706,7 @@ opts_set_ciphers(opts_t *opts, const char *argv0, const char *optarg)
  * Calls exit() on failure.
  */
 void
-opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
+opts_force_proto(opts_t *opts, const char *argv0, const char *optarg)
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (opts->sslmethod != SSLv23_method) {
@@ -783,7 +783,7 @@ opts_proto_force(opts_t *opts, const char *optarg, const char *argv0)
  * Calls exit() on failure.
  */
 void
-opts_proto_disable(opts_t *opts, const char *optarg, const char *argv0)
+opts_disable_proto(opts_t *opts, const char *argv0, const char *optarg)
 {
 #ifdef HAVE_SSLV2
 	if (!strcmp(optarg, "ssl2")) {
@@ -1078,7 +1078,7 @@ int
 load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 {
 	FILE *f;
-	int rv, line_num, yes;
+	int rv, line_num, yes, retval;
 	size_t line_len;
 	char *n, *value, *v, *value_end;
 	char *line, *name;
@@ -1094,27 +1094,28 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 
 	line = NULL;
 	line_num = 0;
+	retval = -1;
 	while (!feof(f)) {
 		rv = getline(&line, &line_len, f);
 		if (rv == -1) {
 			break;
 		}
 		if (line == NULL) {
-			fprintf(stderr, "getline() buf=NULL");
-			return -1;
+			fprintf(stderr, "Error getline() buf=NULL");
+			goto leave;
 		}
 		line_num++;
 
-		// skip white space
+		// Skip white space
 		for (name = line; *name == ' ' || *name == '\t'; name++); 
 
-		// skip comments and empty lines
+		// Skip comments and empty lines
 		if ((name[0] == '\0') || (name[0] == '#') || (name[0] == ';') ||
 			(name[0] == '\r') || (name[0] == '\n')) {
 			continue;
 		}
 
-		// skip to the end of option name and terminate it with '\0'
+		// Skip to the end of option name and terminate it with '\0'
 		for (n = name;; n++) {
 			if (*n == ' ' || *n == '\t') {
 				*n = '\0';
@@ -1127,25 +1128,21 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			}
 		}
 
-		// no value
+		// No value
 		if (n == NULL) {
 			fprintf(stderr, "Conf error at line %d\n", line_num);
-			fclose(f);
-			if (line) {
-				free(line);
-			}
-			return -1;
+			goto leave;
 		}
 		
-		// skip white space before value
+		// Skip white space before value
 		while (*n == ' ' || *n == '\t') {
 			n++;
 		}
 
 		value = n;
 
-		// find end of value and terminate it with '\0'
-		// find first occurrence of trailing white space
+		// Find end of value and terminate it with '\0'
+		// Find first occurrence of trailing white space
 		value_end = NULL;
 		for (v = value;; v++) {
 			if (*v == '\0') {
@@ -1214,9 +1211,9 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			fprintf(stderr, "SSLCompression: %u\n", opts->sslcomp);
 #endif /* SSL_OP_NO_COMPRESSION */
 		} else if (!strncmp(name, "ForceSSLProto", 14)) {
-			opts_proto_force(opts, value, argv0);
+			opts_force_proto(opts, argv0, value);
 		} else if (!strncmp(name, "DisableSSLProto", 16)) {
-			opts_proto_disable(opts, value, argv0);
+			opts_disable_proto(opts, argv0, value);
 		} else if (!strncmp(name, "Ciphers", 8)) {
 			opts_set_ciphers(opts, argv0, value);
 		} else if (!strncmp(name, "NATEngine", 10)) {
@@ -1277,21 +1274,17 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			free(save_argv);
 		} else {
 			fprintf(stderr, "Unknown option '%s' at %s line %d\n", name, opts->conffile, line_num);
-			fclose(f);
-			if (line) {
-				free(line);
-			}
-			return -1;
+			goto leave;
 		}
-
-		continue;
 	}
 
+	retval = 0;
+leave:
 	fclose(f);
 	if (line) {
 		free(line);
 	}
-	return 0;
+	return retval;
 }
 
 /* vim: set noet ft=c: */

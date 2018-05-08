@@ -124,7 +124,7 @@ void opts_proto_dbg_dump(opts_t *) NONNULL(1);
 
 void proxyspec_parse(int *, char **[], const char *, opts_t *);
 void proxyspec_free(proxyspec_t *) NONNULL(1);
-char * proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
+char *proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
 
 void opts_set_cacrt(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_cakey(opts_t *, const char *, const char *) NONNULL(1,2,3);
@@ -143,8 +143,8 @@ void opts_set_dh(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_ecdhcurve(opts_t *, const char *, const char *) NONNULL(1,2,3);
 #endif /* !OPENSSL_NO_ECDH */
 void opts_unset_sslcomp(opts_t *) NONNULL(1);
-void opts_proto_force(opts_t *, const char *, const char *) NONNULL(1,2,3);
-void opts_proto_disable(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_force_proto(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_disable_proto(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_ciphers(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_user(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_group(opts_t *, const char *, const char *) NONNULL(1,2,3);
