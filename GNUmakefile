@@ -421,13 +421,18 @@ install: $(TARGET)
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
+	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man5 || \
+		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
 	$(INSTALL) $(BINOWNERFLAGS) -m $(BINMODE) \
 		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
 	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \
 		$(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
+	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \
+		$(TARGET).conf.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/
 
 deinstall:
-	$(RM) -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/$(TARGET).1
+	$(RM) -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/$(TARGET).1 \
+		$(DESTDIR)$(PREFIX)/$(MANDIR)/man5/$(TARGET).conf.5
 
 ifdef GITDIR
 lint:
