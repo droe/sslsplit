@@ -1070,7 +1070,7 @@ check_value_yesno(char *value, char *name, int line_num)
 	} else if (!strncmp(value, "no", 3)) {
 		return 0;
 	}
-	fprintf(stderr, "Invalid %s %s at line %d, use yes|no\n", name, value, line_num);
+	fprintf(stderr, "Error in conf file: Invalid '%s' value '%s' at line %d, use yes|no\n", name, value, line_num);
 	return -1;
 }
 
@@ -1086,7 +1086,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 	
 	f = fopen(opts->conffile, "r");
 	if (!f) {
-		fprintf(stderr, "Error opening conf file %s: %s\n", opts->conffile, strerror(errno));
+		fprintf(stderr, "Error opening conf file '%s': %s\n", opts->conffile, strerror(errno));
 		return -1;
 	}
 
@@ -1101,7 +1101,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			break;
 		}
 		if (line == NULL) {
-			fprintf(stderr, "Error in getline() line=NULL after line %d\n", line_num);
+			fprintf(stderr, "Error in conf file: getline() returns NULL line after line %d\n", line_num);
 			goto leave;
 		}
 		line_num++;
@@ -1130,7 +1130,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 
 		// No value
 		if (n == NULL) {
-			fprintf(stderr, "Error in conf file at line %d\n", line_num);
+			fprintf(stderr, "Error in conf file: No value at line %d\n", line_num);
 			goto leave;
 		}
 		
@@ -1184,15 +1184,17 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			opts_set_certgendir_writeall(opts, argv0, value);
 		} else if (!strncmp(name, "DenyOCSP", 9)) {
 			yes = check_value_yesno(value, "DenyOCSP", line_num);
-			if (yes >= 0) {
-				yes ? opts_set_deny_ocsp(opts) : opts_unset_deny_ocsp(opts);
+			if (yes == -1) {
+				goto leave;
 			}
+			yes ? opts_set_deny_ocsp(opts) : opts_unset_deny_ocsp(opts);
 			fprintf(stderr, "DenyOCSP: %u\n", opts->deny_ocsp);
 		} else if (!strncmp(name, "Passthrough", 12)) {
 			yes = check_value_yesno(value, "Passthrough", line_num);
-			if (yes >= 0) {
-				yes ? opts_set_passthrough(opts) : opts_unset_passthrough(opts);
+			if (yes == -1) {
+				goto leave;
 			}
+			yes ? opts_set_passthrough(opts) : opts_unset_passthrough(opts);
 			fprintf(stderr, "Passthrough: %u\n", opts->passthrough);
 #ifndef OPENSSL_NO_DH
 		} else if (!strncmp(name, "DHGroupParams", 14)) {
@@ -1205,9 +1207,10 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 #ifdef SSL_OP_NO_COMPRESSION
 		} else if (!strncmp(name, "SSLCompression", 15)) {
 			yes = check_value_yesno(value, "SSLCompression", line_num);
-			if (yes >= 0) {
-				yes ? opts_set_sslcomp(opts) : opts_unset_sslcomp(opts);
+			if (yes == -1) {
+				goto leave;
 			}
+			yes ? opts_set_sslcomp(opts) : opts_unset_sslcomp(opts);
 			fprintf(stderr, "SSLCompression: %u\n", opts->sslcomp);
 #endif /* SSL_OP_NO_COMPRESSION */
 		} else if (!strncmp(name, "ForceSSLProto", 14)) {
@@ -1238,24 +1241,27 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 #ifdef HAVE_LOCAL_PROCINFO
 		} else if (!strncmp(name, "LogProcInfo", 11)) {
 			yes = check_value_yesno(value, "LogProcInfo", line_num);
-			if (yes >= 0) {
-				yes ? opts_set_lprocinfo(opts) : opts_unset_lprocinfo(opts);
+			if (yes == -1) {
+				goto leave;
 			}
+			yes ? opts_set_lprocinfo(opts) : opts_unset_lprocinfo(opts);
 			fprintf(stderr, "LogProcInfo: %u\n", opts->lprocinfo);
 #endif /* HAVE_LOCAL_PROCINFO */
 		} else if (!strncmp(name, "MasterKeyLog", 13)) {
 			opts_set_masterkeylog(opts, argv0, value);
 		} else if (!strncmp(name, "Daemon", 7)) {
 			yes = check_value_yesno(value, "Daemon", line_num);
-			if (yes >= 0) {
-				yes ? opts_set_daemon(opts) : opts_unset_daemon(opts);
+			if (yes == -1) {
+				goto leave;
 			}
+			yes ? opts_set_daemon(opts) : opts_unset_daemon(opts);
 			fprintf(stderr, "Daemon: %u\n", opts->detach);
 		} else if (!strncmp(name, "Debug", 6)) {
 			yes = check_value_yesno(value, "Debug", line_num);
-			if (yes >= 0) {
-				yes ? opts_set_debug(opts) : opts_unset_debug(opts);
+			if (yes == -1) {
+				goto leave;
 			}
+			yes ? opts_set_debug(opts) : opts_unset_debug(opts);
 			fprintf(stderr, "Debug: %u\n", opts->debug);
 		} else if (!strncmp(name, "ProxySpec", 10)) {
 			char **argv = malloc(strlen(value) + 1);
@@ -1273,7 +1279,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			proxyspec_parse(&argc, &argv, natengine, &opts->spec);
 			free(save_argv);
 		} else {
-			fprintf(stderr, "Unknown option '%s' at %s line %d\n", name, opts->conffile, line_num);
+			fprintf(stderr, "Error in conf file: Unknown option '%s' at line %d\n", name, line_num);
 			goto leave;
 		}
 	}
