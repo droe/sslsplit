@@ -229,7 +229,6 @@ opts_proto_dbg_dump(opts_t *opts)
 	               "");
 }
 
-
 /*
  * Parse proxyspecs using a simple state machine.
  */
@@ -1074,6 +1073,8 @@ check_value_yesno(char *value, char *name, int line_num)
 	return -1;
 }
 
+#define MAX_TOKEN 10
+
 int
 load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 {
@@ -1264,14 +1265,15 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			yes ? opts_set_debug(opts) : opts_unset_debug(opts);
 			fprintf(stderr, "Debug: %u\n", opts->debug);
 		} else if (!strncmp(name, "ProxySpec", 10)) {
-			char **argv = malloc(strlen(value) + 1);
+			// Use MAX_TOKEN instead of computing the actual number of tokens in value
+			char **argv = malloc(sizeof(char *) * MAX_TOKEN);
 			char **save_argv = argv;
 			int argc = 0;
 			char *p, *last = NULL;
 
 			for ((p = strtok_r(value, " ", &last)); p; (p = strtok_r(NULL, " ", &last))) {
 				// Limit max # token
-				if (argc < 10) {
+				if (argc < MAX_TOKEN) {
 					argv[argc++] = p;
 				}
 			}
