@@ -41,6 +41,8 @@ sslsplit \-\- transparent SSL/TLS interception
 [\fB-OPZwWdDgGsrReumjplLSFiM\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
+.B sslsplit [\fB-kCKwWOPZdDgGsrReumjplLSFiM\fP] -f \fIconffile\fP
+.br
 .B sslsplit -E
 .br
 .B sslsplit -V
@@ -137,6 +139,9 @@ returned by \fB-E\fP.
 .B \-E
 List all supported NAT engines available on the system and exit.  See
 NAT ENGINES for a list of NAT engines currently supported by SSLsplit.
+.TP
+.B \-f \fIconffile\fP
+Read configuraion from \fIconffile\fP.
 .TP
 .B \-F \fIlogspec\fP
 Log connection content to separate log files with the given path specification
@@ -723,7 +728,7 @@ SSLsplit uses SSL session caching on both ends to minimize the amount of full
 SSL handshakes, but even then, the limiting factor in handling SSL connections
 are the actual bignum computations.
 .SH "SEE ALSO"
-openssl(1), ciphers(1), speed(1),
+sslsplit.conf(5), openssl(1), ciphers(1), speed(1),
 pf(4), ipfw(8), iptables(8), ip6tables(8), ip(8),
 hostapd(8), arpspoof(8), parasite6(8), yersinia(8),
 .I https://www.roe.ch/SSLsplit
