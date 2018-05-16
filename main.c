@@ -128,6 +128,8 @@ main_usage(void)
 "Usage: %s [options...] [proxyspecs...]\n"
 "  -c pemfile  use CA cert (and key) from pemfile to sign forged certs\n"
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
+"  -a pemfile  use cert from pemfile when destination requests client certs\n"
+"  -b pemfile  use key from pemfile when destination requests client certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -q crlurl   use URL as CRL distribution point for all forged certs\n"
@@ -307,7 +309,7 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
+	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:a:b:C:K:t:"
 	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:")) != -1) {
 		switch (ch) {
 			case 'c':
@@ -367,6 +369,40 @@ main(int argc, char *argv[])
 					opts->dh = ssl_dh_load(optarg);
 				}
 #endif /* !OPENSSL_NO_DH */
+				break;
+			case 'a': //client cert
+                                if (opts->clientcrt)
+                                        X509_free(opts->clientcrt);
+                                opts->clientcrt = ssl_x509_load(optarg);
+                                if (!opts->clientcrt) {
+                                        fprintf(stderr, "%s: error loading client "
+                                                        "cert from '%s':\n",
+                                                        argv0, optarg);
+                                        if (errno) {
+                                                fprintf(stderr, "%s\n",
+                                                        strerror(errno));
+                                        } else {
+                                                ERR_print_errors_fp(stderr);
+                                        }
+                                        exit(EXIT_FAILURE);
+                                }
+				break;
+			case 'b': //client key
+                                if (opts->clientkey)
+                                        EVP_PKEY_free(opts->clientkey);
+                                opts->clientkey = ssl_key_load(optarg);
+                                if (!opts->clientkey) {
+                                        fprintf(stderr, "%s: error loading client "
+                                                        "key from '%s':\n",
+                                                        argv0, optarg);
+                                        if (errno) {
+                                                fprintf(stderr, "%s\n",
+                                                        strerror(errno));
+                                        } else {
+                                                ERR_print_errors_fp(stderr);
+                                        }
+                                        exit(EXIT_FAILURE);
+                                }
 				break;
 			case 'C':
 				if (ssl_x509chain_load(NULL, &opts->chain,
