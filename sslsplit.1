@@ -30,15 +30,15 @@ sslsplit \-\- transparent SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrReumjplLSFiM\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKqwWOPZdDgGsrReumjplLSFiMab\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrReumjplLSFiM\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKqwWOPZdDgGsrReumjplLSFiMab\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZwWdDgGsrReumjplLSFiM\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZwWdDgGsrReumjplLSFiMab\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit -E
@@ -104,6 +104,12 @@ legitimate router, ARP spoofing, ND spoofing, DNS poisoning, deploying a rogue
 access point (e.g. using hostap mode), physical recabling, malicious VLAN
 reconfiguration or route injection, /etc/hosts modification and so on.
 .SH OPTIONS
+.TP
+.B \-a \fIpemfile\fP
+Use client certificate from \fIpemfile\fP when destination server requests a client certificate
+.TP
+.B \-b \fIpemfile\fP
+Use client private key from \fIpemfile\fP when destination server requests a client certificate
 .TP
 .B \-c \fIpemfile\fP
 Use CA certificate from \fIpemfile\fP to sign certificates forged on-the-fly.
