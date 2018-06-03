@@ -59,6 +59,12 @@ void
 opts_free(opts_t *opts)
 {
 	sk_X509_pop_free(opts->chain, X509_free);
+	if (opts->clientcrt) {
+		X509_free(opts->clientcrt);
+	}
+	if (opts->clientkey) {
+		EVP_PKEY_free(opts->clientkey);
+	}
 	if (opts->cacrt) {
 		X509_free(opts->cacrt);
 	}

@@ -100,10 +100,10 @@ typedef struct opts {
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	X509 *cacrt;
 	EVP_PKEY *cakey;
-	X509 *clientcrt;
-	EVP_PKEY *clientkey;
 	EVP_PKEY *key;
 	STACK_OF(X509) *chain;
+	X509 *clientcrt;
+	EVP_PKEY *clientkey;
 #ifndef OPENSSL_NO_DH
 	DH *dh;
 #endif /* !OPENSSL_NO_DH */
