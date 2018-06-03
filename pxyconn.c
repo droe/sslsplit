@@ -1137,6 +1137,15 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 
 	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 
+	if (ctx->opts->clientcrt) {
+		if (!SSL_CTX_use_certificate(sslctx, ctx->opts->clientcrt))
+			log_dbg_printf("loading client certificate failed");
+	}
+	if (ctx->opts->clientkey) {
+		if (!SSL_CTX_use_PrivateKey(sslctx, ctx->opts->clientkey))
+			log_dbg_printf("loading client key failed");
+	}
+
 	ssl = SSL_new(sslctx);
 	SSL_CTX_free(sslctx); /* SSL_new() increments refcount */
 	if (!ssl) {

@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Add -a and -b for initial basic client certificate support (pull req #194
+    by @naf419, issue #46).
 -   Respect `SOURCE_DATE_EPOCH` for reproducible builds (pull req #192 by
     @anthraxx).
 -   Sign using SHA-256 instead of SHA-1 when key type of server and key type
