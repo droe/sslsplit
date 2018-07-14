@@ -7,6 +7,8 @@
     @anthraxx).
 -   Sign using SHA-256 instead of SHA-1 when key type of server and key type
     of used CA certificate differ (issue #189).
+-   Fix keyUsage to match the type of leaf key used instead of copying from
+    upstream certificate (issue #195).
 -   Fix build with OpenSSL 1.1.1 (pull req #186 by @sonertari, issue #183).
 -   Fix build on FreeBSD 12 (patch-proc.c r436571 from FreeBSD ports).
 -   Minor bugfixes and improvements.
