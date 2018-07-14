@@ -882,8 +882,8 @@ ssl_x509_serial_copyrand(X509 *dstcrt, X509 *srccrt)
 
 /*
  * Returns the appropriate key usage strings for the type of server key.
- * Return value should conceptually be static, but OpenSSL does not use
- * const appropriately.
+ * Return value should conceptually be const, but OpenSSL does not use const
+ * appropriately.
  */
 static char *
 ssl_key_usage_for_key(EVP_PKEY *key)
