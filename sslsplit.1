@@ -327,6 +327,8 @@ effective and stored user IDs to \fIuser\fP and loading the appropriate
 primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
 privileges to the stored UID if EUID != UID (setuid bit scenario), or to
 \fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0).
+The user needs to be allowed to make outbound TCP connections, and in some
+configurations, also to perform DNS resolution.
 Due to an Apple bug, \fB-u\fP cannot be used with \fBpf\fP proxyspecs on
 Mac OS X.
 .TP

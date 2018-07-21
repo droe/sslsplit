@@ -1,6 +1,7 @@
 
 ### SSLsplit develop
 
+-   Add `sudotest` target with unit tests which require privileges to run.
 -   Minor bugfixes and improvements.
 
 

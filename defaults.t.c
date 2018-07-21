@@ -26,49 +26,61 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DEFAULTS_H
-#define DEFAULTS_H
+#include "sys.h"
+
+#include "defaults.h"
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <check.h>
+
+#define CONNECT_CMD "openssl s_client -connect www.google.com:443" \
+                    " -quiet -no_ign_eof </dev/null >/dev/null 2>/dev/null"
+
+START_TEST(defaults_dropuser_01)
+{
+	fail_unless(0 == sys_privdrop(DFLT_DROPUSER, NULL, NULL),
+	            "privdrop failed");
+}
+END_TEST
 
 /*
- * Defaults for convenient tweaking or patching.
+ * This test is designed to fail in the third assertion if the currently
+ * configured default dropuser is not allowed to make outbound network
+ * connections.
  */
+START_TEST(defaults_dropuser_02)
+{
+	fail_unless(0 == system(CONNECT_CMD),
+	            "connect failed for user running tests");
+	fail_unless(0 == sys_privdrop(DFLT_DROPUSER, NULL, NULL),
+	            "privdrop failed");
+	fail_unless(0 == system(CONNECT_CMD),
+	            "connect failed for default dropuser " DFLT_DROPUSER);
+}
+END_TEST
 
-/*
- * User to drop privileges to by default.  This user needs to be allowed to
- * create outbound TCP connections, and in some configurations, perform DNS
- * resolution.
- *
- * Packagers may want to use a specific service user account instead of
- * overloading nobody with yet another use case.  Using nobody for source
- * builds makes sense because chances are high that it exists.  Good practice
- * is to create a dedicated user for sslsplit.
- *
- * Make sure to also patch the manual page if you patch this.
- */
-#define DFLT_DROPUSER "nobody"
+Suite *
+defaults_suite(void)
+{
+	Suite *s;
+	TCase *tc;
 
-/*
- * Default file and directory modes for newly created files and directories
- * created as part of e.g. logging.  The default is to use full permissions
- * subject to the system's umask, as is the default for system utilities.
- * Use a more restrictive mode for the PID file.
- */
-#define DFLT_DIRMODE  0777
-#define DFLT_FILEMODE 0666
-#define DFLT_PIDFMODE 0644
+	s = suite_create("defaults");
 
-/*
- * Default cipher suite spec.
- * Use 'openssl ciphers -v spec' to see what ciphers are effectively enabled
- * by a cipher suite spec with a given version of OpenSSL.
- */
-#define DFLT_CIPHERS "ALL:-aNULL"
+	tc = tcase_create("dropuser");
+	if (getuid() == 0) {
+		tcase_add_test(tc, defaults_dropuser_01);
+		tcase_add_test(tc, defaults_dropuser_02);
+	} else {
+		fprintf(stderr, "2 tests omitted because "
+		                "not running as root\n");
+	}
+	suite_add_tcase(s, tc);
 
-/*
- * Default elliptic curve for EC cipher suites.
- */
-#define DFLT_CURVE "prime256v1"
-
-#endif /* !DEFAULTS_H */
+	return s;
+}
 
 /* vim: set noet ft=c: */

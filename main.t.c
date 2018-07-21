@@ -79,6 +79,7 @@ Suite * base64_suite(void);
 Suite * url_suite(void);
 Suite * util_suite(void);
 Suite * pxythrmgr_suite(void);
+Suite * defaults_suite(void);
 
 int
 main(UNUSED int argc, UNUSED char *argv[])
@@ -102,6 +103,7 @@ main(UNUSED int argc, UNUSED char *argv[])
 	srunner_add_suite(sr, url_suite());
 	srunner_add_suite(sr, util_suite());
 	srunner_add_suite(sr, pxythrmgr_suite());
+	srunner_add_suite(sr, defaults_suite());
 	srunner_run_all(sr, CK_NORMAL);
 	nfail = srunner_ntests_failed(sr);
 	srunner_free(sr);

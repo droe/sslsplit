@@ -410,6 +410,9 @@ test: $(TARGET).test
 	$(MAKE) -C extra/pki testreqs session
 	./$(TARGET).test
 
+sudotest: test
+	sudo ./$(TARGET).test
+
 $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
