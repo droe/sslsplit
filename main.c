@@ -1006,7 +1006,7 @@ main(int argc, char *argv[])
 		               strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
-	log_dbg_printf("Dropped privs to user '%s' group '%s' chroot '%s'",
+	log_dbg_printf("Dropped privs to user '%s' group '%s' chroot '%s'\n",
 	               opts->dropuser, opts->dropgroup, opts->jaildir);
 	if (ssl_reinit() == -1) {
 		fprintf(stderr, "%s: failed to reinit SSL\n", argv0);
