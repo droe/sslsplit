@@ -250,12 +250,12 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine, proxyspec_t **o
 				spec->next = *opts_spec;
 				*opts_spec = spec;
 
-				// Defaults
+				/* Defaults */
 				spec->ssl = 0;
 				spec->http = 0;
 				spec->upgrade = 0;
 				if (!strcmp(**argv, "tcp")) {
-					// use defaults
+					/* use defaults */
 				} else
 				if (!strcmp(**argv, "ssl")) {
 					spec->ssl = 1;
@@ -1063,7 +1063,7 @@ opts_unset_debug(opts_t *opts)
 static int
 check_value_yesno(char *value, char *name, int line_num)
 {
-	// Compare strlen(s2)+1 chars to match exactly
+	/* Compare strlen(s2)+1 chars to match exactly */
 	if (!strncmp(value, "yes", 4)) {
 		return 1;
 	} else if (!strncmp(value, "no", 3)) {
@@ -1107,16 +1107,16 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 		}
 		line_num++;
 
-		// Skip white space
+		/* Skip white space */
 		for (name = line; *name == ' ' || *name == '\t'; name++); 
 
-		// Skip comments and empty lines
+		/* Skip comments and empty lines */
 		if ((name[0] == '\0') || (name[0] == '#') || (name[0] == ';') ||
 			(name[0] == '\r') || (name[0] == '\n')) {
 			continue;
 		}
 
-		// Skip to the end of option name and terminate it with '\0'
+		/* Skip to the end of option name and terminate it with '\0' */
 		for (n = name;; n++) {
 			if (*n == ' ' || *n == '\t') {
 				*n = '\0';
@@ -1129,21 +1129,21 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			}
 		}
 
-		// No value
+		/* No value */
 		if (n == NULL) {
 			fprintf(stderr, "Error in conf file: No value at line %d\n", line_num);
 			goto leave;
 		}
 		
-		// Skip white space before value
+		/* Skip white space before value */
 		while (*n == ' ' || *n == '\t') {
 			n++;
 		}
 
 		value = n;
 
-		// Find end of value and terminate it with '\0'
-		// Find first occurrence of trailing white space
+		/* Find end of value and terminate it with '\0'
+		   Find first occurrence of trailing white space */
 		value_end = NULL;
 		for (v = value;; v++) {
 			if (*v == '\0') {
@@ -1166,7 +1166,7 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			*value_end = '\0';
 		}
 
-		// Compare strlen(s2)+1 chars to match exactly
+        /* Compare strlen(s2)+1 chars to match exactly */
 		if (!strncmp(name, "CACert", 7)) {
 			opts_set_cacrt(opts, argv0, value);
 		} else if (!strncmp(name, "CAKey", 6)) {
@@ -1265,14 +1265,14 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			yes ? opts_set_debug(opts) : opts_unset_debug(opts);
 			fprintf(stderr, "Debug: %u\n", opts->debug);
 		} else if (!strncmp(name, "ProxySpec", 10)) {
-			// Use MAX_TOKEN instead of computing the actual number of tokens in value
+			/* Use MAX_TOKEN instead of computing the actual number of tokens in value */
 			char **argv = malloc(sizeof(char *) * MAX_TOKEN);
 			char **save_argv = argv;
 			int argc = 0;
 			char *p, *last = NULL;
 
 			for ((p = strtok_r(value, " ", &last)); p; (p = strtok_r(NULL, " ", &last))) {
-				// Limit max # token
+				/* Limit max # token */
 				if (argc < MAX_TOKEN) {
 					argv[argc++] = p;
 				} else {

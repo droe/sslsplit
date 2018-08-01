@@ -36,7 +36,7 @@
 
 #include <event2/util.h>
 
-// The longest natengine is "netfilter"
+/* The longest natengine is "netfilter" */
 #define NATENGINE_SIZE 10
 
 typedef int (*nat_lookup_cb_t)(struct sockaddr *, socklen_t *, evutil_socket_t,
