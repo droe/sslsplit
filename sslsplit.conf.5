@@ -47,6 +47,12 @@ Use CA cert (and key) to sign forged certs.
 .TP
 \fBCAKey STRING\fR
 Use CA key (and cert) to sign forged certs.
+.TP 
+\fBClientCert STRING\fR
+Use cert from pemfile when destination requests client certs.
+.TP
+\fBClientKey STRING\fR
+Use key from pemfile when destination requests client certs.
 .TP
 \fBCAChain STRING\fR
 Use CA chain from pemfile (intermediate and root CA certs).
@@ -154,7 +160,7 @@ Proxy specification: type listenaddr+port [natengine|targetaddr+port|"sni"+port]
 /etc/sslsplit/sslsplit.conf
 .SH "AUTHOR"
 .LP 
-The config file facility was added by Soner Tari <sonertari@gmail.com>
+The config file facility was added by Soner Tari <sonertari@gmail.com>.
 .SH "SEE ALSO"
 .LP 
 sslsplit(1)

@@ -334,38 +334,10 @@ main(int argc, char *argv[])
 				opts_set_passthrough(opts);
 				break;
 			case 'a':
-				if (opts->clientcrt)
-					X509_free(opts->clientcrt);
-				opts->clientcrt = ssl_x509_load(optarg);
-				if (!opts->clientcrt) {
-					fprintf(stderr, "%s: error loading cli"
-					                "ent cert from '%s':\n",
-					                argv0, optarg);
-					if (errno) {
-						fprintf(stderr, "%s\n",
-						        strerror(errno));
-					} else {
-						ERR_print_errors_fp(stderr);
-					}
-					exit(EXIT_FAILURE);
-				}
+				opts_set_clientcrt(opts, argv0, optarg);
 				break;
 			case 'b':
-				if (opts->clientkey)
-					EVP_PKEY_free(opts->clientkey);
-				opts->clientkey = ssl_key_load(optarg);
-				if (!opts->clientkey) {
-					fprintf(stderr, "%s: error loading cli"
-					                "ent key from '%s':\n",
-					                argv0, optarg);
-					if (errno) {
-						fprintf(stderr, "%s\n",
-						        strerror(errno));
-					} else {
-						ERR_print_errors_fp(stderr);
-					}
-					exit(EXIT_FAILURE);
-				}
+				opts_set_clientkey(opts, argv0, optarg);
 				break;
 #ifndef OPENSSL_NO_DH
 			case 'g':

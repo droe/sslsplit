@@ -480,7 +480,7 @@ opts_set_cacrt(opts_t *opts, const char *argv0, const char *optarg)
 		opts->dh = ssl_dh_load(optarg);
 	}
 #endif /* !OPENSSL_NO_DH */
-	fprintf(stderr, "CACrt: %s\n", optarg);
+	fprintf(stderr, "CACert: %s\n", optarg);
 }
 
 void
@@ -637,6 +637,48 @@ void
 opts_unset_passthrough(opts_t *opts)
 {
 	opts->passthrough = 0;
+}
+
+void
+opts_set_clientcrt(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->clientcrt)
+		X509_free(opts->clientcrt);
+	opts->clientcrt = ssl_x509_load(optarg);
+	if (!opts->clientcrt) {
+		fprintf(stderr, "%s: error loading cli"
+						"ent cert from '%s':\n",
+						argv0, optarg);
+		if (errno) {
+			fprintf(stderr, "%s\n",
+					strerror(errno));
+		} else {
+			ERR_print_errors_fp(stderr);
+		}
+		exit(EXIT_FAILURE);
+	}
+	fprintf(stderr, "ClientCert: %s\n", optarg);
+}
+
+void
+opts_set_clientkey(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->clientkey)
+		EVP_PKEY_free(opts->clientkey);
+	opts->clientkey = ssl_key_load(optarg);
+	if (!opts->clientkey) {
+		fprintf(stderr, "%s: error loading cli"
+						"ent key from '%s':\n",
+						argv0, optarg);
+		if (errno) {
+			fprintf(stderr, "%s\n",
+					strerror(errno));
+		} else {
+			ERR_print_errors_fp(stderr);
+		}
+		exit(EXIT_FAILURE);
+	}
+	fprintf(stderr, "ClientKey: %s\n", optarg);
 }
 
 #ifndef OPENSSL_NO_DH
@@ -1177,6 +1219,10 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			opts_set_cacrt(opts, argv0, value);
 		} else if (!strncmp(name, "CAKey", 6)) {
 			opts_set_cakey(opts, argv0, value);
+		} else if (!strncmp(name, "ClientCert", 11)) {
+			opts_set_clientcrt(opts, argv0, value);
+		} else if (!strncmp(name, "ClientKey", 10)) {
+			opts_set_clientkey(opts, argv0, value);
 		} else if (!strncmp(name, "CAChain", 8)) {
 			opts_set_chain(opts, argv0, value);
 		} else if (!strncmp(name, "LeafCerts", 10)) {

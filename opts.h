@@ -138,6 +138,8 @@ void opts_set_certgendir_writeall(opts_t *, const char *, const char *) NONNULL(
 void opts_set_certgendir_writegencerts(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_deny_ocsp(opts_t *) NONNULL(1);
 void opts_set_passthrough(opts_t *) NONNULL(1);
+void opts_set_clientcrt(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_clientkey(opts_t *, const char *, const char *) NONNULL(1,2,3);
 #ifndef OPENSSL_NO_DH
 void opts_set_dh(opts_t *, const char *, const char *) NONNULL(1,2,3);
 #endif /* !OPENSSL_NO_DH */
