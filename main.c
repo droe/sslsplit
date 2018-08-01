@@ -296,8 +296,8 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:"
-	                    "OPs:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:")) != -1) {
+	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:OPa:"
+	                    "b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
