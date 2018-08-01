@@ -103,6 +103,8 @@ typedef struct opts {
 	EVP_PKEY *cakey;
 	EVP_PKEY *key;
 	STACK_OF(X509) *chain;
+	X509 *clientcrt;
+	EVP_PKEY *clientkey;
 #ifndef OPENSSL_NO_DH
 	DH *dh;
 #endif /* !OPENSSL_NO_DH */

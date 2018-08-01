@@ -881,6 +881,36 @@ ssl_x509_serial_copyrand(X509 *dstcrt, X509 *srccrt)
 }
 
 /*
+ * Returns the appropriate key usage strings for the type of server key.
+ * Return value should conceptually be const, but OpenSSL does not use const
+ * appropriately.
+ */
+static char *
+ssl_key_usage_for_key(EVP_PKEY *key)
+{
+	switch (EVP_PKEY_type(EVP_PKEY_base_id(key))) {
+#ifndef OPENSSL_NO_RSA
+	case EVP_PKEY_RSA:
+		return "keyEncipherment,digitalSignature";
+#endif /* !OPENSSL_NO_RSA */
+#ifndef OPENSSL_NO_DH
+	case EVP_PKEY_DH:
+		return "keyAgreement";
+#endif /* !OPENSSL_NO_DH */
+#ifndef OPENSSL_NO_DSA
+	case EVP_PKEY_DSA:
+		return "digitalSignature";
+#endif /* !OPENSSL_NO_DSA */
+#ifndef OPENSSL_NO_ECDSA
+	case EVP_PKEY_EC:
+		return "digitalSignature,keyAgreement";
+#endif /* !OPENSSL_NO_ECDSA */
+	default:
+		return "keyEncipherment,keyAgreement,digitalSignature";
+	}
+}
+
+/*
  * Create a fake X509v3 certificate, signed by the provided CA,
  * based on the original certificate retrieved from the real server.
  * The returned certificate is created using X509_new() and thus must
@@ -933,12 +963,9 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 	if (rv == -1)
 		goto errout;
 
-	rv = ssl_x509_v3ext_copy_by_nid(crt, origcrt,
-	                                NID_key_usage);
-	if (rv == 0)
-		rv = ssl_x509_v3ext_add(&ctx, crt, "keyUsage",
-		                                   "digitalSignature,"
-		                                   "keyEncipherment");
+	/* key usage depends on the key type, do not copy from original */
+	rv = ssl_x509_v3ext_add(&ctx, crt, "keyUsage",
+	                        ssl_key_usage_for_key(key));
 	if (rv == -1)
 		goto errout;
 

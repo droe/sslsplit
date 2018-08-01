@@ -74,6 +74,7 @@ With OpenSSL, libevent 2.x, pkg-config and check available, run:
 
     make
     make test       # optional unit tests
+    make sudotest   # optional unit tests requiring privileges
     make install    # optional install
 
 Dependencies are autoconfigured using pkg-config.  If dependencies are not
@@ -82,7 +83,7 @@ respective locations manually by setting `OPENSSL_BASE`, `LIBEVENT_BASE` and/or
 `CHECK_BASE` to the respective prefixes.
 
 You can override the default install prefix (`/usr/local`) by setting `PREFIX`.
-For more build options see `GNUmakefile`.
+For more build options see `GNUmakefile` and `defaults.h`.
 
 
 ## Documentation

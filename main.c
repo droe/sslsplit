@@ -139,6 +139,8 @@ main_usage(void)
 "  -O          deny all OCSP requests on all proxyspecs\n"
 "  -P          passthrough SSL connections if they cannot be split because of\n"
 "              client cert auth or no matching cert and no CA (default: drop)\n"
+"  -a pemfile  use cert from pemfile when destination requests client certs\n"
+"  -b pemfile  use key from pemfile when destination requests client certs\n"
 #ifndef OPENSSL_NO_DH
 "  -g pemfile  use DH group params from pemfile (default: keyfiles or auto)\n"
 #define OPT_g "g:"
@@ -330,6 +332,40 @@ main(int argc, char *argv[])
 				break;
 			case 'P':
 				opts_set_passthrough(opts);
+				break;
+			case 'a':
+				if (opts->clientcrt)
+					X509_free(opts->clientcrt);
+				opts->clientcrt = ssl_x509_load(optarg);
+				if (!opts->clientcrt) {
+					fprintf(stderr, "%s: error loading cli"
+					                "ent cert from '%s':\n",
+					                argv0, optarg);
+					if (errno) {
+						fprintf(stderr, "%s\n",
+						        strerror(errno));
+					} else {
+						ERR_print_errors_fp(stderr);
+					}
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'b':
+				if (opts->clientkey)
+					EVP_PKEY_free(opts->clientkey);
+				opts->clientkey = ssl_key_load(optarg);
+				if (!opts->clientkey) {
+					fprintf(stderr, "%s: error loading cli"
+					                "ent key from '%s':\n",
+					                argv0, optarg);
+					if (errno) {
+						fprintf(stderr, "%s\n",
+						        strerror(errno));
+					} else {
+						ERR_print_errors_fp(stderr);
+					}
+					exit(EXIT_FAILURE);
+				}
 				break;
 #ifndef OPENSSL_NO_DH
 			case 'g':
@@ -699,6 +735,10 @@ main(int argc, char *argv[])
 		               strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
+	log_dbg_printf("Dropped privs to user %s group %s chroot %s\n",
+	               opts->dropuser  ? opts->dropuser  : "-",
+	               opts->dropgroup ? opts->dropgroup : "-",
+	               opts->jaildir   ? opts->jaildir   : "-");
 	if (ssl_reinit() == -1) {
 		fprintf(stderr, "%s: failed to reinit SSL\n", argv0);
 		goto out_sslreinit_failed;
