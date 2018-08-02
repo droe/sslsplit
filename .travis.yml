@@ -1,8 +1,15 @@
 language: c
-compiler:
-  - gcc
-  - clang
 script: make && make travis && ./sslsplit -V
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libssl-dev libevent-dev check
+matrix:
+  include:
+    - os: linux
+      compiler:
+        - gcc
+        - clang
+      before_install:
+        - sudo apt-get update -qq
+        - sudo apt-get install -qq libssl-dev libevent-dev check
+    - os: osx
+      before_install:
+        - brew install libevent
+        - brew install check
