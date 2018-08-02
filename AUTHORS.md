@@ -3,8 +3,8 @@
 SSLsplit was written by
 [Daniel Roethlisberger](https://github.com/droe).
 SSLsplit is currently maintained by
-[Soner Tari](https://github.com/sonertari) and
-[Daniel Roethlisberger](https://github.com/droe).
+[Daniel Roethlisberger](https://github.com/droe) and
+[Soner Tari](https://github.com/sonertari).
 
 The following individuals have contributed to the codebase by submitting
 patches or pull requests, in chronological order of their first contribution:
