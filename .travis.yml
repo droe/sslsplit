@@ -13,6 +13,8 @@ matrix:
         - sudo apt-get update -qq
         - sudo apt-get install -qq libssl-dev libevent-dev check
     - os: osx
+      before_script: |
+        export PATH=$(brew --prefix)/bin:$(brew --prefix)/sbin:$PATH
       before_install:
         - brew install openssl
         - brew install libevent
