@@ -116,7 +116,7 @@ session.pem: server.pem
 	$(OPENSSL) s_server -accept 46143 -cert server.pem -quiet $(NO_SSL2) & \
 		pid=$$! ; \
 		sleep 1 ; \
-		echo q | $(OPENSSL) s_client -connect localhost:46143 \
+		echo q | $(OPENSSL) s_client -connect 127.0.0.1:46143 \
 			-quiet -no_ign_eof -sess_out $@ ; \
 		kill $$pid
 	test -r $@
