@@ -3,9 +3,12 @@ script: make && make travis && ./sslsplit -V
 matrix:
   include:
     - os: linux
-      compiler:
-        - gcc
-        - clang
+      compiler: gcc
+      before_install:
+        - sudo apt-get update -qq
+        - sudo apt-get install -qq libssl-dev libevent-dev check
+    - os: linux
+      compiler: clang
       before_install:
         - sudo apt-get update -qq
         - sudo apt-get install -qq libssl-dev libevent-dev check
