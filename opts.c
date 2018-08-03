@@ -63,6 +63,7 @@ opts_new(void)
 	opts->sslcomp = 1;
 	opts->chain = sk_X509_new_null();
 	opts->sslmethod = SSLv23_method;
+	opts->allow_wrong_host = 1;
 
 	return opts;
 }
@@ -1108,6 +1109,30 @@ opts_unset_debug(opts_t *opts)
 	opts->debug = 0;
 }
 
+static void
+opts_set_verify_peer(opts_t *opts)
+{
+	opts->verify_peer = 1;
+}
+
+static void
+opts_unset_verify_peer(opts_t *opts)
+{
+	opts->verify_peer = 0;
+}
+
+static void
+opts_set_allow_wrong_host(opts_t *opts)
+{
+	opts->allow_wrong_host = 1;
+}
+
+static void
+opts_unset_allow_wrong_host(opts_t *opts)
+{
+	opts->allow_wrong_host = 0;
+}
+
 static int
 check_value_yesno(char *value, char *name, int line_num)
 {
@@ -1334,6 +1359,20 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			
 			proxyspec_parse(&argc, &argv, natengine, &opts->spec);
 			free(save_argv);
+		} else if (!strncasecmp(name, "VerifyPeer", 11)) {
+			yes = check_value_yesno(value, "VerifyPeer", line_num);
+			if (yes == -1) {
+				goto leave;
+			}
+			yes ? opts_set_verify_peer(opts) : opts_unset_verify_peer(opts);
+			fprintf(stderr, "VerifyPeer: %u\n", opts->verify_peer);
+		} else if (!strncasecmp(name, "AllowWrongHost", 15)) {
+			yes = check_value_yesno(value, "AllowWrongHost", line_num);
+			if (yes == -1) {
+				goto leave;
+			}
+			yes ? opts_set_allow_wrong_host(opts) : opts_unset_allow_wrong_host(opts);
+			fprintf(stderr, "AllowWrongHost: %u\n", opts->allow_wrong_host);
 		} else {
 			fprintf(stderr, "Error in conf file: Unknown option '%s' at line %d\n", name, line_num);
 			goto leave;
