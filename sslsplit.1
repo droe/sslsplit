@@ -82,7 +82,7 @@ is available, instead of generating forged ones.  SSLsplit supports NULL-prefix
 CN certificates but otherwise does not implement exploits against specific
 certificate verification vulnerabilities in SSL/TLS stacks.
 .LP
-SSLsplit implements a number of defences against mechanisms which would
+SSLsplit implements a number of defenses against mechanisms which would
 normally prevent MitM attacks or make them more difficult.
 SSLsplit can deny OCSP requests in a generic way.
 For HTTP and HTTPS connections, SSLsplit mangles headers to
@@ -240,7 +240,7 @@ parsable by OpenSSL, or if the method is \fBPOST\fP and the \fBContent-Type\fP
 is \fBapplication/ocsp-request\fP.
 For this to be effective, SSLsplit must be handling traffic destined to the
 port used by the OCSP server.  In particular, SSLsplit must be configured to
-receive traffic to all ports used by OCSP servers of targetted certificates
+receive traffic to all ports used by OCSP servers of targeted certificates
 within the \fIcertdir\fP specified by \fB-t\fP.
 .TP
 .B \-p \fIpidfile\fP
@@ -428,7 +428,7 @@ Use the Server Name Indication (SNI) hostname sent by the client in the
 Client Hello SSL/TLS message to determine the IP address of the server to
 connect to.  This only works for \fBssl\fP and \fBhttps\fP \fIproxyspecs\fP and
 needs a port or service name as an argument.
-Because this requires DNS lookups, it is preferrable to use NAT engine
+Because this requires DNS lookups, it is preferable to use NAT engine
 lookups (see above), except when that is not possible, such as when there is
 no supported NAT engine or when running \fBsslsplit\fP on a different system
 than the NAT rules redirecting the actual connections.
@@ -662,7 +662,7 @@ Intercepting IMAP/IMAPS using the same settings:
          tcp ::1 10143  tcp 127.0.0.1 10143\fP
 .fi
 .LP
-A more targetted setup, HTTPS only, using certificate/chain/key files from
+A more targeted setup, HTTPS only, using certificate/chain/key files from
 \fB/path/to/cert.d\fP and statically redirecting to \fBwww.example.org\fP
 instead of querying a NAT engine:
 .LP
@@ -724,7 +724,7 @@ authorityKeyIdentifier  = keyid:always,issuer:always
 SSLsplit is able to handle a relatively high number of listeners and
 connections due to a multithreaded, event based architecture based on libevent,
 taking advantage of platform specific select() replacements such as kqueue.
-The main thread handles the listeners and signalling, while a number of worker
+The main thread handles the listeners and signaling, while a number of worker
 threads equal to twice the number of CPU cores is used for handling the actual
 connections in separate event bases, including the CPU-intensive SSL/TLS
 handling.
@@ -733,7 +733,7 @@ Care has been taken to choose well-performing data structures for caching
 certificates and SSL sessions.  Logging is implemented in separate disk writer
 threads to ensure that socket event handling threads don't have to block on
 disk I/O.
-DNS lookups are performed asynchroniously.
+DNS lookups are performed asynchronously.
 SSLsplit uses SSL session caching on both ends to minimize the amount of full
 SSL handshakes, but even then, the limiting factor in handling SSL connections
 are the actual bignum computations.
