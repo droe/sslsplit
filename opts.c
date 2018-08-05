@@ -1366,13 +1366,13 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			}
 			yes ? opts_set_verify_peer(opts) : opts_unset_verify_peer(opts);
 			fprintf(stderr, "VerifyPeer: %u\n", opts->verify_peer);
-		} else if (!strncasecmp(name, "AllowWrongHost", 15)) {
-			yes = check_value_yesno(value, "AllowWrongHost", line_num);
+		} else if (!strncasecmp(name, "AddSNIToCertificate", 20)) {
+			yes = check_value_yesno(value, "AddSNIToCertificate", line_num);
 			if (yes == -1) {
 				goto leave;
 			}
 			yes ? opts_set_allow_wrong_host(opts) : opts_unset_allow_wrong_host(opts);
-			fprintf(stderr, "AllowWrongHost: %u\n", opts->allow_wrong_host);
+			fprintf(stderr, "AddSNIToCertificate: %u\n", opts->allow_wrong_host);
 		} else {
 			fprintf(stderr, "Error in conf file: Unknown option '%s' at line %d\n", name, line_num);
 			goto leave;

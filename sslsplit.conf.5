@@ -158,8 +158,8 @@ Verify peer using default certificates.
 .br
 Default: no
 .TP
-\fBAllowWrongHost BOOL\fR
-Allow wrong host names in certificates.
+\fBAddSNIToCertificate BOOL\fR
+When disabled, never add the SNI to forged certificates, even if the SNI provided by the client does not match the server certificate's CN/SAN. Helps pass the wrong.host test at https://badssl.com.
 .br
 Default: yes
 .TP 
