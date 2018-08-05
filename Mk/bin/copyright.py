@@ -62,6 +62,8 @@ def mangle(outfile, infile):
 for fn in sys.argv[1:]:
     with open(fn, 'r') as infile:
         with open(fn + '~', 'w') as outfile:
+            mode = os.fstat(infile.fileno()).st_mode
+            os.fchmod(outfile.fileno(), mode)
             mangle(outfile, infile)
     os.rename(fn + '~', fn)
 
