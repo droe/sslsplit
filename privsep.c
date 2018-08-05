@@ -312,6 +312,7 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 	}
 	case PRIVSEP_REQ_OPENFILE_P:
 		mkpath = 1;
+		/* fall through */
 	case PRIVSEP_REQ_OPENFILE: {
 		char *fn;
 		int fd;

@@ -1,0 +1,166 @@
+.\" SSLsplit - transparent SSL/TLS interception
+.\" Copyright (c) 2009-2018, Daniel Roethlisberger <daniel@roe.ch>.
+.\" All rights reserved.
+.\" https://www.roe.ch/SSLsplit
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions, and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.TH "sslsplit.conf" "5" "May 7, 2018" "sslsplit 0.5.4" "SSLsplit"
+.SH "NAME"
+.LP 
+\fBsslsplit.conf\fR \- Configuration file for SSLsplit
+.SH "DESCRIPTION"
+.LP 
+The file sslsplit.conf configures SSLsplit, sslsplit(1).
+.SH "FILE FORMAT"
+The file consists of comments and options with arguments. Each line which starts with a hash (\fB#\fR) symbol is ignored by the parser. Options and arguments are of the form \fBOption Argument\fR. The arguments are of the following types:
+.TP
+\fBBOOL\fR 
+Boolean value (yes/no).
+.TP 
+\fBSTRING\fR
+String.
+.SH "DIRECTIVES"
+.LP 
+When an option is not used (hashed or doesn't exist in the configuration file) sslsplit takes a default action.
+.TP 
+\fBCACert STRING\fR
+Use CA cert (and key) to sign forged certs.
+.TP
+\fBCAKey STRING\fR
+Use CA key (and cert) to sign forged certs.
+.TP 
+\fBClientCert STRING\fR
+Use cert from pemfile when destination requests client certs.
+.TP
+\fBClientKey STRING\fR
+Use key from pemfile when destination requests client certs.
+.TP
+\fBCAChain STRING\fR
+Use CA chain from pemfile (intermediate and root CA certs).
+.TP
+\fBLeafCerts STRING\fR
+Use key from pemfile for leaf certs.
+.br
+Default: generate
+.TP
+\fBCRL STRING\fR
+Use URL as CRL distribution point for all forged certs.
+.TP
+\fBTargetCertDir STRING\fR
+Use cert+chain+key PEM files from certdir to target all sites matching the common names (non-matching: generate if CA).
+.TP
+\fBWriteGenCertsDir STRING\fR
+Write leaf key and only generated certificates to gendir.
+.TP
+\fBWriteAllCertsDir STRING\fR
+Write leaf key and all certificates to gendir.
+.TP
+\fBDenyOCSP BOOL\fR
+Deny all OCSP requests on all proxyspecs.
+.TP
+\fBPassthrough BOOL\fR
+Passthrough SSL connections if they cannot be split because of client cert auth or no matching cert and no CA.
+.br 
+Default: drop
+.TP
+\fBDHGroupParams STRING\fR
+Use DH group params from pemfile.
+.br 
+Default: keyfiles or auto
+.TP
+\fBECDHCurve STRING\fR
+Use ECDH named curve.
+.br 
+Default: prime256v1
+.TP
+\fBSSLCompression BOOL\fR
+Enable/disable SSL/TLS compression on all connections.
+.TP
+\fBForceSSLProto STRING\fR
+Force SSL/TLS protocol version only.
+.br 
+Default: all
+.TP
+\fBDisableSSLProto STRING\fR
+Disable SSL/TLS protocol version.
+.br 
+Default: none
+.TP
+\fBCiphers STRING\fR
+Use the given OpenSSL cipher suite spec.
+.br 
+Default: ALL:-aNULL
+.TP 
+\fBNATEngine STRING\fR
+Specify default NAT engine to use.
+.TP 
+\fBUser STRING\fR
+Drop privileges to user.
+.br 
+Default: nobody, if run as root
+.TP
+\fBGroup STRING\fR
+Drop privileges to group.
+.br
+Default: Primary group of user
+.TP 
+\fBChroot STRING\fR
+chroot() to jaildir (impacts sni proxyspecs, see sslsplit(1)).
+.TP 
+\fBPidFile STRING\fR
+Write pid to file.
+.TP 
+\fBConnectLog STRING\fR
+Connect log: log one line summary per connection to logfile.
+.TP 
+\fBContentLog STRING\fR
+Content log: full data to file or named pipe (excludes ContentLogDir/ContentLogPathSpec).
+.TP 
+\fBContentLogDir STRING\fR
+Content log: full data to separate files in dir (excludes ContentLog/ContentLogPathSpec).
+.TP 
+\fBContentLogPathSpec STRING\fR
+Content log: full data to sep files with %% subst (excludes ContentLog/ContentLogDir).
+.TP 
+\fBLogProcInfo BOOL\fR
+Look up local process owning each connection for logging.
+.TP 
+\fBMasterKeyLog STRING\fR
+Log master keys to logfile in SSLKEYLOGFILE format.
+.TP 
+\fBDaemon BOOL\fR
+Daemon mode: run in background, log error messages to syslog.
+.TP 
+\fBDebug BOOL\fR
+Debug mode: run in foreground, log debug messages on stderr.
+.TP 
+\fBProxySpec STRING\fR
+Proxy specification: type listenaddr+port [natengine|targetaddr+port|"sni"+port]. Multiple specs are allowed, one on each line.
+.SH "FILES"
+.LP 
+/etc/sslsplit/sslsplit.conf
+.SH "AUTHOR"
+.LP 
+The config file facility was added by Soner Tari <sonertari@gmail.com>.
+.SH "SEE ALSO"
+.LP 
+sslsplit(1)
