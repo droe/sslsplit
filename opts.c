@@ -1123,7 +1123,7 @@ check_value_yesno(const char *value, const char *name, int line_num)
 
 #define MAX_TOKEN 10
 
-int
+static int
 set_option(opts_t *opts, const char *argv0, const char *name, char *value, char **natengine, int line_num)
 {
 	int yes;
@@ -1267,7 +1267,7 @@ leave:
  * Separator param is needed for command line options only.
  * Conf file option separator is ' '.
  */
-int
+static int
 get_name_value(char **name, char **value, const char sep)
 {
 	char *n, *v, *value_end;
