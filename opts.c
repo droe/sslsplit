@@ -481,7 +481,7 @@ opts_set_cacrt(opts_t *opts, const char *argv0, const char *optarg)
 		opts->dh = ssl_dh_load(optarg);
 	}
 #endif /* !OPENSSL_NO_DH */
-	fprintf(stderr, "CACert: %s\n", optarg);
+	log_dbg_printf("CACert: %s\n", optarg);
 }
 
 void
@@ -516,7 +516,7 @@ opts_set_cakey(opts_t *opts, const char *argv0, const char *optarg)
 		opts->dh = ssl_dh_load(optarg);
 	}
 #endif /* !OPENSSL_NO_DH */
-	fprintf(stderr, "CAKey: %s\n", optarg);
+	log_dbg_printf("CAKey: %s\n", optarg);
 }
 
 void
@@ -535,7 +535,7 @@ opts_set_chain(opts_t *opts, const char *argv0, const char *optarg)
 		}
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "CAChain: %s\n", optarg);
+	log_dbg_printf("CAChain: %s\n", optarg);
 }
 
 void
@@ -561,7 +561,7 @@ opts_set_key(opts_t *opts, const char *argv0, const char *optarg)
 		opts->dh = ssl_dh_load(optarg);
 	}
 #endif /* !OPENSSL_NO_DH */
-	fprintf(stderr, "LeafCerts: %s\n", optarg);
+	log_dbg_printf("LeafCerts: %s\n", optarg);
 }
 
 void
@@ -570,7 +570,7 @@ opts_set_crl(opts_t *opts, const char *optarg)
 	if (opts->crlurl)
 		free(opts->crlurl);
 	opts->crlurl = strdup(optarg);
-	fprintf(stderr, "CRL: %s\n", opts->crlurl);
+	log_dbg_printf("CRL: %s\n", opts->crlurl);
 }
 
 void
@@ -587,7 +587,7 @@ opts_set_tgcrtdir(opts_t *opts, const char *argv0, const char *optarg)
 	opts->tgcrtdir = strdup(optarg);
 	if (!opts->tgcrtdir)
 		oom_die(argv0);
-	fprintf(stderr, "TargetCertDir: %s\n", opts->tgcrtdir);
+	log_dbg_printf("TargetCertDir: %s\n", opts->tgcrtdir);
 }
 
 static void
@@ -605,7 +605,8 @@ opts_set_certgendir_writegencerts(opts_t *opts, const char *argv0, const char *o
 {
 	opts->certgen_writeall = 0;
 	set_certgendir(opts, argv0, optarg);
-	fprintf(stderr, "WriteGenCertsDir: certgendir=%s, writeall=%u\n", opts->certgendir, opts->certgen_writeall);
+	log_dbg_printf("WriteGenCertsDir: certgendir=%s, writeall=%u\n",
+	               opts->certgendir, opts->certgen_writeall);
 }
 
 void
@@ -613,7 +614,8 @@ opts_set_certgendir_writeall(opts_t *opts, const char *argv0, const char *optarg
 {
 	opts->certgen_writeall = 1;
 	set_certgendir(opts, argv0, optarg);
-	fprintf(stderr, "WriteAllCertsDir: certgendir=%s, writeall=%u\n", opts->certgendir, opts->certgen_writeall);
+	log_dbg_printf("WriteAllCertsDir: certgendir=%s, writeall=%u\n",
+	               opts->certgendir, opts->certgen_writeall);
 }
 
 void
@@ -658,7 +660,7 @@ opts_set_clientcrt(opts_t *opts, const char *argv0, const char *optarg)
 		}
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "ClientCert: %s\n", optarg);
+	log_dbg_printf("ClientCert: %s\n", optarg);
 }
 
 void
@@ -679,7 +681,7 @@ opts_set_clientkey(opts_t *opts, const char *argv0, const char *optarg)
 		}
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "ClientKey: %s\n", optarg);
+	log_dbg_printf("ClientKey: %s\n", optarg);
 }
 
 #ifndef OPENSSL_NO_DH
@@ -701,7 +703,7 @@ opts_set_dh(opts_t *opts, const char *argv0, const char *optarg)
 		}
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "DHGroupParams: %s\n", optarg);
+	log_dbg_printf("DHGroupParams: %s\n", optarg);
 }
 #endif /* !OPENSSL_NO_DH */
 
@@ -722,7 +724,7 @@ opts_set_ecdhcurve(opts_t *opts, const char *argv0, const char *optarg)
 	opts->ecdhcurve = strdup(optarg);
 	if (!opts->ecdhcurve)
 		oom_die(argv0);
-	fprintf(stderr, "ECDHCurve: %s\n", opts->ecdhcurve);
+	log_dbg_printf("ECDHCurve: %s\n", opts->ecdhcurve);
 }
 #endif /* !OPENSSL_NO_ECDH */
 
@@ -746,7 +748,7 @@ opts_set_ciphers(opts_t *opts, const char *argv0, const char *optarg)
 	opts->ciphers = strdup(optarg);
 	if (!opts->ciphers)
 		oom_die(argv0);
-	fprintf(stderr, "Ciphers: %s\n", opts->ciphers);
+	log_dbg_printf("Ciphers: %s\n", opts->ciphers);
 }
 
 /*
@@ -823,7 +825,7 @@ opts_force_proto(opts_t *opts, const char *argv0, const char *optarg)
 		                argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "ForceSSLProto: %s\n", optarg);
+	log_dbg_printf("ForceSSLProto: %s\n", optarg);
 }
 
 /*
@@ -863,7 +865,7 @@ opts_disable_proto(opts_t *opts, const char *argv0, const char *optarg)
 		                argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "DisableSSLProto: %s\n", optarg);
+	log_dbg_printf("DisableSSLProto: %s\n", optarg);
 }
 
 void
@@ -880,7 +882,7 @@ opts_set_user(opts_t *opts, const char *argv0, const char *optarg)
 	opts->dropuser = strdup(optarg);
 	if (!opts->dropuser)
 		oom_die(argv0);
-	fprintf(stderr, "User: %s\n", opts->dropuser);
+	log_dbg_printf("User: %s\n", opts->dropuser);
 }
 
 void
@@ -898,7 +900,7 @@ opts_set_group(opts_t *opts, const char *argv0, const char *optarg)
 	opts->dropgroup = strdup(optarg);
 	if (!opts->dropgroup)
 		oom_die(argv0);
-	fprintf(stderr, "Group: %s\n", opts->dropgroup);
+	log_dbg_printf("Group: %s\n", opts->dropgroup);
 }
 
 void
@@ -921,7 +923,7 @@ opts_set_jaildir(opts_t *opts, const char *argv0, const char *optarg)
 						strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(stderr, "Chroot: %s\n", opts->jaildir);
+	log_dbg_printf("Chroot: %s\n", opts->jaildir);
 }
 
 void
@@ -932,7 +934,7 @@ opts_set_pidfile(opts_t *opts, const char *argv0, const char *optarg)
 	opts->pidfile = strdup(optarg);
 	if (!opts->pidfile)
 		oom_die(argv0);
-	fprintf(stderr, "PidFile: %s\n", opts->pidfile);
+	log_dbg_printf("PidFile: %s\n", opts->pidfile);
 }
 
 void
@@ -943,7 +945,7 @@ opts_set_connectlog(opts_t *opts, const char *argv0, const char *optarg)
 	opts->connectlog = strdup(optarg);
 	if (!opts->connectlog)
 		oom_die(argv0);
-	fprintf(stderr, "ConnectLog: %s\n", opts->connectlog);
+	log_dbg_printf("ConnectLog: %s\n", opts->connectlog);
 }
 
 void
@@ -956,7 +958,7 @@ opts_set_contentlog(opts_t *opts, const char *argv0, const char *optarg)
 		oom_die(argv0);
 	opts->contentlog_isdir = 0;
 	opts->contentlog_isspec = 0;
-	fprintf(stderr, "ContentLog: %s\n", opts->contentlog);
+	log_dbg_printf("ContentLog: %s\n", opts->contentlog);
 }
 
 void
@@ -981,7 +983,7 @@ opts_set_contentlogdir(opts_t *opts, const char *argv0, const char *optarg)
 	}
 	opts->contentlog_isdir = 1;
 	opts->contentlog_isspec = 0;
-	fprintf(stderr, "ContentLogDir: %s\n", opts->contentlog);
+	log_dbg_printf("ContentLogDir: %s\n", opts->contentlog);
 }
 
 void
@@ -1055,7 +1057,8 @@ opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 	opts->contentlog_isspec = 1;
 	free(lhs);
 	free(rhs);
-	fprintf(stderr, "ContentLogPathSpec: basedir=%s, %s\n", opts->contentlog_basedir, opts->contentlog);
+	log_dbg_printf("ContentLogPathSpec: basedir=%s, %s\n",
+	               opts->contentlog_basedir, opts->contentlog);
 }
 
 #ifdef HAVE_LOCAL_PROCINFO
@@ -1080,7 +1083,7 @@ opts_set_masterkeylog(opts_t *opts, const char *argv0, const char *optarg)
 	opts->masterkeylog = strdup(optarg);
 	if (!opts->masterkeylog)
 		oom_die(argv0);
-	fprintf(stderr, "MasterKeyLog: %s\n", opts->masterkeylog);
+	log_dbg_printf("MasterKeyLog: %s\n", opts->masterkeylog);
 }
 
 void
@@ -1181,14 +1184,14 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 			goto leave;
 		}
 		yes ? opts_set_deny_ocsp(opts) : opts_unset_deny_ocsp(opts);
-		fprintf(stderr, "DenyOCSP: %u\n", opts->deny_ocsp);
+		log_dbg_printf("DenyOCSP: %u\n", opts->deny_ocsp);
 	} else if (!strncmp(name, "Passthrough", 12)) {
 		yes = check_value_yesno(value, "Passthrough", line_num);
 		if (yes == -1) {
 			goto leave;
 		}
 		yes ? opts_set_passthrough(opts) : opts_unset_passthrough(opts);
-		fprintf(stderr, "Passthrough: %u\n", opts->passthrough);
+		log_dbg_printf("Passthrough: %u\n", opts->passthrough);
 #ifndef OPENSSL_NO_DH
 	} else if (!strncmp(name, "DHGroupParams", 14)) {
 		opts_set_dh(opts, argv0, value);
@@ -1204,7 +1207,7 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 			goto leave;
 		}
 		yes ? opts_set_sslcomp(opts) : opts_unset_sslcomp(opts);
-		fprintf(stderr, "SSLCompression: %u\n", opts->sslcomp);
+		log_dbg_printf("SSLCompression: %u\n", opts->sslcomp);
 #endif /* SSL_OP_NO_COMPRESSION */
 	} else if (!strncmp(name, "ForceSSLProto", 14)) {
 		opts_force_proto(opts, argv0, value);
@@ -1218,7 +1221,7 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 		*natengine = strdup(value);
 		if (!*natengine)
 			goto leave;
-		fprintf(stderr, "NATEngine: %s\n", *natengine);
+		log_dbg_printf("NATEngine: %s\n", *natengine);
 	} else if (!strncmp(name, "User", 5)) {
 		opts_set_user(opts, argv0, value);
 	} else if (!strncmp(name, "Group", 6)) {
@@ -1242,7 +1245,7 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 			goto leave;
 		}
 		yes ? opts_set_lprocinfo(opts) : opts_unset_lprocinfo(opts);
-		fprintf(stderr, "LogProcInfo: %u\n", opts->lprocinfo);
+		log_dbg_printf("LogProcInfo: %u\n", opts->lprocinfo);
 #endif /* HAVE_LOCAL_PROCINFO */
 	} else if (!strncmp(name, "MasterKeyLog", 13)) {
 		opts_set_masterkeylog(opts, argv0, value);
@@ -1252,14 +1255,14 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 			goto leave;
 		}
 		yes ? opts_set_daemon(opts) : opts_unset_daemon(opts);
-		fprintf(stderr, "Daemon: %u\n", opts->detach);
+		log_dbg_printf("Daemon: %u\n", opts->detach);
 	} else if (!strncmp(name, "Debug", 6)) {
 		yes = check_value_yesno(value, "Debug", line_num);
 		if (yes == -1) {
 			goto leave;
 		}
 		yes ? opts_set_debug(opts) : opts_unset_debug(opts);
-		fprintf(stderr, "Debug: %u\n", opts->debug);
+		log_dbg_printf("Debug: %u\n", opts->debug);
 	} else if (!strncmp(name, "ProxySpec", 10)) {
 		/* Use MAX_TOKEN instead of computing the actual number of tokens in value */
 		char **argv = malloc(sizeof(char *) * MAX_TOKEN);
@@ -1284,14 +1287,15 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 			goto leave;
 		}
 		yes ? opts_set_verify_peer(opts) : opts_unset_verify_peer(opts);
-		fprintf(stderr, "VerifyPeer: %u\n", opts->verify_peer);
+		log_dbg_printf("VerifyPeer: %u\n", opts->verify_peer);
 	} else if (!strncasecmp(name, "AddSNIToCertificate", 20)) {
 		yes = check_value_yesno(value, "AddSNIToCertificate", line_num);
 		if (yes == -1) {
 			goto leave;
 		}
 		yes ? opts_set_allow_wrong_host(opts) : opts_unset_allow_wrong_host(opts);
-		fprintf(stderr, "AddSNIToCertificate: %u\n", opts->allow_wrong_host);
+		log_dbg_printf("AddSNIToCertificate: %u\n",
+		               opts->allow_wrong_host);
 	} else {
 		fprintf(stderr, "Error in conf: Unknown option '%s' at line %d\n", name, line_num);
 		goto leave;
