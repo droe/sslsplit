@@ -152,6 +152,16 @@ Daemon mode: run in background, log error messages to syslog.
 .TP 
 \fBDebug BOOL\fR
 Debug mode: run in foreground, log debug messages on stderr.
+.TP
+\fBVerifyPeer BOOL\fR
+Verify peer using default certificates.
+.br
+Default: no
+.TP
+\fBAddSNIToCertificate BOOL\fR
+When disabled, never add the SNI to forged certificates, even if the SNI provided by the client does not match the server certificate's CN/SAN. Helps pass the wrong.host test at https://badssl.com.
+.br
+Default: yes
 .TP 
 \fBProxySpec STRING\fR
 Proxy specification: type listenaddr+port [natengine|targetaddr+port|"sni"+port]. Multiple specs are allowed, one on each line.

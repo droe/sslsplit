@@ -1044,7 +1044,7 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 
 	/* generate a new certificate with sn as additional altSubjectName
 	 * and replace it both in the current SSL ctx and in the cert cache */
-	if (!ctx->immutable_cert &&
+	if (ctx->opts->allow_wrong_host && !ctx->immutable_cert &&
 	    !ssl_x509_names_match((sslcrt = SSL_get_certificate(ssl)), sn)) {
 		X509 *newcrt;
 		SSL_CTX *newsslctx;
@@ -1135,7 +1135,12 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 	}
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 
-	SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
+	if (ctx->opts->verify_peer) {
+		SSL_CTX_set_verify(sslctx, SSL_VERIFY_PEER, NULL);
+		SSL_CTX_set_default_verify_paths(sslctx);
+	} else {
+		SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
+	}
 
 	if (ctx->opts->clientcrt) {
 		if (!SSL_CTX_use_certificate(sslctx, ctx->opts->clientcrt))

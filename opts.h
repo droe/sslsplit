@@ -113,6 +113,8 @@ typedef struct opts {
 #endif /* !OPENSSL_NO_ECDH */
 	proxyspec_t *spec;
 	char *crlurl;
+	unsigned int verify_peer: 1;
+	unsigned int allow_wrong_host: 1;
 } opts_t;
 
 void NORET oom_die(const char *) NONNULL(1);
