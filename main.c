@@ -125,8 +125,9 @@ main_usage(void)
 {
 	const char *dflt, *warn;
 	const char *usagefmt =
-"Usage: %s [options...] [proxyspecs...]\n"
+"Usage: %s [-D] [-f conffile] [-o opt=val] [options...] [proxyspecs...]\n"
 "  -f conffile use conffile to load configuration from\n"
+"  -o opt=val  override conffile option opt with value val\n"
 "  -c pemfile  use CA cert (and key) from pemfile to sign forged certs\n"
 "  -k pemfile  use CA key (and cert) from pemfile to sign forged certs\n"
 "  -C pemfile  use CA chain from pemfile (intermediate and root CA certs)\n"
