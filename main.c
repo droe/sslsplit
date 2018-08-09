@@ -354,10 +354,8 @@ main(int argc, char *argv[])
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
 			case 'G':
-			{
 				opts_set_ecdhcurve(opts, argv0, optarg);
 				break;
-			}
 #endif /* !OPENSSL_NO_ECDH */
 #ifdef SSL_OP_NO_COMPRESSION
 			case 'Z':
