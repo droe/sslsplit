@@ -299,7 +299,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:OPa:"
-	                    "b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:")) != -1) {
+	                    "b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:o:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
@@ -307,7 +307,15 @@ main(int argc, char *argv[])
 				opts->conffile = strdup(optarg);
 				if (!opts->conffile)
 					oom_die(argv0);
+				if (load_conffile(opts, argv0, &natengine) == -1) {
+					exit(EXIT_FAILURE);
+				}
 				fprintf(stderr, "Conf file: %s\n", opts->conffile);
+				break;
+			case 'o':
+				if (opts_set_option(opts, argv0, optarg, &natengine) == -1) {
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'c':
 				opts_set_cacrt(opts, argv0, optarg);
@@ -438,12 +446,6 @@ main(int argc, char *argv[])
 	argv += optind;
 	proxyspec_parse(&argc, &argv, natengine, &opts->spec);
 	
-	if (opts->conffile) {
-		if (load_conffile(opts, argv0, natengine) == -1) {
-			exit(EXIT_FAILURE);
-		}
-	}
-
 	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",

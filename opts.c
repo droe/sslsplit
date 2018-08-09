@@ -1134,7 +1134,7 @@ opts_unset_allow_wrong_host(opts_t *opts)
 }
 
 static int
-check_value_yesno(char *value, char *name, int line_num)
+check_value_yesno(const char *value, const char *name, int line_num)
 {
 	/* Compare strlen(s2)+1 chars to match exactly */
 	if (!strncmp(value, "yes", 4)) {
@@ -1142,21 +1142,265 @@ check_value_yesno(char *value, char *name, int line_num)
 	} else if (!strncmp(value, "no", 3)) {
 		return 0;
 	}
-	fprintf(stderr, "Error in conf file: Invalid '%s' value '%s' at line %d, use yes|no\n", name, value, line_num);
+	fprintf(stderr, "Error in conf: Invalid '%s' value '%s' at line %d, use yes|no\n", name, value, line_num);
 	return -1;
 }
 
 #define MAX_TOKEN 10
 
-int
-load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
+static int
+set_option(opts_t *opts, const char *argv0, const char *name, char *value, char **natengine, int line_num)
 {
-	FILE *f;
-	int rv, line_num, yes, retval;
+	int yes;
+	int retval = -1;
+
+	/* Compare strlen(s2)+1 chars to match exactly */
+	if (!strncmp(name, "CACert", 7)) {
+		opts_set_cacrt(opts, argv0, value);
+	} else if (!strncmp(name, "CAKey", 6)) {
+		opts_set_cakey(opts, argv0, value);
+	} else if (!strncmp(name, "ClientCert", 11)) {
+		opts_set_clientcrt(opts, argv0, value);
+	} else if (!strncmp(name, "ClientKey", 10)) {
+		opts_set_clientkey(opts, argv0, value);
+	} else if (!strncmp(name, "CAChain", 8)) {
+		opts_set_chain(opts, argv0, value);
+	} else if (!strncmp(name, "LeafCerts", 10)) {
+		opts_set_key(opts, argv0, value);
+	} else if (!strncmp(name, "CRL", 4)) {
+		opts_set_crl(opts, value);
+	} else if (!strncmp(name, "TargetCertDir", 14)) {
+		opts_set_tgcrtdir(opts, argv0, value);
+	} else if (!strncmp(name, "WriteGenCertsDir", 17)) {
+		opts_set_certgendir_writegencerts(opts, argv0, value);
+	} else if (!strncmp(name, "WriteAllCertsDir", 17)) {
+		opts_set_certgendir_writeall(opts, argv0, value);
+	} else if (!strncmp(name, "DenyOCSP", 9)) {
+		yes = check_value_yesno(value, "DenyOCSP", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_deny_ocsp(opts) : opts_unset_deny_ocsp(opts);
+		fprintf(stderr, "DenyOCSP: %u\n", opts->deny_ocsp);
+	} else if (!strncmp(name, "Passthrough", 12)) {
+		yes = check_value_yesno(value, "Passthrough", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_passthrough(opts) : opts_unset_passthrough(opts);
+		fprintf(stderr, "Passthrough: %u\n", opts->passthrough);
+#ifndef OPENSSL_NO_DH
+	} else if (!strncmp(name, "DHGroupParams", 14)) {
+		opts_set_dh(opts, argv0, value);
+#endif /* !OPENSSL_NO_DH */
+#ifndef OPENSSL_NO_ECDH
+	} else if (!strncmp(name, "ECDHCurve", 10)) {
+		opts_set_ecdhcurve(opts, argv0, value);
+#endif /* !OPENSSL_NO_ECDH */
+#ifdef SSL_OP_NO_COMPRESSION
+	} else if (!strncmp(name, "SSLCompression", 15)) {
+		yes = check_value_yesno(value, "SSLCompression", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_sslcomp(opts) : opts_unset_sslcomp(opts);
+		fprintf(stderr, "SSLCompression: %u\n", opts->sslcomp);
+#endif /* SSL_OP_NO_COMPRESSION */
+	} else if (!strncmp(name, "ForceSSLProto", 14)) {
+		opts_force_proto(opts, argv0, value);
+	} else if (!strncmp(name, "DisableSSLProto", 16)) {
+		opts_disable_proto(opts, argv0, value);
+	} else if (!strncmp(name, "Ciphers", 8)) {
+		opts_set_ciphers(opts, argv0, value);
+	} else if (!strncmp(name, "NATEngine", 10)) {
+		if (*natengine)
+			free(*natengine);
+		*natengine = strdup(value);
+		if (!*natengine)
+			goto leave;
+		fprintf(stderr, "NATEngine: %s\n", *natengine);
+	} else if (!strncmp(name, "User", 5)) {
+		opts_set_user(opts, argv0, value);
+	} else if (!strncmp(name, "Group", 6)) {
+		opts_set_group(opts, argv0, value);
+	} else if (!strncmp(name, "Chroot", 7)) {
+		opts_set_jaildir(opts, argv0, value);
+	} else if (!strncmp(name, "PidFile", 8)) {
+		opts_set_pidfile(opts, argv0, value);
+	} else if (!strncmp(name, "ConnectLog", 11)) {
+		opts_set_connectlog(opts, argv0, value);
+	} else if (!strncmp(name, "ContentLog", 11)) {
+		opts_set_contentlog(opts, argv0, value);
+	} else if (!strncmp(name, "ContentLogDir", 14)) {
+		opts_set_contentlogdir(opts, argv0, value);
+	} else if (!strncmp(name, "ContentLogPathSpec", 19)) {
+		opts_set_contentlogpathspec(opts, argv0, value);
+#ifdef HAVE_LOCAL_PROCINFO
+	} else if (!strncmp(name, "LogProcInfo", 11)) {
+		yes = check_value_yesno(value, "LogProcInfo", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_lprocinfo(opts) : opts_unset_lprocinfo(opts);
+		fprintf(stderr, "LogProcInfo: %u\n", opts->lprocinfo);
+#endif /* HAVE_LOCAL_PROCINFO */
+	} else if (!strncmp(name, "MasterKeyLog", 13)) {
+		opts_set_masterkeylog(opts, argv0, value);
+	} else if (!strncmp(name, "Daemon", 7)) {
+		yes = check_value_yesno(value, "Daemon", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_daemon(opts) : opts_unset_daemon(opts);
+		fprintf(stderr, "Daemon: %u\n", opts->detach);
+	} else if (!strncmp(name, "Debug", 6)) {
+		yes = check_value_yesno(value, "Debug", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_debug(opts) : opts_unset_debug(opts);
+		fprintf(stderr, "Debug: %u\n", opts->debug);
+	} else if (!strncmp(name, "ProxySpec", 10)) {
+		/* Use MAX_TOKEN instead of computing the actual number of tokens in value */
+		char **argv = malloc(sizeof(char *) * MAX_TOKEN);
+		char **save_argv = argv;
+		int argc = 0;
+		char *p, *last = NULL;
+
+		for ((p = strtok_r(value, " ", &last)); p; (p = strtok_r(NULL, " ", &last))) {
+			/* Limit max # token */
+			if (argc < MAX_TOKEN) {
+				argv[argc++] = p;
+			} else {
+				break;
+			}
+		}
+
+		proxyspec_parse(&argc, &argv, *natengine, &opts->spec);
+		free(save_argv);
+	} else if (!strncasecmp(name, "VerifyPeer", 11)) {
+		yes = check_value_yesno(value, "VerifyPeer", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_verify_peer(opts) : opts_unset_verify_peer(opts);
+		fprintf(stderr, "VerifyPeer: %u\n", opts->verify_peer);
+	} else if (!strncasecmp(name, "AddSNIToCertificate", 20)) {
+		yes = check_value_yesno(value, "AddSNIToCertificate", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_allow_wrong_host(opts) : opts_unset_allow_wrong_host(opts);
+		fprintf(stderr, "AddSNIToCertificate: %u\n", opts->allow_wrong_host);
+	} else {
+		fprintf(stderr, "Error in conf: Unknown option '%s' at line %d\n", name, line_num);
+		goto leave;
+	}
+
+	retval = 0;
+leave:
+	return retval;
+}
+
+/*
+ * Separator param is needed for command line options only.
+ * Conf file option separator is ' '.
+ */
+static int
+get_name_value(char **name, char **value, const char sep)
+{
+	char *n, *v, *value_end;
+	int retval = -1;
+
+	/* Skip to the end of option name and terminate it with '\0' */
+	for (n = *name;; n++) {
+		/* White spaces possible around separator,
+		 * if the command line option is passed between the quotes */
+		if (*n == ' ' || *n == '\t' || *n == sep) {
+			*n = '\0';
+			n++;
+			break;
+		}
+		if (*n == '\0') {
+			n = NULL;
+			break;
+		}
+	}
+
+	/* No option name */
+	if (n == NULL) {
+		fprintf(stderr, "Error in option: No option name\n");
+		goto leave;
+	}
+
+	/* White spaces possible before value and around separator,
+	 * if the command line option is passed between the quotes */
+	while (*n == ' ' || *n == '\t' || *n == sep) {
+		n++;
+	}
+
+	*value = n;
+
+	/* Find end of value and terminate it with '\0'
+	 * Find first occurrence of trailing white space */
+	value_end = NULL;
+	for (v = *value;; v++) {
+		if (*v == '\0') {
+			break;
+		}
+		if (*v == '\r' || *v == '\n') {
+			*v = '\0';
+			break;
+		}
+		if (*v == ' ' || *v == '\t') {
+			if (!value_end) {
+				value_end = v;
+			}
+		} else {
+			value_end = NULL;
+		}
+	}
+
+	if (value_end) {
+		*value_end = '\0';
+	}
+
+	retval = 0;
+leave:
+	return retval;
+}
+
+int
+opts_set_option(opts_t *opts, const char *argv0, const char *optarg, char **natengine)
+{
+	char *name, *value;
+	int retval = -1;
+	char *line = strdup(optarg);
+
+	/* White spaces possible before option name,
+	 * if the command line option is passed between the quotes */
+	for (name = line; *name == ' ' || *name == '\t'; name++); 
+
+	/* Command line option separator is '=' */
+	retval = get_name_value(&name, &value, '=');
+	if (retval == 0) {
+		/* Line number param is for conf file, pass 0 for command line options */
+		retval = set_option(opts, argv0, name, value, natengine, 0);
+	}
+
+	if (line) {
+		free(line);
+	}
+	return retval;
+}
+
+int
+load_conffile(opts_t *opts, const char *argv0, char **natengine)
+{
+	int retval, line_num;
+	char *line, *name, *value;
 	size_t line_len;
-	char *n, *value, *v, *value_end;
-	char *line, *name;
-	char natengine[NATENGINE_SIZE];
+	FILE *f;
 	
 	f = fopen(opts->conffile, "r");
 	if (!f) {
@@ -1164,14 +1408,11 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 		return -1;
 	}
 
-	strncpy(natengine, prev_natengine, NATENGINE_SIZE);
-
 	line = NULL;
 	line_num = 0;
 	retval = -1;
 	while (!feof(f)) {
-		rv = getline(&line, &line_len, f);
-		if (rv == -1) {
+		if (getline(&line, &line_len, f) == -1) {
 			break;
 		}
 		if (line == NULL) {
@@ -1189,197 +1430,16 @@ load_conffile(opts_t *opts, const char *argv0, const char *prev_natengine)
 			continue;
 		}
 
-		/* Skip to the end of option name and terminate it with '\0' */
-		for (n = name;; n++) {
-			if (*n == ' ' || *n == '\t') {
-				*n = '\0';
-				n++;
-				break;
-			}
-			if (*n == '\0') {
-				n = NULL;
-				break;
-			}
+		retval = get_name_value(&name, &value, ' ');
+		if (retval == 0) {
+			retval = set_option(opts, argv0, name, value, natengine, line_num);
 		}
 
-		/* No value */
-		if (n == NULL) {
-			fprintf(stderr, "Error in conf file: No value at line %d\n", line_num);
-			goto leave;
-		}
-		
-		/* Skip white space before value */
-		while (*n == ' ' || *n == '\t') {
-			n++;
-		}
-
-		value = n;
-
-		/* Find end of value and terminate it with '\0'
-		   Find first occurrence of trailing white space */
-		value_end = NULL;
-		for (v = value;; v++) {
-			if (*v == '\0') {
-				break;
-			}
-			if (*v == '\r' || *v == '\n') {
-				*v = '\0';
-				break;
-			}
-			if (*v == ' ' || *v == '\t') {
-				if (!value_end) {
-					value_end = v;
-				}
-			} else {
-				value_end = NULL;
-			}
-		}
-
-		if (value_end) {
-			*value_end = '\0';
-		}
-
-        /* Compare strlen(s2)+1 chars to match exactly */
-		if (!strncmp(name, "CACert", 7)) {
-			opts_set_cacrt(opts, argv0, value);
-		} else if (!strncmp(name, "CAKey", 6)) {
-			opts_set_cakey(opts, argv0, value);
-		} else if (!strncmp(name, "ClientCert", 11)) {
-			opts_set_clientcrt(opts, argv0, value);
-		} else if (!strncmp(name, "ClientKey", 10)) {
-			opts_set_clientkey(opts, argv0, value);
-		} else if (!strncmp(name, "CAChain", 8)) {
-			opts_set_chain(opts, argv0, value);
-		} else if (!strncmp(name, "LeafCerts", 10)) {
-			opts_set_key(opts, argv0, value);
-		} else if (!strncmp(name, "CRL", 4)) {
-			opts_set_crl(opts, value);
-		} else if (!strncmp(name, "TargetCertDir", 14)) {
-			opts_set_tgcrtdir(opts, argv0, value);
-		} else if (!strncmp(name, "WriteGenCertsDir", 17)) {
-			opts_set_certgendir_writegencerts(opts, argv0, value);
-		} else if (!strncmp(name, "WriteAllCertsDir", 17)) {
-			opts_set_certgendir_writeall(opts, argv0, value);
-		} else if (!strncmp(name, "DenyOCSP", 9)) {
-			yes = check_value_yesno(value, "DenyOCSP", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_deny_ocsp(opts) : opts_unset_deny_ocsp(opts);
-			fprintf(stderr, "DenyOCSP: %u\n", opts->deny_ocsp);
-		} else if (!strncmp(name, "Passthrough", 12)) {
-			yes = check_value_yesno(value, "Passthrough", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_passthrough(opts) : opts_unset_passthrough(opts);
-			fprintf(stderr, "Passthrough: %u\n", opts->passthrough);
-#ifndef OPENSSL_NO_DH
-		} else if (!strncmp(name, "DHGroupParams", 14)) {
-			opts_set_dh(opts, argv0, value);
-#endif /* !OPENSSL_NO_DH */
-#ifndef OPENSSL_NO_ECDH
-		} else if (!strncmp(name, "ECDHCurve", 10)) {
-			opts_set_ecdhcurve(opts, argv0, value);
-#endif /* !OPENSSL_NO_ECDH */
-#ifdef SSL_OP_NO_COMPRESSION
-		} else if (!strncmp(name, "SSLCompression", 15)) {
-			yes = check_value_yesno(value, "SSLCompression", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_sslcomp(opts) : opts_unset_sslcomp(opts);
-			fprintf(stderr, "SSLCompression: %u\n", opts->sslcomp);
-#endif /* SSL_OP_NO_COMPRESSION */
-		} else if (!strncmp(name, "ForceSSLProto", 14)) {
-			opts_force_proto(opts, argv0, value);
-		} else if (!strncmp(name, "DisableSSLProto", 16)) {
-			opts_disable_proto(opts, argv0, value);
-		} else if (!strncmp(name, "Ciphers", 8)) {
-			opts_set_ciphers(opts, argv0, value);
-		} else if (!strncmp(name, "NATEngine", 10)) {
-			strncpy(natengine, value, NATENGINE_SIZE);
-			fprintf(stderr, "NATEngine: %s\n", natengine);
-		} else if (!strncmp(name, "User", 5)) {
-			opts_set_user(opts, argv0, value);
-		} else if (!strncmp(name, "Group", 6)) {
-			opts_set_group(opts, argv0, value);
-		} else if (!strncmp(name, "Chroot", 7)) {
-			opts_set_jaildir(opts, argv0, value);
-		} else if (!strncmp(name, "PidFile", 8)) {
-			opts_set_pidfile(opts, argv0, value);
-		} else if (!strncmp(name, "ConnectLog", 11)) {
-			opts_set_connectlog(opts, argv0, value);
-		} else if (!strncmp(name, "ContentLog", 11)) {
-			opts_set_contentlog(opts, argv0, value);
-		} else if (!strncmp(name, "ContentLogDir", 14)) {
-			opts_set_contentlogdir(opts, argv0, value);
-		} else if (!strncmp(name, "ContentLogPathSpec", 19)) {
-			opts_set_contentlogpathspec(opts, argv0, value);
-#ifdef HAVE_LOCAL_PROCINFO
-		} else if (!strncmp(name, "LogProcInfo", 11)) {
-			yes = check_value_yesno(value, "LogProcInfo", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_lprocinfo(opts) : opts_unset_lprocinfo(opts);
-			fprintf(stderr, "LogProcInfo: %u\n", opts->lprocinfo);
-#endif /* HAVE_LOCAL_PROCINFO */
-		} else if (!strncmp(name, "MasterKeyLog", 13)) {
-			opts_set_masterkeylog(opts, argv0, value);
-		} else if (!strncmp(name, "Daemon", 7)) {
-			yes = check_value_yesno(value, "Daemon", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_daemon(opts) : opts_unset_daemon(opts);
-			fprintf(stderr, "Daemon: %u\n", opts->detach);
-		} else if (!strncmp(name, "Debug", 6)) {
-			yes = check_value_yesno(value, "Debug", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_debug(opts) : opts_unset_debug(opts);
-			fprintf(stderr, "Debug: %u\n", opts->debug);
-		} else if (!strncmp(name, "ProxySpec", 10)) {
-			/* Use MAX_TOKEN instead of computing the actual number of tokens in value */
-			char **argv = malloc(sizeof(char *) * MAX_TOKEN);
-			char **save_argv = argv;
-			int argc = 0;
-			char *p, *last = NULL;
-
-			for ((p = strtok_r(value, " ", &last)); p; (p = strtok_r(NULL, " ", &last))) {
-				/* Limit max # token */
-				if (argc < MAX_TOKEN) {
-					argv[argc++] = p;
-				} else {
-					break;
-				}
-			}
-			
-			proxyspec_parse(&argc, &argv, natengine, &opts->spec);
-			free(save_argv);
-		} else if (!strncasecmp(name, "VerifyPeer", 11)) {
-			yes = check_value_yesno(value, "VerifyPeer", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_verify_peer(opts) : opts_unset_verify_peer(opts);
-			fprintf(stderr, "VerifyPeer: %u\n", opts->verify_peer);
-		} else if (!strncasecmp(name, "AddSNIToCertificate", 20)) {
-			yes = check_value_yesno(value, "AddSNIToCertificate", line_num);
-			if (yes == -1) {
-				goto leave;
-			}
-			yes ? opts_set_allow_wrong_host(opts) : opts_unset_allow_wrong_host(opts);
-			fprintf(stderr, "AddSNIToCertificate: %u\n", opts->allow_wrong_host);
-		} else {
-			fprintf(stderr, "Error in conf file: Unknown option '%s' at line %d\n", name, line_num);
+		if (retval == -1) {
 			goto leave;
 		}
 	}
 
-	retval = 0;
 leave:
 	fclose(f);
 	if (line) {
