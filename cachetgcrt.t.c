@@ -59,6 +59,7 @@ START_TEST(cache_tgcrt_01)
 	fail_unless(!!c1, "loading certificate failed");
 	cachemgr_tgcrt_set("daniel.roe.ch", c1);
 	c2 = cachemgr_tgcrt_get("daniel.roe.ch");
+	fail_unless(!!c2, "cache did not return a certificate");
 	fail_unless(c2 == c1, "cache did not return same pointer");
 	cert_free(c1);
 	cert_free(c2);

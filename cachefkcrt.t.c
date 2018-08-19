@@ -58,6 +58,7 @@ START_TEST(cache_fkcrt_01)
 	fail_unless(!!c1, "loading certificate failed");
 	cachemgr_fkcrt_set(c1, c1);
 	c2 = cachemgr_fkcrt_get(c1);
+	fail_unless(!!c2, "cache did not return a certificate");
 	fail_unless(c2 == c1, "cache did not return same pointer");
 	X509_free(c1);
 	X509_free(c2);
