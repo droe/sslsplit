@@ -204,8 +204,6 @@ cert_free(cert_t *c)
 		pthread_mutex_unlock(&c->mutex);
 		return;
 	}
-	pthread_mutex_unlock(&c->mutex);
-	pthread_mutex_destroy(&c->mutex);
 	if (c->key) {
 		EVP_PKEY_free(c->key);
 	}
@@ -215,6 +213,8 @@ cert_free(cert_t *c)
 	if (c->chain) {
 		sk_X509_pop_free(c->chain, X509_free);
 	}
+	pthread_mutex_unlock(&c->mutex);
+	pthread_mutex_destroy(&c->mutex);
 	free(c);
 }
 
