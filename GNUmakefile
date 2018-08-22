@@ -453,7 +453,7 @@ mantest: $(TARGET).1
 	$(MAN) -M . 1 $(TARGET)
 	$(RM) man1
 
-copyright: *.c *.h *.1
+copyright: *.c *.h *.1 *.5
 	Mk/bin/copyright.py $^
 
 $(PKGNAME)-$(VERSION).1.txt: $(TARGET).1
