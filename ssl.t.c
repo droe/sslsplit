@@ -751,6 +751,7 @@ END_TEST
 
 START_TEST(ssl_engine_01)
 {
+	char cwd[PATH_MAX];
 	char *path;
 
 #ifdef __APPLE__
@@ -758,7 +759,9 @@ START_TEST(ssl_engine_01)
 #else
 #define DLSUFFIX "so"
 #endif
-	asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, getwd(NULL));
+
+	fail_unless(getcwd(cwd, sizeof(cwd)) == cwd, "getcwd() failed");
+	(void)asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, cwd);
 	fail_unless(!!path, "constructing engine path failed");
 	fail_unless(ssl_engine(path) == 0, "loading OpenSSL engine failed");
 }
