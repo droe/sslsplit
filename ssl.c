@@ -367,6 +367,7 @@ ssl_init(void)
 #endif /* PURIFY */
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
+	OPENSSL_config(NULL);
 
 	/* thread-safety */
 #if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -446,6 +447,19 @@ ssl_reinit(void)
 	}
 #endif /* OPENSSL_THREADS */
 
+	return 0;
+}
+
+int
+ssl_engine(const char *name) {
+	ENGINE *engine;
+
+	engine = ENGINE_by_id(name);
+	if (!engine)
+		return -1;
+
+	if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
+		return -1;
 	return 0;
 }
 

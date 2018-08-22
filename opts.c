@@ -103,6 +103,9 @@ opts_free(opts_t *opts)
 	if (opts->ciphers) {
 		free(opts->ciphers);
 	}
+	if (opts->openssl_engine) {
+		free(opts->openssl_engine);
+	}
 	if (opts->tgcrtdir) {
 		free(opts->tgcrtdir);
 	}
@@ -751,6 +754,17 @@ opts_set_ciphers(opts_t *opts, const char *argv0, const char *optarg)
 	log_dbg_printf("Ciphers: %s\n", opts->ciphers);
 }
 
+void
+opts_set_openssl_engine(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->openssl_engine)
+		free(opts->openssl_engine);
+	opts->openssl_engine = strdup(optarg);
+	if (!opts->openssl_engine)
+		oom_die(argv0);
+	log_dbg_printf("OpenSSLEngine: %s\n", opts->openssl_engine);
+}
+
 /*
  * Parse SSL proto string in optarg and look up the corresponding SSL method.
  * Calls exit() on failure.
@@ -1215,6 +1229,8 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 		opts_disable_proto(opts, argv0, value);
 	} else if (!strncmp(name, "Ciphers", 8)) {
 		opts_set_ciphers(opts, argv0, value);
+	} else if (!strncmp(name, "OpenSSLEngine", 14)) {
+		opts_set_openssl_engine(opts, argv0, value);
 	} else if (!strncmp(name, "NATEngine", 10)) {
 		if (*natengine)
 			free(*natengine);

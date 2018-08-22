@@ -83,6 +83,7 @@ typedef struct opts {
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
 	unsigned int certgen_writeall: 1;
+	char *openssl_engine;
 	char *ciphers;
 	char *certgendir;
 	char *tgcrtdir;
@@ -154,6 +155,8 @@ void opts_unset_sslcomp(opts_t *) NONNULL(1);
 void opts_force_proto(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_disable_proto(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_ciphers(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_openssl_engine(opts_t *, const char *, const char *)
+     NONNULL(1,2,3);
 void opts_set_user(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_group(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_jaildir(opts_t *, const char *, const char *) NONNULL(1,2,3);

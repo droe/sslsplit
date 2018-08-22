@@ -111,6 +111,11 @@ Use the given OpenSSL cipher suite spec.
 .br 
 Default: ALL:-aNULL
 .TP 
+\fBOpenSSLEngine STRING\fR
+The OpenSSL engine to activate, either the ID or the full path to the shared
+library implementing the engine.  If an ID is given, the engine needs to be
+known to the system-wide OpenSSL configuration.
+.TP 
 \fBNATEngine STRING\fR
 Specify default NAT engine to use.
 .TP 

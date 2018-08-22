@@ -163,6 +163,7 @@ main_usage(void)
 "  -r proto    only support one of " SSL_PROTO_SUPPORT_S "(default: all)\n"
 "  -R proto    disable one of " SSL_PROTO_SUPPORT_S "(default: none)\n"
 "  -s ciphers  use the given OpenSSL cipher suite spec (default: " DFLT_CIPHERS ")\n"
+"  -x engine   load OpenSSL engine with the given identifier\n"
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: " DFLT_DROPUSER ")\n"
@@ -300,7 +301,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:OPa:"
-	                    "b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:o:")) != -1) {
+	                    "b:s:r:R:x:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:o:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
@@ -371,6 +372,9 @@ main(int argc, char *argv[])
 				break;
 			case 'R':
 				opts_disable_proto(opts, argv0, optarg);
+				break;
+			case 'x':
+				opts_set_openssl_engine(opts, argv0, optarg);
 				break;
 			case 'e':
 				if (natengine)
@@ -478,6 +482,12 @@ main(int argc, char *argv[])
 		if (ssl_init() == -1) {
 			fprintf(stderr, "%s: failed to initialize OpenSSL.\n",
 			                argv0);
+			exit(EXIT_FAILURE);
+		}
+		if (opts->openssl_engine &&
+		    ssl_engine(opts->openssl_engine) == -1) {
+			fprintf(stderr, "%s: failed to enable OpenSSL engine"
+			                " %s.\n", argv0, opts->openssl_engine);
 			exit(EXIT_FAILURE);
 		}
 		if ((opts->cacrt || !opts->tgcrtdir) && !opts->cakey) {
@@ -618,6 +628,10 @@ main(int argc, char *argv[])
 			}
 			log_dbg_printf("- %s\n", specstr);
 			free(specstr);
+		}
+		if (opts->openssl_engine) {
+			log_dbg_printf("Loaded OpenSSL engine %s\n",
+			               opts->openssl_engine);
 		}
 		if (opts->cacrt) {
 			char *subj = ssl_x509_subject(opts->cacrt);

@@ -30,6 +30,7 @@
 #include "ssl.h"
 
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <check.h>
 
@@ -748,6 +749,21 @@ START_TEST(ssl_x509_refcount_inc_01)
 }
 END_TEST
 
+START_TEST(ssl_engine_01)
+{
+	char *path;
+
+#ifdef __APPLE__
+#define DLSUFFIX "dylib"
+#else
+#define DLSUFFIX "so"
+#endif
+	asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, getwd(NULL));
+	fail_unless(!!path, "constructing engine path failed");
+	fail_unless(ssl_engine(path) == 0, "loading OpenSSL engine failed");
+}
+END_TEST
+
 Suite *
 ssl_suite(void)
 {
@@ -849,6 +865,11 @@ ssl_suite(void)
 	tc = tcase_create("ssl_x509_refcount_inc");
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_x509_refcount_inc_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("ssl_engine");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
+	tcase_add_test(tc, ssl_engine_01);
 	suite_add_tcase(s, tc);
 
 	return s;
