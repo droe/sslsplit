@@ -764,6 +764,7 @@ START_TEST(ssl_engine_01)
 	(void)asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, cwd);
 	fail_unless(!!path, "constructing engine path failed");
 	fail_unless(ssl_engine(path) == 0, "loading OpenSSL engine failed");
+	free(path);
 }
 END_TEST
 
