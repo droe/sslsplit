@@ -757,12 +757,14 @@ ssl_suite(void)
 	s = suite_create("ssl");
 
 	tc = tcase_create("ssl_wildcardify");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_wildcardify_01);
 	tcase_add_test(tc, ssl_wildcardify_02);
 	tcase_add_test(tc, ssl_wildcardify_03);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_dnsname_match");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_dnsname_match_01);
 	tcase_add_test(tc, ssl_dnsname_match_02);
 	tcase_add_test(tc, ssl_dnsname_match_03);
@@ -782,6 +784,7 @@ ssl_suite(void)
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_tls_clienthello_parse");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_00);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_01);
 	tcase_add_test(tc, ssl_tls_clienthello_parse_02);
@@ -828,19 +831,23 @@ ssl_suite(void)
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_is_ocspreq");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_is_ocspreq_01);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_features");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_features_01);
 	tcase_add_test(tc, ssl_features_02);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_key_refcount_inc");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_key_refcount_inc_01);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ssl_x509_refcount_inc");
+	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_x509_refcount_inc_01);
 	suite_add_tcase(s, tc);
 
