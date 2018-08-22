@@ -450,19 +450,6 @@ ssl_reinit(void)
 	return 0;
 }
 
-int
-ssl_engine(const char *name) {
-	ENGINE *engine;
-
-	engine = ENGINE_by_id(name);
-	if (!engine)
-		return -1;
-
-	if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
-		return -1;
-	return 0;
-}
-
 /*
  * Deinitialize OpenSSL and free as much memory as possible.
  * Some 10k-100k will still remain resident no matter what.
@@ -501,6 +488,25 @@ ssl_fini(void)
 	EVP_cleanup();
 	ERR_free_strings();
 	CRYPTO_cleanup_all_ex_data();
+}
+
+/*
+ * Look up an OpenSSL engine by ID or by full path and load it as default
+ * engine.  This works globally, not on specific SSL_CTX or SSL instances.
+ * OpenSSL must already have been initialized when calling this function.
+ * Returns 0 on success, -1 on failure.
+ */
+int
+ssl_engine(const char *name) {
+	ENGINE *engine;
+
+	engine = ENGINE_by_id(name);
+	if (!engine)
+		return -1;
+
+	if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
+		return -1;
+	return 0;
 }
 
 /*
