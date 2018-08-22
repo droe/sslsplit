@@ -539,6 +539,19 @@ main(int argc, char *argv[])
 		}
 #endif /* __APPLE__ */
 	}
+
+	/* usage checks after defaults */
+	if (opts->dropgroup && !opts->dropuser) {
+		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+
+	/* debug log, part 1 */
+	if (OPTS_DEBUG(opts)) {
+		main_version();
+	}
+
+	/* generate leaf key */
 	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
 		/*
 		 * While browsers still generally accept it, use a leaf key
@@ -559,7 +572,6 @@ main(int argc, char *argv[])
 			log_dbg_printf("Generated RSA key for leaf certs.\n");
 		}
 	}
-
 	if (opts->certgendir) {
 		char *keyid, *keyfn;
 		int prv;
@@ -594,15 +606,8 @@ main(int argc, char *argv[])
 		fclose(keyf);
 	}
 
-	/* usage checks after defaults */
-	if (opts->dropgroup && !opts->dropuser) {
-		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
-		exit(EXIT_FAILURE);
-	}
-
-	/* debugging */
+	/* debug log, part 2 */
 	if (OPTS_DEBUG(opts)) {
-		main_version();
 		opts_proto_dbg_dump(opts);
 		log_dbg_printf("proxyspecs:\n");
 		for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
