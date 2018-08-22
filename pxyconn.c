@@ -725,7 +725,7 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 
 	pxy_sslctx_setoptions(sslctx, ctx);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	if (ctx->opts->sslversion) {
 		if (SSL_CTX_set_min_proto_version(sslctx, ctx->opts->sslversion) == 0 ||
 			SSL_CTX_set_max_proto_version(sslctx, ctx->opts->sslversion) == 0) {
@@ -1124,7 +1124,7 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 
 	pxy_sslctx_setoptions(sslctx, ctx);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	if (ctx->opts->sslversion) {
 		if (SSL_CTX_set_min_proto_version(sslctx, ctx->opts->sslversion) == 0 ||
 			SSL_CTX_set_max_proto_version(sslctx, ctx->opts->sslversion) == 0) {
