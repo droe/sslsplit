@@ -374,8 +374,11 @@ ssl_init(void)
 	                    |OPENSSL_INIT_ENGINE_ALL_BUILTIN
 #endif /* !OPENSSL_NO_ENGINE */
 	                   );
-#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+	OPENSSL_init_ssl(0, NULL);
+#else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	SSL_library_init();
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
+
 #ifdef PURIFY
 	CRYPTO_malloc_init();
 	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
