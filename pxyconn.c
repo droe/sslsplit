@@ -1414,6 +1414,10 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 		    /* HSTS: HTTP Strict Transport Security (RFC 6797)
 		     * remove to allow users to accept bad certs */
 		    !strncasecmp(line, "Strict-Transport-Security:", 26) ||
+		    /* Expect-CT: Expect Certificate Transparency
+		     * (draft-ietf-httpbis-expect-ct-latest)
+		     * remove to prevent failed CT log lookups */
+		    !strncasecmp(line, "Expect-CT:", 10) ||
 		    /* Alternate Protocol
 		     * remove to prevent switching to QUIC, SPDY et al */
 		    !strncasecmp(line, "Alternate-Protocol:", 19) ||

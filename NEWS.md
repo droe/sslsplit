@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Suppress Expect-CT header in order to avoid Certificate Transparency log
+    lookup failures (issue #205).
 -   Add -f option for loading configuration from file (pull req #193).
 -   Add `sudotest` target with unit tests which require privileges to run.
 -   Minor bugfixes and improvements.

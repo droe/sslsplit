@@ -88,7 +88,8 @@ SSLsplit can deny OCSP requests in a generic way.
 For HTTP and HTTPS connections, SSLsplit mangles headers to
 prevent server-instructed public key pinning (HPKP),
 avoid strict transport security restrictions (HSTS),
-and prevent switching to QUIC/SPDY, HTTP/2 or WebSockets (Upgrade,
+avoid Certificate Transparency enforcement (Expect-CT) and
+prevent switching to QUIC/SPDY, HTTP/2 or WebSockets (Upgrade,
 Alternate Protocols).
 HTTP compression, encodings and keep-alive are disabled to make the logs more
 readable.
