@@ -28,6 +28,6 @@ $(TARGET).$(SUFFIX): $(TARGET).c GNUmakefile
 	$(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $< $(LIBS)
 
 clean:
-	rm -f $(OPENSSL_BASE).$(SUFFIX)
+	rm -f $(TARGET).$(SUFFIX)
 
 .PHONY: all clean
