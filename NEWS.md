@@ -5,6 +5,7 @@
     lookup failures (issue #205).
 -   Add -f option for loading configuration from file (pull req #193).
 -   Add `sudotest` target with unit tests which require privileges to run.
+-   Add XNU headers for macOS High Sierra 10.13.1, 10.13.2 and 10.13.3.
 -   Minor bugfixes and improvements.
 
 
