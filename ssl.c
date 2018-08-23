@@ -30,6 +30,7 @@
 
 #include "log.h"
 #include "defaults.h"
+#include "attrib.h"
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -39,7 +40,9 @@
 #include <limits.h>
 
 #include <openssl/crypto.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif /* !OPENSSL_NO_ENGINE */
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -168,6 +171,11 @@ ssl_openssl_version(void)
 #else /* !OPENSSL_THREADS */
 	fprintf(stderr, "OpenSSL is not thread-safe\n");
 #endif /* !OPENSSL_THREADS */
+#ifndef OPENSSL_NO_ENGINE
+	fprintf(stderr, "OpenSSL has engine support\n");
+#else /* OPENSSL_NO_ENGINE */
+	fprintf(stderr, "OpenSSL has no engine support\n");
+#endif /* OPENSSL_NO_ENGINE */
 #ifdef SSL_MODE_RELEASE_BUFFERS
 	fprintf(stderr, "Using SSL_MODE_RELEASE_BUFFERS\n");
 #else /* !SSL_MODE_RELEASE_BUFFERS */
@@ -360,13 +368,26 @@ ssl_init(void)
 		return 0;
 
 	/* general initialization */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG
+#ifndef OPENSSL_NO_ENGINE
+	                    |OPENSSL_INIT_ENGINE_ALL_BUILTIN
+#endif /* !OPENSSL_NO_ENGINE */
+	                    , NULL);
+	OPENSSL_init_ssl(0, NULL);
+#else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	SSL_library_init();
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
+
 #ifdef PURIFY
 	CRYPTO_malloc_init();
 	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
 #endif /* PURIFY */
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	OPENSSL_config(NULL);
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 
 	/* thread-safety */
 #if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -387,7 +408,7 @@ ssl_init(void)
 #else /* !OPENSSL_NO_THREADID */
 	CRYPTO_THREADID_set_callback(ssl_thr_id_cb);
 #endif /* !OPENSSL_NO_THREADID */
-#endif /* OPENSSL_THREADS */
+#endif /* OPENSSL_THREADS && OPENSSL_VERSION_NUMBER < 0x10100000L */
 
 	/* randomness */
 #ifndef PURIFY
@@ -479,7 +500,9 @@ ssl_fini(void)
 	free(ssl_mutex);
 #endif
 
+#if !defined(OPENSSL_NO_ENGINE) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	ENGINE_cleanup();
+#endif /* !OPENSSL_NO_ENGINE && OPENSSL_VERSION_NUMBER < 0x10100000L */
 	CONF_modules_finish();
 	CONF_modules_unload(1);
 	CONF_modules_free();
@@ -488,6 +511,27 @@ ssl_fini(void)
 	ERR_free_strings();
 	CRYPTO_cleanup_all_ex_data();
 }
+
+/*
+ * Look up an OpenSSL engine by ID or by full path and load it as default
+ * engine.  This works globally, not on specific SSL_CTX or SSL instances.
+ * OpenSSL must already have been initialized when calling this function.
+ * Returns 0 on success, -1 on failure.
+ */
+#ifndef OPENSSL_NO_ENGINE
+int
+ssl_engine(const char *name) {
+	ENGINE *engine;
+
+	engine = ENGINE_by_id(name);
+	if (!engine)
+		return -1;
+
+	if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
+		return -1;
+	return 0;
+}
+#endif /* !OPENSSL_NO_ENGINE */
 
 /*
  * Format raw SHA1 hash into newly allocated string, with or without colons.
