@@ -29,6 +29,7 @@
 #include "base64.h"
 #include "ssl.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -761,7 +762,7 @@ START_TEST(ssl_engine_01)
 #endif
 
 	fail_unless(getcwd(cwd, sizeof(cwd)) == cwd, "getcwd() failed");
-	(void)asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, cwd);
+	UNUSED int unused = asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, cwd);
 	fail_unless(!!path, "constructing engine path failed");
 	fail_unless(ssl_engine(path) == 0, "loading OpenSSL engine failed");
 	free(path);

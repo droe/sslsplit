@@ -367,7 +367,9 @@ ssl_init(void)
 #endif /* PURIFY */
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
+#endif
 
 	/* thread-safety */
 #if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
