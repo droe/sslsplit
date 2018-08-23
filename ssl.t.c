@@ -35,9 +35,16 @@
 
 #include <check.h>
 
+#ifdef __APPLE__
+#define DLSUFFIX "dylib"
+#else
+#define DLSUFFIX "so"
+#endif
+
 #define TESTKEY "extra/pki/server.key"
 #define TESTCERT "extra/pki/server.crt"
 #define TESTCERT2 "extra/pki/rsa.crt"
+#define ENGINE "extra/engine/dummy-engine."DLSUFFIX
 
 static void
 ssl_setup(void)
@@ -755,15 +762,9 @@ START_TEST(ssl_engine_01)
 	char cwd[PATH_MAX];
 	char *path;
 
-#ifdef __APPLE__
-#define DLSUFFIX "dylib"
-#else
-#define DLSUFFIX "so"
-#endif
-
 	fail_unless(getcwd(cwd, sizeof(cwd)) == cwd, "getcwd() failed");
-	UNUSED int unused = asprintf(&path, "%s/extra/engine/dummy-engine."DLSUFFIX, cwd);
-	fail_unless(!!path, "constructing engine path failed");
+	fail_unless(asprintf(&path, "%s/"ENGINE, cwd) != -1 && !!path,
+	            "constructing engine path failed");
 	fail_unless(ssl_engine(path) == 0, "loading OpenSSL engine failed");
 	free(path);
 }
