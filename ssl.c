@@ -368,7 +368,7 @@ ssl_init(void)
 		return 0;
 
 	/* general initialization */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG
 #ifndef OPENSSL_NO_ENGINE
 	                    |OPENSSL_INIT_ENGINE_ALL_BUILTIN
@@ -385,7 +385,7 @@ ssl_init(void)
 #endif /* PURIFY */
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 	OPENSSL_config(NULL);
 #endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 
@@ -500,7 +500,7 @@ ssl_fini(void)
 	free(ssl_mutex);
 #endif
 
-#if !defined(OPENSSL_NO_ENGINE) && OPENSSL_VERSION_NUMBER < 0x10100000L
+#if !defined(OPENSSL_NO_ENGINE) && ((OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER))
 	ENGINE_cleanup();
 #endif /* !OPENSSL_NO_ENGINE && OPENSSL_VERSION_NUMBER < 0x10100000L */
 	CONF_modules_finish();
