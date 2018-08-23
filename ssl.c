@@ -490,7 +490,7 @@ ssl_fini(void)
 	free(ssl_mutex);
 #endif
 
-#ifndef OPENSSL_NO_ENGINE
+#if !defined(OPENSSL_NO_ENGINE) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	ENGINE_cleanup();
 #endif /* OPENSSL_NO_ENGINE */
 	CONF_modules_finish();
