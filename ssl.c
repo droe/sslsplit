@@ -30,6 +30,7 @@
 
 #include "log.h"
 #include "defaults.h"
+#include "attrib.h"
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -168,6 +169,11 @@ ssl_openssl_version(void)
 #else /* !OPENSSL_THREADS */
 	fprintf(stderr, "OpenSSL is not thread-safe\n");
 #endif /* !OPENSSL_THREADS */
+#ifndef OPENSSL_NO_ENGINE
+	fprintf(stderr, "OpenSSL has engine support\n");
+#else /* !OPENSSL_NO_ENGINE */
+	fprintf(stderr, "OpenSSL has no engine support\n");
+#endif /* !OPENSSL_NO_ENGINE */
 #ifdef SSL_MODE_RELEASE_BUFFERS
 	fprintf(stderr, "Using SSL_MODE_RELEASE_BUFFERS\n");
 #else /* !SSL_MODE_RELEASE_BUFFERS */
@@ -482,7 +488,9 @@ ssl_fini(void)
 	free(ssl_mutex);
 #endif
 
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
+#endif /* OPENSSL_NO_ENGINE */
 	CONF_modules_finish();
 	CONF_modules_unload(1);
 	CONF_modules_free();
@@ -498,6 +506,7 @@ ssl_fini(void)
  * OpenSSL must already have been initialized when calling this function.
  * Returns 0 on success, -1 on failure.
  */
+#ifndef OPENSSL_NO_ENGINE
 int
 ssl_engine(const char *name) {
 	ENGINE *engine;
@@ -510,6 +519,12 @@ ssl_engine(const char *name) {
 		return -1;
 	return 0;
 }
+#else /* !OPENSSL_NO_ENGINE */
+int
+ssl_engine(UNUSED const char *name) {
+	return -1;
+}
+#endif /* !OPENSSL_NO_ENGINE */
 
 /*
  * Format raw SHA1 hash into newly allocated string, with or without colons.
