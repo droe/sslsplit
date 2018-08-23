@@ -373,7 +373,7 @@ ssl_init(void)
 #ifndef OPENSSL_NO_ENGINE
 	                    |OPENSSL_INIT_ENGINE_ALL_BUILTIN
 #endif /* !OPENSSL_NO_ENGINE */
-	                   );
+	                    , NULL);
 	OPENSSL_init_ssl(0, NULL);
 #else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	SSL_library_init();
