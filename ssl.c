@@ -42,7 +42,7 @@
 #include <openssl/crypto.h>
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
-#endif /* OPENSSL_NO_ENGINE */
+#endif /* !OPENSSL_NO_ENGINE */
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -173,9 +173,9 @@ ssl_openssl_version(void)
 #endif /* !OPENSSL_THREADS */
 #ifndef OPENSSL_NO_ENGINE
 	fprintf(stderr, "OpenSSL has engine support\n");
-#else /* !OPENSSL_NO_ENGINE */
+#else /* OPENSSL_NO_ENGINE */
 	fprintf(stderr, "OpenSSL has no engine support\n");
-#endif /* !OPENSSL_NO_ENGINE */
+#endif /* OPENSSL_NO_ENGINE */
 #ifdef SSL_MODE_RELEASE_BUFFERS
 	fprintf(stderr, "Using SSL_MODE_RELEASE_BUFFERS\n");
 #else /* !SSL_MODE_RELEASE_BUFFERS */
@@ -368,6 +368,13 @@ ssl_init(void)
 		return 0;
 
 	/* general initialization */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG
+#ifndef OPENSSL_NO_ENGINE
+	                    |OPENSSL_INIT_ENGINE_ALL_BUILTIN
+#endif /* !OPENSSL_NO_ENGINE */
+	                   );
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	SSL_library_init();
 #ifdef PURIFY
 	CRYPTO_malloc_init();
@@ -377,7 +384,7 @@ ssl_init(void)
 	OpenSSL_add_all_algorithms();
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
-#endif
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 
 	/* thread-safety */
 #if defined(OPENSSL_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -398,7 +405,7 @@ ssl_init(void)
 #else /* !OPENSSL_NO_THREADID */
 	CRYPTO_THREADID_set_callback(ssl_thr_id_cb);
 #endif /* !OPENSSL_NO_THREADID */
-#endif /* OPENSSL_THREADS */
+#endif /* OPENSSL_THREADS && OPENSSL_VERSION_NUMBER < 0x10100000L */
 
 	/* randomness */
 #ifndef PURIFY
@@ -492,7 +499,7 @@ ssl_fini(void)
 
 #if !defined(OPENSSL_NO_ENGINE) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	ENGINE_cleanup();
-#endif /* OPENSSL_NO_ENGINE */
+#endif /* !OPENSSL_NO_ENGINE && OPENSSL_VERSION_NUMBER < 0x10100000L */
 	CONF_modules_finish();
 	CONF_modules_unload(1);
 	CONF_modules_free();
@@ -521,12 +528,12 @@ ssl_engine(const char *name) {
 		return -1;
 	return 0;
 }
-#else /* !OPENSSL_NO_ENGINE */
+#else /* OPENSSL_NO_ENGINE */
 int
 ssl_engine(UNUSED const char *name) {
 	return -1;
 }
-#endif /* !OPENSSL_NO_ENGINE */
+#endif /* OPENSSL_NO_ENGINE */
 
 /*
  * Format raw SHA1 hash into newly allocated string, with or without colons.
