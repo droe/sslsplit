@@ -423,6 +423,7 @@ $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
 clean:
+	$(MAKE) -C extra/engine clean
 	$(RM) -f $(TARGET) $(TARGET).test *.o .*.o *.core *~
 	$(RM) -rf *.dSYM
 
