@@ -757,6 +757,7 @@ START_TEST(ssl_x509_refcount_inc_01)
 }
 END_TEST
 
+#ifndef OPENSSL_NO_ENGINE
 START_TEST(ssl_engine_01)
 {
 	char cwd[PATH_MAX];
@@ -769,6 +770,7 @@ START_TEST(ssl_engine_01)
 	free(path);
 }
 END_TEST
+#endif /* !OPENSSL_NO_ENGINE */
 
 Suite *
 ssl_suite(void)
@@ -873,10 +875,15 @@ ssl_suite(void)
 	tcase_add_test(tc, ssl_x509_refcount_inc_01);
 	suite_add_tcase(s, tc);
 
+#ifndef OPENSSL_NO_ENGINE
 	tc = tcase_create("ssl_engine");
 	tcase_add_checked_fixture(tc, ssl_setup, ssl_teardown);
 	tcase_add_test(tc, ssl_engine_01);
 	suite_add_tcase(s, tc);
+#else /* OPENSSL_NO_ENGINE */
+	fprintf(stderr, "1 test omitted because OpenSSL has no "
+	                "engine support\n");
+#endif /* OPENSSL_NO_ENGINE */
 
 	return s;
 }

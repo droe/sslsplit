@@ -28,6 +28,7 @@
 
 /*
  * Dummy OpenSSL engine.  Does not do anything useful except being loadable.
+ * It deliberately builds fine even if engine support is unavailable.
  *
  * gcc -I/opt/local/include -fPIC -o dummy-engine.o -c dummy-engine.c
  * gcc -L/opt/local/lib -shared -o dummy-engine.dylib -lcrypto dummy-engine.o
@@ -36,6 +37,8 @@
 
 #include <stdio.h>
 
+#include <openssl/conf.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 
 static int
@@ -54,4 +57,5 @@ bind(ENGINE *engine, const char *id)
 
 IMPLEMENT_DYNAMIC_BIND_FN(bind)
 IMPLEMENT_DYNAMIC_CHECK_FN()
+#endif /* !OPENSSL_NO_ENGINE */
 

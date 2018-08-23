@@ -164,7 +164,9 @@ int ssl_init(void) WUNRES;
 int ssl_reinit(void) WUNRES;
 void ssl_fini(void);
 
+#ifndef OPENSSL_NO_ENGINE
 int ssl_engine(const char *) WUNRES;
+#endif /* !OPENSSL_NO_ENGINE */
 
 char * ssl_sha1_to_str(unsigned char *, int) NONNULL(1) MALLOC;
 

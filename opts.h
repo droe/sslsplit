@@ -83,7 +83,9 @@ typedef struct opts {
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
 	unsigned int certgen_writeall: 1;
+#ifndef OPENSSL_NO_ENGINE
 	char *openssl_engine;
+#endif /* !OPENSSL_NO_ENGINE */
 	char *ciphers;
 	char *certgendir;
 	char *tgcrtdir;

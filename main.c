@@ -163,7 +163,12 @@ main_usage(void)
 "  -r proto    only support one of " SSL_PROTO_SUPPORT_S "(default: all)\n"
 "  -R proto    disable one of " SSL_PROTO_SUPPORT_S "(default: none)\n"
 "  -s ciphers  use the given OpenSSL cipher suite spec (default: " DFLT_CIPHERS ")\n"
+#ifndef OPENSSL_NO_ENGINE
 "  -x engine   load OpenSSL engine with the given identifier\n"
+#define OPT_x "x:"
+#else /* OPENSSL_NO_ENGINE */
+#define OPT_x 
+#endif /* OPENSSL_NO_ENGINE */
 "  -e engine   specify default NAT engine to use (default: %s)\n"
 "  -E          list available NAT engines and exit\n"
 "  -u user     drop privileges to user (default if run as root: " DFLT_DROPUSER ")\n"
@@ -300,8 +305,9 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i "k:c:C:K:t:OPa:"
-	                    "b:s:r:R:x:e:Eu:m:j:p:l:L:S:F:M:dDVhW:w:q:f:o:")) != -1) {
+	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i OPT_x
+	                    "k:c:C:K:t:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
+	                    "dDVhW:w:q:f:o:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
@@ -373,9 +379,11 @@ main(int argc, char *argv[])
 			case 'R':
 				opts_disable_proto(opts, argv0, optarg);
 				break;
+#ifndef OPENSSL_NO_ENGINE
 			case 'x':
 				opts_set_openssl_engine(opts, argv0, optarg);
 				break;
+#endif /* !OPENSSL_NO_ENGINE */
 			case 'e':
 				if (natengine)
 					free(natengine);
@@ -484,12 +492,14 @@ main(int argc, char *argv[])
 			                argv0);
 			exit(EXIT_FAILURE);
 		}
+#ifndef OPENSSL_NO_ENGINE
 		if (opts->openssl_engine &&
 		    ssl_engine(opts->openssl_engine) == -1) {
 			fprintf(stderr, "%s: failed to enable OpenSSL engine"
 			                " %s.\n", argv0, opts->openssl_engine);
 			exit(EXIT_FAILURE);
 		}
+#endif /* !OPENSSL_NO_ENGINE */
 		if ((opts->cacrt || !opts->tgcrtdir) && !opts->cakey) {
 			fprintf(stderr, "%s: no CA key specified (-k).\n",
 			                argv0);
@@ -629,10 +639,12 @@ main(int argc, char *argv[])
 			log_dbg_printf("- %s\n", specstr);
 			free(specstr);
 		}
+#ifndef OPENSSL_NO_ENGINE
 		if (opts->openssl_engine) {
 			log_dbg_printf("Loaded OpenSSL engine %s\n",
 			               opts->openssl_engine);
 		}
+#endif /* !OPENSSL_NO_ENGINE */
 		if (opts->cacrt) {
 			char *subj = ssl_x509_subject(opts->cacrt);
 			log_dbg_printf("Loaded CA: '%s'\n", subj);

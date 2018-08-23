@@ -531,12 +531,7 @@ ssl_engine(const char *name) {
 		return -1;
 	return 0;
 }
-#else /* OPENSSL_NO_ENGINE */
-int
-ssl_engine(UNUSED const char *name) {
-	return -1;
-}
-#endif /* OPENSSL_NO_ENGINE */
+#endif /* !OPENSSL_NO_ENGINE */
 
 /*
  * Format raw SHA1 hash into newly allocated string, with or without colons.
