@@ -3,6 +3,8 @@
 /sslsplit
 /sslsplit.test
 /extra/*.pyc
+/extra/engine/*.dylib
+/extra/engine/*.so
 /extra/pki/dh*.param
 /extra/pki/dsa.pem
 /extra/pki/dsa.crt

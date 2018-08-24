@@ -30,18 +30,18 @@ sslsplit \-\- transparent SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrReumjplLSFiMab\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKqwWOPZdDgGsrRxeumjplLSFiMab\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrReumjplLSFiMab\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKqwWOPZdDgGsrRxeumjplLSFiMab\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZwWdDgGsrReumjplLSFiMab\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZwWdDgGsrRxeumjplLSFiMab\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
-.B sslsplit [\fB-kCKwWOPZdDgGsrReumjplLSFiM\fP] -f \fIconffile\fP
+.B sslsplit [\fB-kCKwWOPZdDgGsrRxeumjplLSFiM\fP] -f \fIconffile\fP
 .br
 .B sslsplit -E
 .br
@@ -88,7 +88,8 @@ SSLsplit can deny OCSP requests in a generic way.
 For HTTP and HTTPS connections, SSLsplit mangles headers to
 prevent server-instructed public key pinning (HPKP),
 avoid strict transport security restrictions (HSTS),
-and prevent switching to QUIC/SPDY, HTTP/2 or WebSockets (Upgrade,
+avoid Certificate Transparency enforcement (Expect-CT) and
+prevent switching to QUIC/SPDY, HTTP/2 or WebSockets (Upgrade,
 Alternate Protocols).
 HTTP compression, encodings and keep-alive are disabled to make the logs more
 readable.
@@ -336,6 +337,16 @@ The user needs to be allowed to make outbound TCP connections, and in some
 configurations, also to perform DNS resolution.
 Due to an Apple bug, \fB-u\fP cannot be used with \fBpf\fP proxyspecs on
 Mac OS X.
+.TP
+.B \-x \fIengine\fP
+Use the OpenSSL engine with identifier \fIengine\fP as a default engine.  The
+engine must be available within the OpenSSL ecosystem under the specified
+identifier, that is, they must be loaded from the global OpenSSL configuration.
+If \fIengine\fP is an absolute path, it will be interpreted as path to an
+engine dynamically linked library and loaded by path, regardless of global
+OpenSSL configuration.
+This option is only available if built against a version of OpenSSL with engine
+support.
 .TP
 .B \-V
 Display version and compiled features information and exit.

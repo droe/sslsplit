@@ -38,6 +38,15 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+/*
+ * LibreSSL seems to ship engine support on a source code level, but it seems
+ * to be broken.  Tested with LibreSSL 2.7.4 on OpenBSD and macOS.  For now,
+ * disable engine support when building against LibreSSL.
+ */
+#if defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_NO_ENGINE)
+#define OPENSSL_NO_ENGINE
+#endif
+
 #if (OPENSSL_VERSION_NUMBER < 0x10000000L) && !defined(OPENSSL_NO_THREADID)
 #define OPENSSL_NO_THREADID
 #endif
@@ -163,6 +172,10 @@ void ssl_openssl_version(void);
 int ssl_init(void) WUNRES;
 int ssl_reinit(void) WUNRES;
 void ssl_fini(void);
+
+#ifndef OPENSSL_NO_ENGINE
+int ssl_engine(const char *) WUNRES;
+#endif /* !OPENSSL_NO_ENGINE */
 
 char * ssl_sha1_to_str(unsigned char *, int) NONNULL(1) MALLOC;
 

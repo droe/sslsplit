@@ -35,10 +35,10 @@ SSLsplit implements a number of defences against mechanisms which would
 normally prevent MitM attacks or make them more difficult.  SSLsplit can deny
 OCSP requests in a generic way.  For HTTP and HTTPS connections, SSLsplit
 mangles headers to prevent server-instructed public key pinning (HPKP), avoid
-strict transport security restrictions (HSTS), and prevent switching to
-QUIC/SPDY, HTTP/2 or WebSockets (Upgrade, Alternate Protocols).  HTTP
-compression, encodings and keep-alive are disabled to make the logs more
-readable.
+strict transport security restrictions (HSTS), avoid Certificate Transparency
+enforcement (Expect-CT) and prevent switching to QUIC/SPDY, HTTP/2 or
+WebSockets (Upgrade, Alternate Protocols).  HTTP compression, encodings and
+keep-alive are disabled to make the logs more readable.
 
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.

@@ -352,6 +352,8 @@ endif
 
 export VERSION
 export OPENSSL
+export OPENSSL_BASE
+export OPENSSL_FOUND
 export MKDIR
 export WGET
 
@@ -409,6 +411,7 @@ travis: test
 test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n root||echo 0)\""
 test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n root||echo 0)\""
 test: $(TARGET).test
+	$(MAKE) -C extra/engine
 	$(RM) extra/pki/session.pem
 	$(MAKE) -C extra/pki testreqs session
 	./$(TARGET).test
@@ -420,6 +423,7 @@ $(TARGET).test: $(TOBJS)
 	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
 clean:
+	$(MAKE) -C extra/engine clean
 	$(RM) -f $(TARGET) $(TARGET).test *.o .*.o *.core *~
 	$(RM) -rf *.dSYM
 
@@ -453,7 +457,7 @@ mantest: $(TARGET).1
 	$(MAN) -M . 1 $(TARGET)
 	$(RM) man1
 
-copyright: *.c *.h *.1 *.5
+copyright: *.c *.h *.1 *.5 extra/engine/*.c
 	Mk/bin/copyright.py $^
 
 $(PKGNAME)-$(VERSION).1.txt: $(TARGET).1
