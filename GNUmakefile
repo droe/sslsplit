@@ -412,8 +412,7 @@ test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n root||echo 0)\""
 test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n root||echo 0)\""
 test: $(TARGET).test
 	$(MAKE) -C extra/engine
-	$(RM) extra/pki/session.pem
-	$(MAKE) -C extra/pki testreqs session
+	$(MAKE) -C extra/pki testreqs
 	./$(TARGET).test
 
 sudotest: test

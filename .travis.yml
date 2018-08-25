@@ -5,16 +5,13 @@ matrix:
     - os: linux
       compiler: gcc
       before_install:
-        - sudo apt-get update -qq
         - sudo apt-get install -qq libssl-dev libevent-dev check
     - os: linux
       compiler: clang
       before_install:
-        - sudo apt-get update -qq
         - sudo apt-get install -qq libssl-dev libevent-dev check
-# hangs in make test during session.pem creation
-#    - os: osx
-#      before_install:
-#        - brew install openssl
-#        - brew install libevent
-#        - brew install check
+    - os: osx
+      before_install:
+        - brew install openssl
+        - brew install libevent
+        - brew install check

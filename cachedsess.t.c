@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <time.h>
 
 #include <check.h>
 
@@ -50,6 +51,8 @@ ssl_session_from_file(const char *filename)
 		return NULL;
 	sess = PEM_read_SSL_SESSION(f, NULL, NULL, NULL);
 	fclose(f);
+	/* to avoid having to regenerate the session, just bump its time */
+	SSL_SESSION_set_time(sess, time(NULL) - 1);
 	return sess;
 }
 
