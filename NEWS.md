@@ -7,6 +7,7 @@
 -   Add -f option for loading configuration from file (pull req #193).
 -   Add `sudotest` target with unit tests which require privileges to run.
 -   Add XNU headers for macOS High Sierra 10.13.1, 10.13.2 and 10.13.3.
+-   Fix crash when using LibreSSL (pull req #207).
 -   Minor bugfixes and improvements.
 
 
