@@ -188,7 +188,7 @@ void
 opts_proto_dbg_dump(opts_t *opts)
 {
 	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 #ifdef HAVE_SSLV2
 	               (opts->sslmethod == SSLv2_method) ? "ssl2" :
 #endif /* HAVE_SSLV2 */
@@ -776,7 +776,7 @@ opts_set_openssl_engine(opts_t *opts, const char *argv0, const char *optarg)
 void
 opts_force_proto(opts_t *opts, const char *argv0, const char *optarg)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 	if (opts->sslmethod != SSLv23_method) {
 #else /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	if (opts->sslversion) {
@@ -785,7 +785,7 @@ opts_force_proto(opts_t *opts, const char *argv0, const char *optarg)
 		exit(EXIT_FAILURE);
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 #ifdef HAVE_SSLV2
 	if (!strcmp(optarg, "ssl2")) {
 		opts->sslmethod = SSLv2_method;
