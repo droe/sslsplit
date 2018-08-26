@@ -574,11 +574,7 @@ ssl_ssl_state_to_str(SSL *ssl)
 	              SSL_get_state(ssl) & SSL_ST_MASK,
 	              SSL_state_string(ssl),
 	              SSL_state_string_long(ssl),
-#ifndef LIBRESSL_VERSION_NUMBER
 	              SSL_is_server(ssl) ? "accept socket" : "connect socket");
-#else /* LIBRESSL_VERSION_NUMBER */
-	              "");
-#endif /* LIBRESSL_VERSION_NUMBER */
 
 	return (rv < 0) ? NULL : str;
 }
