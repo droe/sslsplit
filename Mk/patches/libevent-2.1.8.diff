@@ -1,0 +1,103 @@
+From 28b8075400c70b2d2da2ce07e590c2ec6d11783d Mon Sep 17 00:00:00 2001
+From: Bernard Spil <brnrd@FreeBSD.org>
+Date: Mon, 2 Apr 2018 13:18:27 +0200
+Subject: [PATCH] Fix build with LibreSSL 2.7
+
+LibreSSL 2.7 implements OpenSSL 1.1 API except for BIO_get_init()
+
+See also: https://bugs.freebsd.org/226900
+Signed-off-by: Bernard Spil <brnrd@FreeBSD.org>
+Closes: #617 (cherry-pick)
+--- openssl-compat.h.orig	2017-01-25 23:37:15 UTC
++++ openssl-compat.h
+@@ -1,7 +1,8 @@
+ #ifndef OPENSSL_COMPAT_H
+ #define OPENSSL_COMPAT_H
+ 
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+ 
+ static inline BIO_METHOD *BIO_meth_new(int type, const char *name)
+ {
+@@ -30,6 +31,11 @@ static inline BIO_METHOD *BIO_meth_new(i
+ 
+ #define TLS_method SSLv23_method
+ 
+-#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
++#endif /* (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L) */
++
++#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x20700000L
++#define BIO_get_init(b) (b)->init
++#endif
+ 
+ #endif /* OPENSSL_COMPAT_H */
+--- sample/https-client.c.orig	2017-01-25 23:37:15 UTC
++++ sample/https-client.c
+@@ -312,7 +312,8 @@ main(int argc, char **argv)
+ 	}
+ 	uri[sizeof(uri) - 1] = '\0';
+ 
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)	
+ 	// Initialize OpenSSL
+ 	SSL_library_init();
+ 	ERR_load_crypto_strings();
+@@ -480,7 +481,8 @@ cleanup:
+ 		SSL_CTX_free(ssl_ctx);
+ 	if (type == HTTP && ssl)
+ 		SSL_free(ssl);
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+ 	EVP_cleanup();
+ 	ERR_free_strings();
+ 
+@@ -492,7 +494,8 @@ cleanup:
+ 	CRYPTO_cleanup_all_ex_data();
+ 
+ 	sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
+-#endif /*OPENSSL_VERSION_NUMBER < 0x10100000L */
++#endif /* (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L) */
+ 
+ #ifdef _WIN32
+ 	WSACleanup();
+--- sample/le-proxy.c.orig	2017-01-25 23:37:15 UTC
++++ sample/le-proxy.c
+@@ -259,7 +259,8 @@ main(int argc, char **argv)
+ 
+ 	if (use_ssl) {
+ 		int r;
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+ 		SSL_library_init();
+ 		ERR_load_crypto_strings();
+ 		SSL_load_error_strings();
+--- sample/openssl_hostname_validation.c.orig	2017-01-25 23:37:15 UTC
++++ sample/openssl_hostname_validation.c
+@@ -48,7 +48,8 @@ SOFTWARE.
+ 
+ #define HOSTNAME_MAX_SIZE 255
+ 
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if OPENSSL_VERSION_NUMBER < 0x10100000L || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+ #define ASN1_STRING_get0_data ASN1_STRING_data
+ #endif
+ 
+--- test/regress_ssl.c.orig	2017-01-25 23:37:15 UTC
++++ test/regress_ssl.c
+@@ -186,7 +186,8 @@ get_ssl_ctx(void)
+ void
+ init_ssl(void)
+ {
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || \
++	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+ 	SSL_library_init();
+ 	ERR_load_crypto_strings();
+ 	SSL_load_error_strings();

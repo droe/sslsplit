@@ -4,13 +4,58 @@ matrix:
   include:
     - os: linux
       compiler: gcc
+      env: SSL=ubuntu EVENT=ubuntu
       before_install:
         - sudo apt-get install -qq libssl-dev libevent-dev check
     - os: linux
       compiler: clang
+      env: SSL=ubuntu EVENT=ubuntu
       before_install:
         - sudo apt-get install -qq libssl-dev libevent-dev check
+    - os: linux
+      compiler: clang
+      env: SSL=openssl-1.0.2p EVENT=libevent-2.0.22
+      cache:
+        directories:
+          - $HOME/opt
+      before_install:
+        - sudo apt-get install -qq check
+      install:
+        - ./Mk/bin/install-opt.sh
+      before_script:
+        - export OPENSSL_BASE="$HOME/opt/$SSL"
+        - export LIBEVENT_BASE="$HOME/opt/$EVENT"
+        - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
+    - os: linux
+      compiler: clang
+      env: SSL=openssl-1.1.0i EVENT=libevent-2.1.8
+      cache:
+        directories:
+          - $HOME/opt
+      before_install:
+        - sudo apt-get install -qq check
+      install:
+        - ./Mk/bin/install-opt.sh
+      before_script:
+        - export OPENSSL_BASE="$HOME/opt/$SSL"
+        - export LIBEVENT_BASE="$HOME/opt/$EVENT"
+        - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
+    - os: linux
+      compiler: clang
+      env: SSL=libressl-2.7.4 EVENT=libevent-2.1.8
+      cache:
+        directories:
+          - $HOME/opt
+      before_install:
+        - sudo apt-get install -qq check
+      install:
+        - ./Mk/bin/install-opt.sh
+      before_script:
+        - export OPENSSL_BASE="$HOME/opt/$SSL"
+        - export LIBEVENT_BASE="$HOME/opt/$EVENT"
+        - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: osx
+      env: SSL=homebrew EVENT=homebrew
       before_install:
         - brew install openssl
         - brew install libevent
