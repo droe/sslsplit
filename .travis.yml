@@ -14,6 +14,20 @@ matrix:
         - sudo apt-get install -qq libssl-dev libevent-dev check
     - os: linux
       compiler: clang
+      env: SSL=openssl-0.9.8zh EVENT=libevent-2.0.22
+      cache:
+        directories:
+          - $HOME/opt
+      before_install:
+        - sudo apt-get install -qq check
+      install:
+        - ./Mk/bin/install-opt.sh
+      before_script:
+        - export OPENSSL_BASE="$HOME/opt/$SSL"
+        - export LIBEVENT_BASE="$HOME/opt/$EVENT"
+        - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
+    - os: linux
+      compiler: clang
       env: SSL=openssl-1.0.0s EVENT=libevent-2.0.22
       cache:
         directories:
