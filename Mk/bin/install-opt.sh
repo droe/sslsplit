@@ -15,9 +15,6 @@ openssl-0.9.*)
 openssl-1.0.0*)
 	SSLURL=https://www.openssl.org/source/old/1.0.0/$SSL.tar.gz
 	;;
-openssl-1.0.0*)
-	SSLURL=https://www.openssl.org/source/old/1.0.0/$SSL.tar.gz
-	;;
 openssl-1.0.1*)
 	SSLURL=https://www.openssl.org/source/old/1.0.1/$SSL.tar.gz
 	;;
