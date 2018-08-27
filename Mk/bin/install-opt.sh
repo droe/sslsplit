@@ -9,6 +9,18 @@ if [ -z "$EVENT" ]; then
 fi
 
 case "$SSL" in
+openssl-0.9.*)
+	SSLURL=https://www.openssl.org/source/old/0.9.x/$SSL.tar.gz
+	;;
+openssl-1.0.0*)
+	SSLURL=https://www.openssl.org/source/old/1.0.0/$SSL.tar.gz
+	;;
+openssl-1.0.0*)
+	SSLURL=https://www.openssl.org/source/old/1.0.0/$SSL.tar.gz
+	;;
+openssl-1.0.1*)
+	SSLURL=https://www.openssl.org/source/old/1.0.1/$SSL.tar.gz
+	;;
 openssl-*)
 	SSLURL=https://www.openssl.org/source/$SSL.tar.gz
 	;;
@@ -38,7 +50,10 @@ if [ ! -d "$HOME/opt/$SSL" ]; then
 	wget "$SSLURL" || exit 1
 	tar -xzvf "$SSL.tar.gz" || exit 1
 	cd "$SSL" || exit 1
-	./config shared --prefix="$HOME/opt/$SSL" || exit 1
+	./config shared \
+		-Wl,-rpath="$HOME/opt/$SSL/lib" \
+		--prefix="$HOME/opt/$SSL" \
+		--openssldir="$HOME/opt/$SSL" || exit 1
 	make && make install || { rm -rf "$HOME/opt/$SSL"; exit 1; }
 	cd ..
 fi

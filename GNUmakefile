@@ -245,6 +245,7 @@ OPENSSL_FIND:=	$(wildcard \
 endif
 OPENSSL_AVAIL:=	$(OPENSSL_FIND:/$(OPENSSL_PAT)=)
 OPENSSL_FOUND:=	$(word 1,$(OPENSSL_AVAIL))
+OPENSSL:=	$(OPENSSL_FOUND)/bin/openssl
 ifndef OPENSSL_FOUND
 $(error dependency 'OpenSSL' not found; \
 	install it or point OPENSSL_BASE to base path)
