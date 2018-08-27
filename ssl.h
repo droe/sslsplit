@@ -90,6 +90,28 @@
 int DH_set0_pqg(DH *, BIGNUM *, BIGNUM *, BIGNUM *);
 #endif /* < OpenSSL 1.1.0 */
 
+#if OPENSSL_VERSION_NUMBER < 0x1000000fL
+static inline int EVP_PKEY_base_id(const EVP_PKEY *pkey)
+{
+	return EVP_PKEY_type(pkey->type);
+}
+static inline int X509_PUBKEY_get0_param(ASN1_OBJECT **ppkalg, const unsigned char **pk, int *ppklen, X509_ALGOR **pa, X509_PUBKEY *pub)
+{
+	if (ppkalg)
+		*ppkalg = pub->algor->algorithm;
+	if (pk) {
+		*pk = pub->public_key->data;
+		*ppklen = pub->public_key->length;
+	}
+	if (pa)
+		*pa = pub->algor;
+	return 1;
+}
+#ifndef X509_get_X509_PUBKEY
+#define X509_get_X509_PUBKEY(x) ((x)->cert_info->key
+#endif
+#endif /* OpenSSL < 1.0.0 */
+
 /*
  * The constructors returning a SSL_METHOD * were changed to return
  * a const SSL_METHOD * between 0.9.8 and 1.0.0.
