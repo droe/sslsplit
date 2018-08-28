@@ -84,6 +84,20 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: linux
       compiler: clang
+      env: SSL=libressl-2.2.7 EVENT=libevent-2.0.22
+      cache:
+        directories:
+          - $HOME/opt
+      before_install:
+        - sudo apt-get install -qq check
+      install:
+        - ./Mk/bin/install-opt.sh
+      before_script:
+        - export OPENSSL_BASE="$HOME/opt/$SSL"
+        - export LIBEVENT_BASE="$HOME/opt/$EVENT"
+        - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
+    - os: linux
+      compiler: clang
       env: SSL=libressl-2.7.4 EVENT=libevent-2.1.8
       cache:
         directories:
@@ -98,7 +112,11 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: osx
       env: SSL=homebrew EVENT=homebrew
+      cache:
+        directories:
+          - /usr/local/Cellar
+          - /usr/local/opt
       before_install:
-        - brew install openssl
-        - brew install libevent
-        - brew install check
+        - test -e /usr/local/opt/openssl  || brew install openssl
+        - test -e /usr/local/opt/libevent || brew install libevent
+        - test -e /usr/local/opt/check    || brew install check
