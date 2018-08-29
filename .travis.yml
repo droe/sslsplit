@@ -121,6 +121,6 @@ matrix:
           - /usr/local/Cellar/check
           - /usr/local/opt/check
       before_install:
-        - test -d /usr/local/opt/openssl/lib  || brew install openssl
-        - test -d /usr/local/opt/libevent/lib || brew install libevent
-        - test -d /usr/local/opt/check/lib    || brew install check
+        - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
+        - test -d /usr/local/opt/libevent/lib || { rmdir /usr/local/opt/libevent; brew install libevent; }
+        - test -d /usr/local/opt/check/lib    || { rmdir /usr/local/opt/check; brew install check; }
