@@ -114,8 +114,12 @@ matrix:
       env: SSL=homebrew EVENT=homebrew
       cache:
         directories:
-          - /usr/local/Cellar
-          - /usr/local/opt
+          - /usr/local/Cellar/openssl
+          - /usr/local/opt/openssl
+          - /usr/local/Cellar/libevent
+          - /usr/local/opt/libevent
+          - /usr/local/Cellar/check
+          - /usr/local/opt/check
       before_install:
         - test -e /usr/local/opt/openssl  || brew install openssl
         - test -e /usr/local/opt/libevent || brew install libevent
