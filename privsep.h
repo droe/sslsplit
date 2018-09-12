@@ -39,10 +39,10 @@ int privsep_client_opensock(int, const proxyspec_t *spec);
 int privsep_client_certfile(int, const char *);
 int privsep_client_close(int);
 
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
+#ifdef __linux__
 pid_t privsep_client_get_pid(int, uint32_t, in_port_t);
-char* privsep_client_get_info(int , pid_t, uid_t*, gid_t*);
-#endif
+char * privsep_client_get_info(int , pid_t, uid_t *, gid_t *);
+#endif /* __linux__ */
 
 #endif /* !PRIVSEP_H */
 

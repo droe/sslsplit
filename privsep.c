@@ -58,21 +58,22 @@
 
 /* maximal message sizes */
 #define PRIVSEP_MAX_REQ_SIZE	512	/* arbitrary limit */
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
+#ifdef __linux__
 #define PRIVSEP_MAX_ANS_SIZE	PATH_MAX + 255
-#else
+#else /* !__linux__ */
 #define PRIVSEP_MAX_ANS_SIZE	(1+sizeof(int))
-#endif
+#endif /* !__linux__ */
+
 /* command byte */
 #define PRIVSEP_REQ_CLOSE	0	/* closing command socket */
 #define PRIVSEP_REQ_OPENFILE	1	/* open content log file */
 #define PRIVSEP_REQ_OPENFILE_P	2	/* open content log file w/mkpath */
 #define PRIVSEP_REQ_OPENSOCK	3	/* open socket and pass fd */
 #define PRIVSEP_REQ_CERTFILE	4	/* open cert file in certgendir */
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
+#ifdef __linux__
 #define PRIVSEP_REQ_GETPID	5	/* find pid for address */
 #define PRIVSEP_REQ_GETINFO	6	/* get info for pid */
-#endif
+#endif /* __linux__ */
 
 /* response byte */
 #define PRIVSEP_ANS_SUCCESS	0	/* success */
@@ -316,8 +317,7 @@ privsep_server_certfile(const char *fn)
 	return fd;
 }
 
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
-
+#ifdef __linux__
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <ctype.h>
@@ -325,183 +325,185 @@ privsep_server_certfile(const char *fn)
 
 enum { ST_START, ST_NUM, ST_BEFORE_IP, ST_LOCAL_IP, ST_LOCAL_PORT };
 
-int ishex(int c) {
-    return (isdigit(c) != 0 || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)) ? 1 : 0;
+static int
+ishex(int c)
+{
+	return (isdigit(c) != 0 || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)) ? 1 : 0;
 }
 
-int hextoi(int c) {
-    if(c >= 65 && c <= 70) {
-        return c - 55;
-    }
-    if(c >= 97 && c <= 102) {
-        return c - 87;
-    }
-    return c - 48;
+static int
+hextoi(int c)
+{
+	if (c >= 65 && c <= 70) {
+		return c - 55;
+	}
+	if (c >= 97 && c <= 102) {
+		return c - 87;
+	}
+	return c - 48;
 }
 
 pid_t find_pid(ino_t inode)
 {
-    DIR *d = opendir("/proc"), *dfd;
-    struct dirent entry, *res;
-    struct stat sbuf;
-    char *ep, fdn[1024], fdf[1024];
-    pid_t pid;
+	DIR *d = opendir("/proc"), *dfd;
+	struct dirent entry, *res;
+	struct stat sbuf;
+	char *ep, fdn[1024], fdf[1024];
+	pid_t pid;
 
-    if(d != NULL) {
-        while(1) {
-            readdir_r(d, &entry, &res);
-            if(res == NULL) {
-                break;
-            }
-            if(entry.d_type == DT_DIR) {
-                pid = strtol(entry.d_name, &ep, 10);
-                if(ep[0] == '\0') {
-                    snprintf(fdn, sizeof(fdn), "/proc/%s/fd", entry.d_name);
-                    dfd = opendir(fdn);
-                    if(dfd != NULL) {
-                        while(1) {
-                            readdir_r(dfd, &entry, &res);
-                            if(res == NULL) {
-                                break;
-                            }
-                            snprintf(fdf, sizeof(fdf), "%s/%s", fdn, entry.d_name);
-                            if(stat(fdf, &sbuf) == 0) {
-                                if((sbuf.st_mode & S_IFMT) == S_IFSOCK && sbuf.st_ino == inode) {
-                                    closedir(dfd);
-                                    closedir(d);
-                                    return pid;
-                                }
-                            }
-                        }
-                        closedir(dfd);
-                    }
-                }
-            }
-        }
-        closedir(d);
-    }
-    return -1;
+	if (d != NULL) {
+		while(1) {
+			readdir_r(d, &entry, &res);
+			if (res == NULL) {
+				break;
+			}
+			if (entry.d_type == DT_DIR) {
+				pid = strtol(entry.d_name, &ep, 10);
+				if (ep[0] == '\0') {
+					snprintf(fdn, sizeof(fdn), "/proc/%s/fd", entry.d_name);
+					dfd = opendir(fdn);
+					if (dfd != NULL) {
+						while(1) {
+							readdir_r(dfd, &entry, &res);
+							if (res == NULL) {
+								break;
+							}
+							snprintf(fdf, sizeof(fdf), "%s/%s", fdn, entry.d_name);
+							if (stat(fdf, &sbuf) == 0) {
+								if ((sbuf.st_mode & S_IFMT) == S_IFSOCK && sbuf.st_ino == inode) {
+									closedir(dfd);
+									closedir(d);
+									return pid;
+								}
+							}
+						}
+						closedir(dfd);
+					}
+				}
+			}
+		}
+		closedir(d);
+	}
+	return -1;
 }
 
 static pid_t WUNRES
 privsep_server_get_pid(uint32_t src_addr, in_port_t src_port)
 {
-    int fd = open("/proc/net/tcp", O_RDONLY);
-    if (fd != -1) {
-        char bufc[4096], inode[64];
-        char *buf;
-        int i, state, sh = 0;
-        uint32_t s_addr;
-        in_port_t sin_port = 0;
-        char c;
-        FILE *file = fdopen(fd, "r");
+	int fd = open("/proc/net/tcp", O_RDONLY);
+	if (fd != -1) {
+		char bufc[4096], inode[64];
+		char *buf;
+		int i, state, sh = 0;
+		uint32_t s_addr;
+		in_port_t sin_port = 0;
+		char c;
+		FILE *file = fdopen(fd, "r");
 
-        if(file != NULL) {
-            while(fgets(bufc, sizeof(bufc), file) != NULL) {
-                state = ST_START;
-                buf = (char *)&bufc;
-                for(c = *buf; c != 0; buf++, c = *buf) {
-                    if(state == ST_START) {
-                        if(c == ' ') {
-                            continue;
-                        }
-                        if(isdigit(c) == 0) {
-                            break;
-                        }
-                        state = ST_NUM;
-                    } else if(state == ST_NUM) {
-                        if(c == ':') {
-                            state = ST_BEFORE_IP;
-                            continue;
-                        }
-                        if(isdigit(c) == 0) {
-                            break;
-                        }
-                    } else if(state == ST_BEFORE_IP) {
-                        if(c == ' ') {
-                            continue;
-                        }
-                        if(ishex(c) != 0) {
-                            state = ST_LOCAL_IP;
-                            sh = 24;
-                            s_addr = hextoi(c) << 28;
-                            continue;
-                        }
-                        break;
-                    } else if(state == ST_LOCAL_IP) {
-                        if(c == ':') {
-                            state = ST_LOCAL_PORT;
-                            sin_port = 0;
-                            sh = 12;
-                            continue;
-                        }
-                        if(ishex(c) != 0) {
-                            s_addr += (hextoi(c) << sh);
-                            sh -= 4;
-                            continue;
-                        }
-                        break;
-                    } else if(state == ST_LOCAL_PORT) {
-                        if(c == ' ') {
-                            if(s_addr == src_addr && htons(sin_port) == src_port) {
-                                /* find inode */
-                                buf += 72;
-                                for(c = *buf, i = 0; c != 0; i++, buf++, c = *buf) {
-                                    if(c == ' ') {
-                                        inode[i] = 0;
-                                        break;
-                                    }
-                                    if(isdigit(c) == 0) {
-                                        inode[0] = 0;
-                                        break;
-                                    }
-                                    inode[i] = c;
-                                }
-                                if(inode[0] == 0) {
-                                    break;
-                                }
-                                return find_pid(atoll(inode));
-                            }
-                            break;
-                        }
-                        if(ishex(c) != 0) {
-                            sin_port += (hextoi(c) << sh);
-                            sh -= 4;
-                            continue;
-                        }
-                        break;
-                    }
-                }
-            }
-            fclose(file);
-        }
-    }
-    return -1;
+		if (file != NULL) {
+			while (fgets(bufc, sizeof(bufc), file) != NULL) {
+				state = ST_START;
+				buf = (char *)&bufc;
+				for (c = *buf; c != 0; buf++, c = *buf) {
+					if (state == ST_START) {
+						if (c == ' ') {
+							continue;
+						}
+						if (isdigit(c) == 0) {
+							break;
+						}
+						state = ST_NUM;
+					} else if (state == ST_NUM) {
+						if (c == ':') {
+							state = ST_BEFORE_IP;
+							continue;
+						}
+						if (isdigit(c) == 0) {
+							break;
+						}
+					} else if (state == ST_BEFORE_IP) {
+						if (c == ' ') {
+							continue;
+						}
+						if (ishex(c) != 0) {
+							state = ST_LOCAL_IP;
+							sh = 24;
+							s_addr = hextoi(c) << 28;
+							continue;
+						}
+						break;
+					} else if (state == ST_LOCAL_IP) {
+						if (c == ':') {
+							state = ST_LOCAL_PORT;
+							sin_port = 0;
+							sh = 12;
+							continue;
+						}
+						if (ishex(c) != 0) {
+							s_addr += (hextoi(c) << sh);
+							sh -= 4;
+							continue;
+						}
+						break;
+					} else if (state == ST_LOCAL_PORT) {
+						if (c == ' ') {
+							if (s_addr == src_addr && htons(sin_port) == src_port) {
+								/* find inode */
+								buf += 72;
+								for (c = *buf, i = 0; c != 0; i++, buf++, c = *buf) {
+									if (c == ' ') {
+										inode[i] = 0;
+										break;
+									}
+									if (isdigit(c) == 0) {
+										inode[0] = 0;
+										break;
+									}
+									inode[i] = c;
+								}
+								if (inode[0] == 0) {
+									break;
+								}
+								return find_pid(atoll(inode));
+							}
+							break;
+						}
+						if (ishex(c) != 0) {
+							sin_port += (hextoi(c) << sh);
+							sh -= 4;
+							continue;
+						}
+						break;
+					}
+				}
+			}
+			fclose(file);
+		}
+	}
+	return -1;
 }
 
 static size_t WUNRES
 privsep_server_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
-    struct stat sbuf;
-    char dn[1024], exe[PATH_MAX + 1];
-    ssize_t n;
+	struct stat sbuf;
+	char dn[1024], exe[PATH_MAX + 1];
+	ssize_t n;
 
-    snprintf(dn, sizeof(dn), "/proc/%ld", (long)pid);
-    if(stat(dn, &sbuf) == 0) {
-        *uid = sbuf.st_uid;
-        *gid = sbuf.st_gid;
-        snprintf(dn, sizeof(dn), "/proc/%ld/exe", (long)pid);
-        n = readlink(dn, exe, sizeof(exe));
-        if(n != -1) {
-            exe[n < PATH_MAX ? n : PATH_MAX] = 0;
-            *path = strdup(exe);
-            return n < PATH_MAX ? n : PATH_MAX;
-        }
-    }
- 
-    return 0;
+	snprintf(dn, sizeof(dn), "/proc/%ld", (long)pid);
+	if (stat(dn, &sbuf) == 0) {
+		*uid = sbuf.st_uid;
+		*gid = sbuf.st_gid;
+		snprintf(dn, sizeof(dn), "/proc/%ld/exe", (long)pid);
+		n = readlink(dn, exe, sizeof(exe));
+		if (n != -1) {
+			exe[n < PATH_MAX ? n : PATH_MAX] = 0;
+			*path = strdup(exe);
+			return n < PATH_MAX ? n : PATH_MAX;
+		}
+	}
+	return -1;
 }
-
-#endif
+#endif /* __linux__ */
 
 /*
  * Handle a single request on a readable server socket.
@@ -536,44 +538,44 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 		/* client indicates EOF through close message */
 		return 1;
 	}
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
-        case PRIVSEP_REQ_GETPID: {
-            ans[0] = PRIVSEP_ANS_SUCCESS;
-            *(pid_t *)(&ans[1]) = privsep_server_get_pid(*(uint32_t *)(&req[1]),
-                                                         *(in_port_t *)(&req[1 + sizeof(uint32_t)]));
-            if (sys_sendmsgfd(srvsock, ans, 1 + sizeof(pid_t), -1) == -1) {
-                log_err_printf("Sending message failed: %s (%i"
-                               ")\n", strerror(errno), errno);
-                return -1;
-            }
-            return 0;
-        }
-        case PRIVSEP_REQ_GETINFO: {
-            char *path;
-            uid_t uid;
-            gid_t gid;
-            size_t anssz = 1, plen;
+#ifdef __linux__
+	case PRIVSEP_REQ_GETPID: {
+		ans[0] = PRIVSEP_ANS_SUCCESS;
+		*(pid_t *)(&ans[1]) = privsep_server_get_pid(*(uint32_t *)(&req[1]),
+		                                             *(in_port_t *)(&req[1 + sizeof(uint32_t)]));
+		if (sys_sendmsgfd(srvsock, ans, 1 + sizeof(pid_t), -1) == -1) {
+			log_err_printf("Sending message failed: %s (%i)\n",
+			               strerror(errno), errno);
+			return -1;
+		}
+		return 0;
+	}
+	case PRIVSEP_REQ_GETINFO: {
+		char *path;
+		uid_t uid;
+		gid_t gid;
+		size_t anssz = 1, plen;
 
-            ans[0] = PRIVSEP_ANS_SUCCESS;
-            if((plen = privsep_server_get_info(*(pid_t *)(&req[1]), &path, &uid, &gid)) != 0) {
-                anssz = 1 + sizeof(size_t) + plen + sizeof(uid_t) + sizeof(gid_t);
-                *(size_t *)(&ans[1]) = plen;
-                memcpy((void *)(ans + 1 + sizeof(size_t)), (void *)path, plen);
-                free(path);
-                *(uid_t *)(&ans[1 + sizeof(size_t) + plen]) = uid;
-                *(gid_t *)(&ans[1 + sizeof(size_t) + plen] + sizeof(gid_t)) = gid;
-            } else {
-                *(size_t *)(&ans[1]) = 0;
-                anssz = 1 + sizeof(size_t);
-            }
-            if (sys_sendmsgfd(srvsock, ans, anssz, -1) == -1) {
-                log_err_printf("Sending message failed: %s (%i"
-                               ")\n", strerror(errno), errno);
-                return -1;
-            }
-            return 0;
-        }
-#endif
+		ans[0] = PRIVSEP_ANS_SUCCESS;
+		if ((plen = privsep_server_get_info(*(pid_t *)(&req[1]), &path, &uid, &gid)) != 0) {
+			anssz = 1 + sizeof(size_t) + plen + sizeof(uid_t) + sizeof(gid_t);
+			*(size_t *)(&ans[1]) = plen;
+			memcpy((void *)(ans + 1 + sizeof(size_t)), (void *)path, plen);
+			free(path);
+			*(uid_t *)(&ans[1 + sizeof(size_t) + plen]) = uid;
+			*(gid_t *)(&ans[1 + sizeof(size_t) + plen] + sizeof(gid_t)) = gid;
+		} else {
+			*(size_t *)(&ans[1]) = 0;
+			anssz = 1 + sizeof(size_t);
+		}
+		if (sys_sendmsgfd(srvsock, ans, anssz, -1) == -1) {
+			log_err_printf("Sending message failed: %s (%i)\n",
+			               strerror(errno), errno);
+			return -1;
+		}
+		return 0;
+	}
+#endif /* __linux__ */
 	case PRIVSEP_REQ_OPENFILE_P:
 		mkpath = 1;
 		/* fall through */
@@ -1080,113 +1082,112 @@ privsep_client_close(int clisock)
 	return 0;
 }
 
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
-
+#ifdef __linux__
 pid_t
 privsep_client_get_pid(int clisock, uint32_t src_addr, in_port_t src_port)
 {
-    char req[sizeof(uint32_t) + sizeof(in_port_t) + 1];
-    char ans[PRIVSEP_MAX_ANS_SIZE];
-    ssize_t n;
-    int fd = -1;
+	char req[sizeof(uint32_t) + sizeof(in_port_t) + 1];
+	char ans[PRIVSEP_MAX_ANS_SIZE];
+	ssize_t n;
+	int fd = -1;
 
-    req[0] = PRIVSEP_REQ_GETPID;
-    *(uint32_t *)(&req[1]) = src_addr;
-    *(in_port_t *)(&req[1 + sizeof(uint32_t)]) = src_port;
-    if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
-        return -1;
-    }
-
-    if ((n = sys_recvmsgfd(clisock, ans, sizeof(ans), &fd)) == -1) {
+	req[0] = PRIVSEP_REQ_GETPID;
+	*(uint32_t *)(&req[1]) = src_addr;
+	*(in_port_t *)(&req[1 + sizeof(uint32_t)]) = src_port;
+	if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
 		return -1;
-    }
+	}
 
-    if (n < 1) {
-        errno = EINVAL;
-        return -1;
-    }
+	if ((n = sys_recvmsgfd(clisock, ans, sizeof(ans), &fd)) == -1) {
+		return -1;
+	}
 
-    switch (ans[0]) {
-    case PRIVSEP_ANS_SUCCESS:
-        return *(pid_t*)(&ans[1]);
-    case PRIVSEP_ANS_DENIED:
-        errno = EACCES;
-        return -1;
-    case PRIVSEP_ANS_SYS_ERR:
-        if (n < (ssize_t)(1 + sizeof(int))) {
-            errno = EINVAL;
-            return -1;
-        }
-        errno = *((int*)&ans[1]);
-        return -1;
-    case PRIVSEP_ANS_UNK_CMD:
-    case PRIVSEP_ANS_INVALID:
-    default:
-        errno = EINVAL;
-        return -1;
-    }
+	if (n < 1) {
+		errno = EINVAL;
+		return -1;
+	}
 
-    return 0;
+	switch (ans[0]) {
+	case PRIVSEP_ANS_SUCCESS:
+		return *(pid_t*)(&ans[1]);
+	case PRIVSEP_ANS_DENIED:
+		errno = EACCES;
+		return -1;
+	case PRIVSEP_ANS_SYS_ERR:
+		if (n < (ssize_t)(1 + sizeof(int))) {
+			errno = EINVAL;
+			return -1;
+		}
+		errno = *((int*)&ans[1]);
+		return -1;
+	case PRIVSEP_ANS_UNK_CMD:
+	case PRIVSEP_ANS_INVALID:
+	default:
+		errno = EINVAL;
+		return -1;
+	}
+
+	return 0;
 }
 
-char*
+char *
 privsep_client_get_info(int clisock, pid_t pid, uid_t *uid, gid_t *gid)
 {
-    char req[sizeof(pid_t) + 1];
-    char ans[PRIVSEP_MAX_ANS_SIZE];
-    size_t plen;
-    char *exe;
-    ssize_t n;
-    int fd = -1;
+	char req[sizeof(pid_t) + 1];
+	char ans[PRIVSEP_MAX_ANS_SIZE];
+	size_t plen;
+	char *exe;
+	ssize_t n;
+	int fd = -1;
 
-    req[0] = PRIVSEP_REQ_GETINFO;
-    *(pid_t *)(&req[1]) = pid;
-    if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
-        return NULL;
-    }
-
-    if ((n = sys_recvmsgfd(clisock, ans, sizeof(ans), &fd)) == -1) {
+	req[0] = PRIVSEP_REQ_GETINFO;
+	*(pid_t *)(&req[1]) = pid;
+	if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
 		return NULL;
-    }
+	}
 
-    if (n < 1) {
-        errno = EINVAL;
-        return NULL;
-    }
+	if ((n = sys_recvmsgfd(clisock, ans, sizeof(ans), &fd)) == -1) {
+		return NULL;
+	}
 
-    switch (ans[0]) {
-    case PRIVSEP_ANS_SUCCESS:
-        plen = *(size_t *)(&ans[1]);
-        exe = malloc(plen + 1);
-        if(exe != NULL) {
-            memcpy((void *)exe, (void *)(ans + 1 + sizeof(size_t)), plen);
-            exe[plen] = 0;
-            *uid = *(uid_t *)(&ans[1 + sizeof(size_t) + plen]);
-            *gid = *(gid_t *)(&ans[1 + sizeof(size_t) + sizeof(uid_t) + plen]);
-            return exe;
-        }
-        errno = ENOMEM;
-        return NULL;
-    case PRIVSEP_ANS_DENIED:
-        errno = EACCES;
-        return NULL;
-    case PRIVSEP_ANS_SYS_ERR:
-        if (n < (ssize_t)(1 + sizeof(int))) {
-            errno = EINVAL;
-            return NULL;
-        }
-        errno = *((int*)&ans[1]);
-        return NULL;
-    case PRIVSEP_ANS_UNK_CMD:
-    case PRIVSEP_ANS_INVALID:
-    default:
-        errno = EINVAL;
-        return NULL;
-    }
+	if (n < 1) {
+		errno = EINVAL;
+		return NULL;
+	}
 
-    return 0;
+	switch (ans[0]) {
+	case PRIVSEP_ANS_SUCCESS:
+		plen = *(size_t *)(&ans[1]);
+		exe = malloc(plen + 1);
+		if (exe != NULL) {
+			memcpy((void *)exe, (void *)(ans + 1 + sizeof(size_t)), plen);
+			exe[plen] = 0;
+			*uid = *(uid_t *)(&ans[1 + sizeof(size_t) + plen]);
+			*gid = *(gid_t *)(&ans[1 + sizeof(size_t) + sizeof(uid_t) + plen]);
+			return exe;
+		}
+		errno = ENOMEM;
+		return NULL;
+	case PRIVSEP_ANS_DENIED:
+		errno = EACCES;
+		return NULL;
+	case PRIVSEP_ANS_SYS_ERR:
+		if (n < (ssize_t)(1 + sizeof(int))) {
+			errno = EINVAL;
+			return NULL;
+		}
+		errno = *((int*)&ans[1]);
+		return NULL;
+	case PRIVSEP_ANS_UNK_CMD:
+	case PRIVSEP_ANS_INVALID:
+	default:
+		errno = EINVAL;
+		return NULL;
+	}
+
+	return 0;
 }
-#endif
+#endif /* __linux__ */
 
 /*
  * Fork and set up privilege separated monitor process.

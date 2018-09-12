@@ -826,9 +826,9 @@ main(int argc, char *argv[])
 		goto out_sslreinit_failed;
 	}
 
-#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
-        linux_proc_init(clisock[1]);
-#endif
+#ifdef __linux__
+	proc_linux_init(clisock[1]);
+#endif /* __linux__ */
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (log_init(opts, proxy, &clisock[1]) == -1) {
