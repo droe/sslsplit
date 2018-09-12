@@ -36,7 +36,9 @@
 
 #include <event2/util.h>
 
+#if defined(HAVE_DARWIN_LIBPROC) || defined(__FreeBSD__) || defined(__linux__)
 #define HAVE_LOCAL_PROCINFO
+#endif
 
 #ifdef HAVE_DARWIN_LIBPROC
 #ifndef LOCAL_PROCINFO_STR

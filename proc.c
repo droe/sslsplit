@@ -464,7 +464,6 @@ static int proc_clisock = -1; /* privsep client socket for process info */
 
 void
 proc_linux_init(int clisock) {
-	/* XXX only use privsep if actually needed */
 	proc_clisock = clisock;
 }
 
