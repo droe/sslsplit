@@ -456,6 +456,36 @@ proc_darwin_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 
 #endif /* HAVE_DARWIN_LIBPROC */
 
+#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
+#include "privsep.h"
+
+static int proc_clisock = -1; /* privsep client socket for process info */
+
+void linux_proc_init(int clisock) {
+    proc_clisock = clisock;
+}
+
+int
+proc_linux_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
+                        UNUSED socklen_t src_addrlen)
+{
+    if (src_addr->sa_family == AF_INET) {
+        struct sockaddr_in *src_sai =
+            (struct sockaddr_in *)src_addr;
+        *result = privsep_client_get_pid(proc_clisock, src_sai->sin_addr.s_addr, src_sai->sin_port);
+        return 0;
+    }
+    return -1;
+}
+
+int
+proc_linux_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+    *path = privsep_client_get_info(proc_clisock, pid, uid, gid);
+    return path == NULL ? -1 : 0;
+}
+
+#endif
+
 /* vim: set noet ft=c: */
 
 

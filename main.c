@@ -826,6 +826,10 @@ main(int argc, char *argv[])
 		goto out_sslreinit_failed;
 	}
 
+#if !defined(HAVE_DARWIN_LIBPROC) && !defined(__FreeBSD__)
+        linux_proc_init(clisock[1]);
+#endif
+
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (log_init(opts, proxy, &clisock[1]) == -1) {
 		fprintf(stderr, "%s: failed to init log facility: %s\n",
