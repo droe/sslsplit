@@ -1,7 +1,7 @@
 # Security
 
 Please report all security issues privately to
-[Daniel Roethlisberger](daniel@roe.ch).
+[Daniel Roethlisberger](mailto:daniel@roe.ch).
 
 The maintainers pledge to act on all reported security issues in a timely and
 professional manner, working with the reporter to reproduce, understand,
