@@ -1100,8 +1100,10 @@ static int content_pcap_fd = -1;
 static char *content_pcap_fn = NULL;
 
 static int
-log_pcap_preinit(const char *pcapfile) {
-	unlink(pcapfile);
+log_pcap_preinit(const char *pcapfile)
+{
+	int exists = access(pcapfile, F_OK);
+
 	content_pcap_fd = open(pcapfile, O_WRONLY | O_APPEND | O_CREAT,
 			DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
@@ -1110,10 +1112,12 @@ log_pcap_preinit(const char *pcapfile) {
 		return -1;
 	}
 
-	if (logpkt_write_global_pcap_hdr(content_pcap_fd) == -1) {
-		close(content_pcap_fd);
-		content_pcap_fd = -1;
-		return -1;
+	if (exists == -1) {
+		if (logpkt_write_global_pcap_hdr(content_pcap_fd) == -1) {
+			close(content_pcap_fd);
+			content_pcap_fd = -1;
+			return -1;
+		}
 	}
 
 	if (!(content_pcap_fn = realpath(pcapfile, NULL))) {
