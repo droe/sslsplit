@@ -831,7 +831,10 @@ main(int argc, char *argv[])
 	}
 
 #ifdef __linux__
-	proc_linux_init(clisock[4]);
+	if (proc_linux_init(clisock[4]) == -1) {
+		fprintf(stderr, "%s: failed to init proc_linux\n", argv0);
+		goto out_sslreinit_failed;
+	}
 #endif /* __linux__ */
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
