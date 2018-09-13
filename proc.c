@@ -467,10 +467,10 @@ static pthread_mutex_t proc_clisock_mutex;
 void
 proc_linux_init(int clisock) {
 	proc_clisock = clisock;
-        if (pthread_mutex_init(&proc_clisock_mutex, NULL) != 0) {
-            /* something goes wrong, try to work without mutex */
-            proc_clisock_nomutex = 1;
-        }
+	if (pthread_mutex_init(&proc_clisock_mutex, NULL) != 0) {
+		/* something goes wrong, try to work without mutex */
+		proc_clisock_nomutex = 1;
+	}
 }
 
 int
@@ -479,15 +479,15 @@ proc_linux_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 {
 	if (src_addr->sa_family == AF_INET) {
 		struct sockaddr_in *src_sai = (struct sockaddr_in *)src_addr;
-                if(proc_clisock_nomutex == 1 || pthread_mutex_lock(&proc_clisock_mutex) == 0) {
-                    *result = privsep_client_get_pid(proc_clisock, src_sai->sin_addr.s_addr, src_sai->sin_port);
-                    if(proc_clisock_nomutex == 0) {
-                        pthread_mutex_unlock(&proc_clisock_mutex);
-                    }
-                    return 0;
-                } else {
-                    return -1;
-                }
+		if (proc_clisock_nomutex == 1 || pthread_mutex_lock(&proc_clisock_mutex) == 0) {
+			*result = privsep_client_get_pid(proc_clisock, src_sai->sin_addr.s_addr, src_sai->sin_port);
+			if (proc_clisock_nomutex == 0) {
+				pthread_mutex_unlock(&proc_clisock_mutex);
+			}
+			return 0;
+		} else {
+			return -1;
+		}
 	}
 	/* TODO IPv6 */
 	return -1;
@@ -496,17 +496,16 @@ proc_linux_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
 int
 proc_linux_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid)
 {
-        if(proc_clisock_nomutex == 1 || pthread_mutex_lock(&proc_clisock_mutex) == 0) {
-            *path = privsep_client_get_info(proc_clisock, pid, uid, gid);
-            if(proc_clisock_nomutex == 0) {
-                pthread_mutex_unlock(&proc_clisock_mutex);
-            }
-        } else {
-            *path = NULL;
-        }
+	if (proc_clisock_nomutex == 1 || pthread_mutex_lock(&proc_clisock_mutex) == 0) {
+		*path = privsep_client_get_info(proc_clisock, pid, uid, gid);
+		if (proc_clisock_nomutex == 0) {
+			pthread_mutex_unlock(&proc_clisock_mutex);
+		}
+	} else {
+		*path = NULL;
+	}
 	return *path == NULL ? -1 : 0;
 }
-
 #endif /* __linux__ */
 
 /* vim: set noet ft=c: */
