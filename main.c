@@ -787,7 +787,11 @@ main(int argc, char *argv[])
 	 * child process doing the actual work.  We request 4 privsep client
 	 * sockets: three logger threads, and the child process main thread,
 	 * which will become the main proxy thread. */
+#ifdef __linux__
+	int clisock[5];
+#else /* !__linux__ */
 	int clisock[4];
+#endif /* !__linux__ */
 	if (privsep_fork(opts, clisock,
 	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
@@ -827,7 +831,7 @@ main(int argc, char *argv[])
 	}
 
 #ifdef __linux__
-	proc_linux_init(clisock[1]);
+	proc_linux_init(clisock[4]);
 #endif /* __linux__ */
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
