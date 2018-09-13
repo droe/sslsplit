@@ -46,6 +46,7 @@ int sys_isgroup(const char *) NONNULL(1) WUNRES;
 char * sys_user_str(uid_t) MALLOC;
 char * sys_group_str(gid_t) MALLOC;
 
+int sys_get_af(char *);
 int sys_sockaddr_parse(struct sockaddr_storage *, socklen_t *,
                        char *, char *, int, int) NONNULL(1,2,3,4) WUNRES;
 int sys_sockaddr_str(struct sockaddr *, socklen_t,

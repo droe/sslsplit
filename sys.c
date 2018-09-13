@@ -353,6 +353,22 @@ sys_group_str(gid_t gid)
 }
 
 /*
+ * Determine address family of addr
+ */
+int
+sys_get_af(char *addr)
+{
+	if (strstr(addr, ":"))
+		return AF_INET6;
+	else if (!strpbrk(addr, "abcdefghijklmnopqrstu"
+							"vwxyzABCDEFGHIJKLMNOP"
+							"QRSTUVWXYZ-"))
+		return AF_INET;
+	else
+		return AF_UNSPEC;
+}
+
+/*
  * Parse an ascii host/IP and port tuple into a sockaddr_storage.
  * On success, returns address family and fills in addr, addrlen.
  * Returns -1 on error.

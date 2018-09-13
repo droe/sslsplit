@@ -146,13 +146,28 @@ Content log: full data to file or named pipe (excludes ContentLogDir/ContentLogP
 Content log: full data to separate files in dir (excludes ContentLog/ContentLogPathSpec).
 .TP 
 \fBContentLogPathSpec STRING\fR
-Content log: full data to sep files with %% subst (excludes ContentLog/ContentLogDir).
+Content log: full data to sep files with % subst (excludes ContentLog/ContentLogDir).
 .TP 
 \fBLogProcInfo BOOL\fR
 Look up local process owning each connection for logging.
 .TP 
 \fBMasterKeyLog STRING\fR
 Log master keys to logfile in SSLKEYLOGFILE format.
+.TP 
+\fBPcapLog STRING\fR
+Pcap log: packets to pcapfile (excludes PcapLogDir/PcapLogPathSpec).
+.TP 
+\fBPcapLogDir STRING\fR
+Pcap log: packets to separate files in dir (excludes PcapLog/PcapLogPathSpec).
+.TP 
+\fBPcapLogPathSpec STRING\fR
+Pcap log: packets to sep files with % subst (excludes PcapLog/PcapLogDir).
+.TP 
+\fBMirrorIf STRING\fR
+Mirror packets to interface.
+.TP 
+\fBMirrorTarget STRING\fR
+Mirror packets to target address (used with MirrorIf).
 .TP 
 \fBDaemon BOOL\fR
 Daemon mode: run in background, log error messages to syslog.

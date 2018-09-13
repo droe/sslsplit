@@ -141,6 +141,18 @@ opts_free(opts_t *opts)
 	if (opts->masterkeylog) {
 		free(opts->masterkeylog);
 	}
+	if (opts->pcaplog) {
+		free(opts->pcaplog);
+	}
+	if (opts->pcaplog_basedir) {
+		free(opts->pcaplog_basedir);
+	}
+	if (opts->mirrorif) {
+		free(opts->mirrorif);
+	}
+	if (opts->mirrortarget) {
+		free(opts->mirrortarget);
+	}
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }
@@ -295,17 +307,10 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine, proxyspec_t **o
 				break;
 			case 2:
 				/* listenport */
-				if (strstr(addr, ":"))
-					af = AF_INET6;
-				else if (!strpbrk(addr, "abcdefghijklmnopqrstu"
-				                        "vwxyzABCDEFGHIJKLMNOP"
-				                        "QRSTUVWXYZ-"))
-					af = AF_INET;
-				else
-					af = AF_UNSPEC;
 				af = sys_sockaddr_parse(&spec->listen_addr,
 				                        &spec->listen_addrlen,
-				                        addr, **argv, af,
+				                        addr, **argv,
+										sys_get_af(addr),
 				                        EVUTIL_AI_PASSIVE);
 				if (af == -1) {
 					exit(EXIT_FAILURE);
@@ -1004,15 +1009,15 @@ opts_set_contentlogdir(opts_t *opts, const char *argv0, const char *optarg)
 	log_dbg_printf("ContentLogDir: %s\n", opts->contentlog);
 }
 
-void
-opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
+static void
+opts_set_logbasedir(const char *argv0, const char *optarg, char **basedir, char **log)
 {
 	char *lhs, *rhs, *p, *q;
 	size_t n;
-	if (opts->contentlog_basedir)
-		free(opts->contentlog_basedir);
-	if (opts->contentlog)
-		free(opts->contentlog);
+	if (*basedir)
+		free(*basedir);
+	if (*log)
+		free(*log);
 	if (log_content_split_pathspec(optarg, &lhs,
 								   &rhs) == -1) {
 		fprintf(stderr, "%s: Failed to split "
@@ -1038,8 +1043,8 @@ opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 						strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
-	opts->contentlog_basedir = realpath(lhs, NULL);
-	if (!opts->contentlog_basedir) {
+	*basedir = realpath(lhs, NULL);
+	if (!*basedir) {
 		fprintf(stderr, "%s: Failed to "
 						"canonicalize '%s': "
 						"%s (%i)\n",
@@ -1047,19 +1052,19 @@ opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 						strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
-	/* count '%' in opts->contentlog_basedir */
-	for (n = 0, p = opts->contentlog_basedir;
+	/* count '%' in basedir */
+	for (n = 0, p = *basedir;
 		 *p;
 		 p++) {
 		if (*p == '%')
 			n++;
 	}
 	free(lhs);
-	n += strlen(opts->contentlog_basedir);
+	n += strlen(*basedir);
 	if (!(lhs = malloc(n + 1)))
 		oom_die(argv0);
 	/* re-encoding % to %%, copying basedir to lhs */
-	for (p = opts->contentlog_basedir, q = lhs;
+	for (p = *basedir, q = lhs;
 		 *p;
 		 p++, q++) {
 		*q = *p;
@@ -1068,13 +1073,19 @@ opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 	}
 	*q = '\0';
 	/* lhs contains encoded realpathed basedir */
-	if (asprintf(&opts->contentlog,
+	if (asprintf(log,
 				 "%s/%s", lhs, rhs) < 0)
 		oom_die(argv0);
-	opts->contentlog_isdir = 0;
-	opts->contentlog_isspec = 1;
 	free(lhs);
 	free(rhs);
+}
+
+void
+opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
+{
+	opts_set_logbasedir(argv0, optarg, &opts->contentlog_basedir, &opts->contentlog);
+	opts->contentlog_isdir = 0;
+	opts->contentlog_isspec = 1;
 	log_dbg_printf("ContentLogPathSpec: basedir=%s, %s\n",
 	               opts->contentlog_basedir, opts->contentlog);
 }
@@ -1102,6 +1113,76 @@ opts_set_masterkeylog(opts_t *opts, const char *argv0, const char *optarg)
 	if (!opts->masterkeylog)
 		oom_die(argv0);
 	log_dbg_printf("MasterKeyLog: %s\n", opts->masterkeylog);
+}
+
+void
+opts_set_pcaplog(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->pcaplog)
+		free(opts->pcaplog);
+	opts->pcaplog = strdup(optarg);
+	if (!opts->pcaplog)
+		oom_die(argv0);
+	opts->pcaplog_isdir = 0;
+	opts->pcaplog_isspec = 0;
+	log_dbg_printf("PcapLog: %s\n", opts->pcaplog);
+}
+
+void
+opts_set_pcaplogdir(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (!sys_isdir(optarg)) {
+		fprintf(stderr, "%s: '%s' is not a "
+						"directory\n",
+						argv0, optarg);
+		exit(EXIT_FAILURE);
+	}
+	if (opts->pcaplog)
+		free(opts->pcaplog);
+	opts->pcaplog = realpath(optarg, NULL);
+	if (!opts->pcaplog) {
+		fprintf(stderr, "%s: Failed to "
+						"canonicalize '%s': "
+						"%s (%i)\n",
+						argv0, optarg,
+						strerror(errno), errno);
+		exit(EXIT_FAILURE);
+	}
+	opts->pcaplog_isdir = 1;
+	opts->pcaplog_isspec = 0;
+	log_dbg_printf("PcapLogDir: %s\n", opts->pcaplog);
+}
+
+void
+opts_set_pcaplogpathspec(opts_t *opts, const char *argv0, const char *optarg)
+{
+	opts_set_logbasedir(argv0, optarg, &opts->pcaplog_basedir, &opts->pcaplog);
+	opts->pcaplog_isdir = 0;
+	opts->pcaplog_isspec = 1;
+	log_dbg_printf("PcapLogPathSpec: basedir=%s, %s\n",
+	               opts->pcaplog_basedir, opts->pcaplog);
+}
+
+void
+opts_set_mirrorif(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->mirrorif)
+		free(opts->mirrorif);
+	opts->mirrorif = strdup(optarg);
+	if (!opts->mirrorif)
+		oom_die(argv0);
+	log_dbg_printf("MirrorIf: %s\n", opts->mirrorif);
+}
+
+void
+opts_set_mirrortarget(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->mirrortarget)
+		free(opts->mirrortarget);
+	opts->mirrortarget = strdup(optarg);
+	if (!opts->mirrortarget)
+		oom_die(argv0);
+	log_dbg_printf("MirrorTarget: %s\n", opts->mirrortarget);
 }
 
 void
@@ -1271,6 +1352,16 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 #endif /* HAVE_LOCAL_PROCINFO */
 	} else if (!strncmp(name, "MasterKeyLog", 13)) {
 		opts_set_masterkeylog(opts, argv0, value);
+	} else if (!strncmp(name, "PcapLog", 8)) {
+		opts_set_pcaplog(opts, argv0, value);
+	} else if (!strncmp(name, "PcapLogDir", 11)) {
+		opts_set_pcaplogdir(opts, argv0, value);
+	} else if (!strncmp(name, "PcapLogPathSpec", 16)) {
+		opts_set_pcaplogpathspec(opts, argv0, value);
+	} else if (!strncmp(name, "MirrorIf", 9)) {
+		opts_set_mirrorif(opts, argv0, value);
+	} else if (!strncmp(name, "MirrorTarget", 13)) {
+		opts_set_mirrortarget(opts, argv0, value);
 	} else if (!strncmp(name, "Daemon", 7)) {
 		yes = check_value_yesno(value, "Daemon", line_num);
 		if (yes == -1) {

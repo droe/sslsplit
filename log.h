@@ -33,6 +33,7 @@
 #include "proxy.h"
 #include "logger.h"
 #include "attrib.h"
+#include "logpkt.h"
 
 int log_err_printf(const char *, ...) PRINTF(1,2);
 void log_err_mode(int);

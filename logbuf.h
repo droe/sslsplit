@@ -30,6 +30,7 @@
 #define LOGBUF_H
 
 #include "attrib.h"
+#include "logpkt.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,10 +48,11 @@ typedef ssize_t (*writefunc_t)(void *, const void *, size_t);
 logbuf_t * logbuf_new(void *, size_t, void *, logbuf_t *) MALLOC;
 logbuf_t * logbuf_new_alloc(size_t, void *, logbuf_t *) MALLOC;
 logbuf_t * logbuf_new_copy(const void *, size_t, void *, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_rcopy(logbuf_t *);
 logbuf_t * logbuf_new_printf(void *, logbuf_t *, const char *, ...)
            MALLOC PRINTF(3,4);
 ssize_t logbuf_size(logbuf_t *) NONNULL(1) WUNRES;
-ssize_t logbuf_write_free(logbuf_t *, writefunc_t) NONNULL(1);
+ssize_t logbuf_write_free(logbuf_t *, writefunc_t);
 void logbuf_free(logbuf_t *) NONNULL(1);
 
 #define logbuf_ctl_clear(x) (x)->ctl = 0

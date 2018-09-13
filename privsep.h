@@ -34,7 +34,7 @@
 
 int privsep_fork(opts_t *, int[], size_t);
 
-int privsep_client_openfile(int, const char *, int);
+int privsep_client_openfile(int, const char *, int, int);
 int privsep_client_opensock(int, const proxyspec_t *spec);
 int privsep_client_certfile(int, const char *);
 int privsep_client_close(int);

@@ -106,6 +106,22 @@ logbuf_new_copy(const void *buf, size_t sz, void *fh, logbuf_t *next)
 }
 
 /*
+ * Create new logbuf from lb, recursively creating next logbuf.
+ */
+logbuf_t *
+logbuf_new_rcopy(logbuf_t *lb)
+{
+	logbuf_t *lbnew = NULL;
+	if (lb) {
+		lbnew = logbuf_new_copy(lb->buf, lb->sz, lb->fh, NULL);
+		if (!lbnew)
+			return NULL;
+		lbnew->next = logbuf_new_rcopy(lb->next);
+	}
+	return lbnew;
+}
+
+/*
  * Create new logbuf using printf, setting fh and next.
  */
 logbuf_t *
@@ -147,30 +163,39 @@ logbuf_size(logbuf_t *lb)
 /*
  * Write content of logbuf using writefunc and free all buffers.
  * Returns -1 on errors and sets errno according to write().
- * Returns total of bytes written by 1 .. n write() calls on success.
+ * Returns total of bytes written by write() call on success.
  */
 ssize_t
 logbuf_write_free(logbuf_t *lb, writefunc_t writefunc)
 {
-	ssize_t rv1, rv2 = 0;
+	unsigned char *buf = NULL;
+	ssize_t sz = 0;
+	logbuf_t *lbnext;
+	int rv;
+	// Save fh, as only lb has fh set and lb is freed in while loop
+	void *fh = lb->fh;
 
-	rv1 = writefunc(lb->fh, lb->buf, lb->sz);
-	if (lb->buf) {
-		free(lb->buf);
-	}
-	if (lb->next) {
-		if (rv1 == -1) {
-			logbuf_free(lb->next);
-		} else {
-			lb->next->fh = lb->fh;
-			rv2 = logbuf_write_free(lb->next, writefunc);
+	while (lb) {
+		buf = realloc(buf, sz + lb->sz);
+		if (!buf) {
+			logbuf_free(lb);
+			return -1;
 		}
+
+		memcpy(buf + sz, lb->buf, lb->sz);
+		sz += lb->sz;
+
+		lbnext = lb->next;
+		if (lb->buf) {
+			free(lb->buf);
+		}
+		free(lb);
+		lb = lbnext;
 	}
-	free(lb);
-	if (rv1 == -1 || rv2 == -1)
-		return -1;
-	else
-		return rv1 + rv2;
+
+	rv = writefunc(fh, buf, sz);
+	free(buf);
+	return rv;
 }
 
 /*

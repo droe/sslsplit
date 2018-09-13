@@ -65,6 +65,9 @@
 #define PRIVSEP_REQ_OPENFILE_P	2	/* open content log file w/mkpath */
 #define PRIVSEP_REQ_OPENSOCK	3	/* open socket and pass fd */
 #define PRIVSEP_REQ_CERTFILE	4	/* open cert file in certgendir */
+#define PRIVSEP_REQ_OPENPCAPFILE_P	5	/* open pcap log file */
+#define PRIVSEP_REQ_OPENPCAPFILE	6	/* open pcap log file w/mkpath  */
+
 /* response byte */
 #define PRIVSEP_ANS_SUCCESS	0	/* success */
 #define PRIVSEP_ANS_UNK_CMD	1	/* unknown command */
@@ -185,6 +188,20 @@ privsep_server_openfile(char *fn, int mkpath)
 		return -1;
 	}
 	return fd;
+}
+
+static int WUNRES
+privsep_server_openpcapfile_verify(opts_t *opts, char *fn, int mkpath)
+{
+	if (mkpath && !opts->pcaplog_isspec)
+		return -1;
+	if (!mkpath && !opts->pcaplog_isdir)
+		return -1;
+	if (strstr(fn, mkpath ? opts->pcaplog_basedir
+	                      : opts->pcaplog) != fn ||
+	    strstr(fn, "/../"))
+		return -1;
+	return 0;
 }
 
 static int WUNRES
@@ -311,11 +328,16 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 		return 1;
 	}
 	case PRIVSEP_REQ_OPENFILE_P:
+	case PRIVSEP_REQ_OPENPCAPFILE_P:
 		mkpath = 1;
 		/* fall through */
-	case PRIVSEP_REQ_OPENFILE: {
+	case PRIVSEP_REQ_OPENFILE:
+	case PRIVSEP_REQ_OPENPCAPFILE: {
 		char *fn;
 		int fd;
+		int (*verifyfunc)(opts_t *, char *, int) =
+			(req[0] == PRIVSEP_REQ_OPENFILE_P || req[0] == PRIVSEP_REQ_OPENFILE) ?
+			privsep_server_openfile_verify : privsep_server_openpcapfile_verify;
 
 		if (n < 2) {
 			ans[0] = PRIVSEP_ANS_INVALID;
@@ -338,7 +360,7 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 		}
 		memcpy(fn, req + 1, n - 1);
 		fn[n - 1] = '\0';
-		if (privsep_server_openfile_verify(opts, fn, mkpath) == -1) {
+		if (verifyfunc(opts, fn, mkpath) == -1) {
 			free(fn);
 			ans[0] = PRIVSEP_ANS_DENIED;
 			if (sys_sendmsgfd(srvsock, ans, 1, -1) == -1) {
@@ -651,14 +673,18 @@ privsep_server(opts_t *opts, int sigpipe, int srvsock[], size_t nsrvsock,
 }
 
 int
-privsep_client_openfile(int clisock, const char *fn, int mkpath)
+privsep_client_openfile(int clisock, const char *fn, int mkpath, int pcapreq)
 {
 	char ans[PRIVSEP_MAX_ANS_SIZE];
 	char req[1 + strlen(fn)];
 	int fd = -1;
 	ssize_t n;
 
-	req[0] = mkpath ? PRIVSEP_REQ_OPENFILE_P : PRIVSEP_REQ_OPENFILE;
+	if (pcapreq) {
+		req[0] = mkpath ? PRIVSEP_REQ_OPENPCAPFILE_P : PRIVSEP_REQ_OPENPCAPFILE;
+	} else {
+		req[0] = mkpath ? PRIVSEP_REQ_OPENFILE_P : PRIVSEP_REQ_OPENFILE;
+	}
 	memcpy(req + 1, fn, sizeof(req) - 1);
 
 	if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {

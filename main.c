@@ -42,6 +42,7 @@
 #include "log.h"
 #include "build.h"
 #include "defaults.h"
+#include "logpkt.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -202,6 +203,12 @@ main_usage(void)
 #define OPT_i 
 #endif /* HAVE_LOCAL_PROCINFO */
 "  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
+"  -X pcapfile pcap log: packets to pcapfile (excludes -Y/-y)\n"
+"  -Y pcapdir  pcap log: packets to separate files in dir (excludes -X/-y)\n"
+"  -y pathspec pcap log: packets to sep files with %% subst (excl. -X/-Y):\n"
+"              see option -F for pathspec format\n"
+"  -I if       mirror packets to interface\n"
+"  -T addr     mirror packets to target address (used with -I)\n"
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
@@ -307,7 +314,7 @@ main(int argc, char *argv[])
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i OPT_x
 	                    "k:c:C:K:t:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
-	                    "dDVhW:w:q:f:o:")) != -1) {
+	                    "dDVhW:w:q:f:o:X:Y:y:I:T:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
@@ -416,8 +423,23 @@ main(int argc, char *argv[])
 			case 'S':
 				opts_set_contentlogdir(opts, argv0, optarg);
 				break;
-			case 'F': {
+			case 'F':
 				opts_set_contentlogpathspec(opts, argv0, optarg);
+				break;
+			case 'X':
+				opts_set_pcaplog(opts, argv0, optarg);
+				break;
+			case 'Y':
+				opts_set_pcaplogdir(opts, argv0, optarg);
+				break;
+			case 'y':
+				opts_set_pcaplogpathspec(opts, argv0, optarg);
+				break;
+			case 'I':
+				opts_set_mirrorif(opts, argv0, optarg);
+				break;
+			case 'T':
+				opts_set_mirrortarget(opts, argv0, optarg);
 				break;
 			case 'W':
 				opts_set_certgendir_writeall(opts, argv0, optarg);
@@ -425,7 +447,6 @@ main(int argc, char *argv[])
 			case 'w':
 				opts_set_certgendir_writegencerts(opts, argv0, optarg);
 				break;
-			}
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
 				opts_set_lprocinfo(opts);
@@ -564,6 +585,20 @@ main(int argc, char *argv[])
 	if (opts->dropgroup && !opts->dropuser) {
 		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
 		exit(EXIT_FAILURE);
+	}
+
+	/* mirror logging checks */
+	if (opts->mirrortarget) {
+		if (opts->mirrorif) {
+			fprintf(stderr, "Checking mirroring target: %s\n", opts->mirrortarget);
+			if (logpkt_check_mirrortarget(opts->mirrortarget, opts->mirrortarget_ether, opts->mirrorif) == -1) {
+				log_err_printf("Error checking mirroring target\n");
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			fprintf(stderr, "%s: -T depends on -I.\n", argv0);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* debug log, part 1 */

@@ -188,7 +188,7 @@ typedef struct pxy_conn_ctx {
 } pxy_conn_ctx_t;
 
 #define WANT_CONNECT_LOG(ctx)	((ctx)->opts->connectlog||!(ctx)->opts->detach)
-#define WANT_CONTENT_LOG(ctx)	((ctx)->opts->contentlog&&!(ctx)->passthrough)
+#define WANT_CONTENT_LOG(ctx)	(((ctx)->opts->contentlog||(ctx)->opts->pcaplog||(ctx)->opts->mirrorif)&&!(ctx)->passthrough)
 
 static pxy_conn_ctx_t *
 pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
