@@ -41,6 +41,11 @@
 #include <netinet/if_ether.h>
 #else /* !OPENBSD */
 #include <net/ethernet.h>
+/* osx defines ether_addr_octet as just octet in net/ethernet.h,
+ * which causes build errors with struct libnet_ether_addr */
+#ifdef ether_addr_octet
+#undef ether_addr_octet
+#endif /* ether_addr_octet */
 #endif /* !OPENBSD */
 
 typedef struct proxyspec {
