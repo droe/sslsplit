@@ -8,6 +8,7 @@
 # OPENSSL_BASE	Prefix of OpenSSL library and headers to build against
 # LIBEVENT_BASE	Prefix of libevent library and headers to build against
 # LIBNET_BASE	Prefix of libnet library and headers to build against
+# LIBPCAP_BASE	Prefix of libpcap library and headers to build against
 # CHECK_BASE	Prefix of check library and headers to build against (optional)
 # PKGCONFIG	Name/path of pkg-config program to use for auto-detection
 # PCFLAGS	Additional pkg-config flags
@@ -146,7 +147,7 @@ endif
 ifeq ($(shell uname),OpenBSD)
 FEATURES+=	-DOPENBSD
 endif
- 
+
 ### Variables you might need to override
 
 PREFIX?=	/usr/local
@@ -445,6 +446,9 @@ $(info LIBEVENT_BASE:  $(strip $(LIBEVENT_FOUND)))
 endif
 ifdef LIBNET_FOUND
 $(info LIBNET_BASE:  $(strip $(LIBNET_FOUND)))
+endif
+ifdef LIBPCAP_FOUND
+$(info LIBPCAP_BASE:  $(strip $(LIBPCAP_FOUND)))
 endif
 ifdef CHECK_FOUND
 $(info CHECK_BASE:     $(strip $(CHECK_FOUND)))
