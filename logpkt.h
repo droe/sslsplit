@@ -44,15 +44,13 @@
 
 #ifdef OPENBSD
 #include <libnet-1.1/libnet.h>
+/* libnet include files do not define ETHERTYPE_IPV6 on OpenBSD */
+#include <net/ethertypes.h>
 #else /* !OPENBSD */
 #include <libnet.h>
 #endif /* !OPENBSD */
 
 #define MSS_VAL 1420
-
-#ifdef OPENBSD
-#define PF_PACKET PF_ROUTE /* Packet family */
-#endif /* OPENBSD */
 
 typedef struct pcap_file_hdr {
 	unsigned int magic_number; /* magic number */

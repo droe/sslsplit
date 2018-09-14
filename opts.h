@@ -34,19 +34,9 @@
 #include "ssl.h"
 #include "attrib.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#ifdef OPENBSD
-#include <net/if_arp.h>
-#include <netinet/if_ether.h>
-#else /* !OPENBSD */
-#include <net/ethernet.h>
-/* osx defines ether_addr_octet as just octet in net/ethernet.h,
- * which causes build errors with struct libnet_ether_addr */
-#ifdef ether_addr_octet
-#undef ether_addr_octet
-#endif /* ether_addr_octet */
-#endif /* !OPENBSD */
+#ifndef ETHER_ADDR_LEN
+#define ETHER_ADDR_LEN 6
+#endif
 
 typedef struct proxyspec {
 	unsigned int ssl : 1;
