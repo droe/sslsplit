@@ -291,7 +291,7 @@ ifdef LIBNET_BASE
 LIBNET_FIND:=	$(wildcard $(LIBNET_BASE)/$(LIBNET_PAT))
 else
 LIBNET_FIND:=	$(wildcard \
-		/usr/local/opt/libnet/$(LIBNET_PAT) \
+		/usr/local/opt/libnet/include/$(LIBNET_PAT) \
 		/opt/local/include/$(LIBNET_PAT) \
 		/usr/local/include/$(LIBNET_PAT) \
 		/usr/local/include/libnet-1.1/$(LIBNET_PAT) \
