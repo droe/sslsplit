@@ -30,7 +30,6 @@
 #define LOGBUF_H
 
 #include "attrib.h"
-#include "logpkt.h"
 
 #include <stdlib.h>
 #include <unistd.h>

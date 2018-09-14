@@ -33,6 +33,7 @@
 #include "attrib.h"
 #include "privsep.h"
 #include "defaults.h"
+#include "logpkt.h"
 
 #include <stdio.h>
 #include <stdlib.h>
