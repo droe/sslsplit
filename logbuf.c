@@ -171,30 +171,34 @@ logbuf_write_free(logbuf_t *lb, writefunc_t writefunc)
 	unsigned char *buf = NULL;
 	ssize_t sz = 0;
 	logbuf_t *lbnext;
-	int rv;
-	// Save fh, as only lb has fh set and lb is freed in while loop
-	void *fh = lb->fh;
+	void *fh;
+	int rv = 0;
 
-	while (lb) {
-		buf = realloc(buf, sz + lb->sz);
-		if (!buf) {
-			logbuf_free(lb);
-			return -1;
+	if (lb) {
+		// Save fh, as only lb has fh set and lb is freed in while loop
+		fh = lb->fh;
+
+		while (lb) {
+			buf = realloc(buf, sz + lb->sz);
+			if (!buf) {
+				logbuf_free(lb);
+				return -1;
+			}
+
+			memcpy(buf + sz, lb->buf, lb->sz);
+			sz += lb->sz;
+
+			lbnext = lb->next;
+			if (lb->buf) {
+				free(lb->buf);
+			}
+			free(lb);
+			lb = lbnext;
 		}
 
-		memcpy(buf + sz, lb->buf, lb->sz);
-		sz += lb->sz;
-
-		lbnext = lb->next;
-		if (lb->buf) {
-			free(lb->buf);
-		}
-		free(lb);
-		lb = lbnext;
+		rv = writefunc(fh, buf, sz);
+		free(buf);
 	}
-
-	rv = writefunc(fh, buf, sz);
-	free(buf);
 	return rv;
 }
 
