@@ -44,10 +44,8 @@
 
 #ifdef OPENBSD
 #include <libnet-1.1/libnet.h>
-#include <netinet/if_ether.h>
 #else /* !OPENBSD */
 #include <libnet.h>
-#include <net/ethernet.h>
 #endif /* !OPENBSD */
 
 #define MSS_VAL 1420

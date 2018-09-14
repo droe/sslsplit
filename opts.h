@@ -33,10 +33,15 @@
 #include "nat.h"
 #include "ssl.h"
 #include "attrib.h"
-#include "logpkt.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#ifdef OPENBSD
+#include <net/if_arp.h>
+#include <netinet/if_ether.h>
+#else /* !OPENBSD */
+#include <net/ethernet.h>
+#endif /* !OPENBSD */
 
 typedef struct proxyspec {
 	unsigned int ssl : 1;
