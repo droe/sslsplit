@@ -600,6 +600,10 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+	if (opts->mirrorif && !opts->mirrortarget) {
+		fprintf(stderr, "%s: -I is used with -T.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
 
 	/* debug log, part 1 */
 	if (OPTS_DEBUG(opts)) {
