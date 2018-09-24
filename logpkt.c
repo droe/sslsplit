@@ -371,7 +371,7 @@ logpkt_recv_arp_reply(UNUSED const char *user, UNUSED struct pcap_pkthdr *h, uin
 	}
 
 	/* Success: Got ethernet address of mirror target, and it is up */
-	memcpy(&mirrortarget_ether, (u_char*)harp + sizeof(struct libnet_arp_hdr), 6);
+	memcpy(&mirrortarget_ether, (u_char*)harp + sizeof(struct libnet_arp_hdr), ETHER_ADDR_LEN);
 	mirrortarget_result = 0;
 }
 
@@ -462,7 +462,7 @@ logpkt_check_mirrortarget(char *ip, char *ether, char *mirrorif)
 	fprintf(stderr, "\n");
 	
 	if (mirrortarget_result == 0) {
-		memcpy(ether, &mirrortarget_ether, 6);
+		memcpy(ether, &mirrortarget_ether, ETHER_ADDR_LEN);
 		fprintf(stderr, "Mirroring target is up: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
 				ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
