@@ -42,13 +42,13 @@
 #include <pcap.h>
 #include <errno.h>
 
-#ifdef OPENBSD
+#ifdef __OpenBSD__
 #include <libnet-1.1/libnet.h>
 /* libnet include files do not define ETHERTYPE_IPV6 on OpenBSD */
 #include <net/ethertypes.h>
-#else /* !OPENBSD */
+#else /* !__OpenBSD__ */
 #include <libnet.h>
-#endif /* !OPENBSD */
+#endif /* !__OpenBSD__ */
 
 #define MSS_VAL 1420
 

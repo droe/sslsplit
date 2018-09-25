@@ -143,10 +143,6 @@ ifneq ($(wildcard /usr/include/linux/netfilter.h),)
 FEATURES+=	-DHAVE_NETFILTER
 endif
 
-# Autodetect OpenBSD
-ifeq ($(shell uname),OpenBSD)
-FEATURES+=	-DOPENBSD
-endif
 
 ### Variables you might need to override
 
