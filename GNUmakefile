@@ -396,10 +396,10 @@ ifdef LIBEVENT_FOUND
 $(info LIBEVENT_BASE:  $(strip $(LIBEVENT_FOUND)))
 endif
 ifdef LIBPCAP_FOUND
-$(info LIBPCAP_BASE:  $(strip $(LIBPCAP_FOUND)))
+$(info LIBPCAP_BASE:   $(strip $(LIBPCAP_FOUND)))
 endif
 ifdef LIBNET_FOUND
-$(info LIBNET_BASE:  $(strip $(LIBNET_FOUND)))
+$(info LIBNET_BASE:    $(strip $(LIBNET_FOUND)))
 endif
 ifdef CHECK_FOUND
 $(info CHECK_BASE:     $(strip $(CHECK_FOUND)))
