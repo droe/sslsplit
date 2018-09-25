@@ -166,7 +166,10 @@ MANOWNERFLAGS?=
 endif
 
 OPENSSL?=	openssl
-PKGCONFIG?=	pkg-config
+PKGCONFIG?=	$(shell command -v pkg-config||echo false)
+ifeq ($(PKGCONFIG),false)
+$(warning pkg-config not found - guessing paths/flags for dependencies)
+endif
 
 BASENAME?=	basename
 CAT?=		cat
