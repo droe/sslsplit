@@ -250,7 +250,8 @@ char * ssl_x509_to_pem(X509 *) NONNULL(1) MALLOC;
 void ssl_x509_refcount_inc(X509 *) NONNULL(1);
 
 int ssl_x509chain_load(X509 **, STACK_OF(X509) **, const char *) NONNULL(2,3);
-void ssl_x509chain_use(SSL_CTX *, X509 *, STACK_OF(X509) *) NONNULL(1,2,3);
+int ssl_x509chain_use(SSL_CTX *, X509 *, STACK_OF(X509) *)
+    NONNULL(1,2,3) WUNRES;
 
 char * ssl_session_to_str(SSL_SESSION *) NONNULL(1) MALLOC;
 int ssl_session_is_valid(SSL_SESSION *) NONNULL(1);

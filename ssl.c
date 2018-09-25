@@ -1263,18 +1263,21 @@ leave1:
  * Copies the certificate stack to the SSL_CTX internal data structures
  * and increases reference counts accordingly.
  */
-void
+int
 ssl_x509chain_use(SSL_CTX *sslctx, X509 *crt, STACK_OF(X509) *chain)
 {
-	SSL_CTX_use_certificate(sslctx, crt);
+	if (SSL_CTX_use_certificate(sslctx, crt) != 1)
+		return -1;
 
 	for (int i = 0; i < sk_X509_num(chain); i++) {
 		X509 *tmpcrt;
 
 		tmpcrt = sk_X509_value(chain, i);
 		ssl_x509_refcount_inc(tmpcrt);
-		SSL_CTX_add_extra_chain_cert(sslctx, tmpcrt);
+		if (SSL_CTX_add_extra_chain_cert(sslctx, tmpcrt) != 1)
+			return -1;
 	}
+	return 0;
 }
 
 /*

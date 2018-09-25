@@ -720,8 +720,10 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
                      EVP_PKEY *key)
 {
 	SSL_CTX *sslctx = SSL_CTX_new(ctx->opts->sslmethod());
-	if (!sslctx)
+	if (!sslctx) {
+		ctx->enomem = 1;
 		return NULL;
+	}
 
 	pxy_sslctx_setoptions(sslctx, ctx);
 
@@ -766,8 +768,16 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		EC_KEY_free(ecdh);
 	}
 #endif /* !OPENSSL_NO_ECDH */
-	SSL_CTX_use_certificate(sslctx, crt);
-	SSL_CTX_use_PrivateKey(sslctx, key);
+	if (SSL_CTX_use_certificate(sslctx, crt) != 1) {
+		log_dbg_printf("loading src server certificate failed\n");
+		SSL_CTX_free(sslctx);
+		return NULL;
+	}
+	if (SSL_CTX_use_PrivateKey(sslctx, key) != 1) {
+		log_dbg_printf("loading src server key failed\n");
+		SSL_CTX_free(sslctx);
+		return NULL;
+	}
 	for (int i = 0; i < sk_X509_num(chain); i++) {
 		X509 *c = sk_X509_value(chain, i);
 		ssl_x509_refcount_inc(c); /* next call consumes a reference */
@@ -975,10 +985,8 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
 	                                       cert->key);
 	cert_free(cert);
-	if (!sslctx) {
-		ctx->enomem = 1;
+	if (!sslctx)
 		return NULL;
-	}
 	SSL *ssl = SSL_new(sslctx);
 	SSL_CTX_free(sslctx); /* SSL_new() increments refcount */
 	if (!ssl) {
@@ -1090,7 +1098,6 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 		                                 ctx->opts->key);
 		if (!newsslctx) {
 			X509_free(newcrt);
-			ctx->enomem = 1;
 			return SSL_TLSEXT_ERR_NOACK;
 		}
 		SSL_set_SSL_CTX(ssl, newsslctx); /* decr's old incr new refc */
@@ -1129,7 +1136,6 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		if (SSL_CTX_set_min_proto_version(sslctx, ctx->opts->sslversion) == 0 ||
 			SSL_CTX_set_max_proto_version(sslctx, ctx->opts->sslversion) == 0) {
 			SSL_CTX_free(sslctx);
-			ctx->enomem = 1;
 			return NULL;
 		}
 	}
@@ -1142,13 +1148,17 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_verify(sslctx, SSL_VERIFY_NONE, NULL);
 	}
 
-	if (ctx->opts->clientcrt) {
-		if (!SSL_CTX_use_certificate(sslctx, ctx->opts->clientcrt))
-			log_dbg_printf("loading client certificate failed");
+	if (ctx->opts->clientcrt &&
+	    (SSL_CTX_use_certificate(sslctx, ctx->opts->clientcrt) != 1)) {
+		log_dbg_printf("loading dst client certificate failed\n");
+		SSL_CTX_free(sslctx);
+		return NULL;
 	}
-	if (ctx->opts->clientkey) {
-		if (!SSL_CTX_use_PrivateKey(sslctx, ctx->opts->clientkey))
-			log_dbg_printf("loading client key failed");
+	if (ctx->opts->clientkey &&
+	    (SSL_CTX_use_PrivateKey(sslctx, ctx->opts->clientkey) != 1)) {
+		log_dbg_printf("loading dst client key failed\n");
+		SSL_CTX_free(sslctx);
+		return NULL;
 	}
 
 	ssl = SSL_new(sslctx);
