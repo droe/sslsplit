@@ -356,7 +356,7 @@ sys_group_str(gid_t gid)
  * Determine address family of addr
  */
 int
-sys_get_af(char *addr)
+sys_get_af(const char *addr)
 {
 	if (strstr(addr, ":"))
 		return AF_INET6;
