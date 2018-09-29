@@ -609,7 +609,10 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 	time_t epoch;
 	struct tm *utc;
 	char *dsthost_clean = NULL, *srchost_clean = NULL;
-	int is_spec_or_dir = opts->contentlog_isdir || opts->pcaplog_isdir || opts->contentlog_isspec || opts->pcaplog_isspec;
+	int is_spec_or_dir = opts->contentlog_isdir ||
+	                     opts->pcaplog_isdir ||
+	                     opts->contentlog_isspec ||
+	                     opts->pcaplog_isspec;
 
 	if (is_spec_or_dir) {
 		if (opts->contentlog_isdir || opts->pcaplog_isdir) {
@@ -618,14 +621,16 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 				goto errout;
 			}
 			if ((utc = gmtime(&epoch)) == NULL) {
-				log_err_printf("Failed to convert time: %s (%i)\n",
-							   strerror(errno), errno);
+				log_err_printf("Failed to convert time:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
 				goto errout;
 			}
 			if (!strftime(timebuf, sizeof(timebuf),
-						  "%Y%m%dT%H%M%SZ", utc)) {
-				log_err_printf("Failed to format time: %s (%i)\n",
-							   strerror(errno), errno);
+			              "%Y%m%dT%H%M%SZ", utc)) {
+				log_err_printf("Failed to format time:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
 				goto errout;
 			}
 		}
@@ -646,32 +651,39 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 	if (opts->contentlog) {
 		if (opts->contentlog_isdir) {
 			/* per-connection-file content log (-S) */
-			if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
-						 opts->contentlog, timebuf,
-						 srchost_clean, srcport,
-						 dsthost_clean, dstport) < 0) {
-				log_err_printf("Failed to format filename: %s (%i)\n",
-							   strerror(errno), errno);
+			if (asprintf(&ctx->u.dir.filename,
+			             "%s/%s-%s,%s-%s,%s.log",
+			             opts->contentlog, timebuf,
+			             srchost_clean, srcport,
+			             dsthost_clean, dstport) < 0) {
+				log_err_printf("Failed to format filename:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
 				goto errout2;
 			}
 		} else if (opts->contentlog_isspec) {
 			/* per-connection-file content log with logspec (-F) */
-			ctx->u.spec.filename = log_content_format_pathspec(
-												   opts->contentlog,
-												   srchost_clean, srcport,
-												   dsthost_clean, dstport,
-												   exec_path, user, group);
+			ctx->u.spec.filename =
+				log_content_format_pathspec(opts->contentlog,
+				                            srchost_clean,
+				                            srcport,
+				                            dsthost_clean,
+				                            dstport,
+				                            exec_path,
+				                            user, group);
 			if (!ctx->u.spec.filename) {
 				goto errout2;
 			}
 		} else {
 			/* single-file content log (-L) */
-			if (asprintf(&ctx->u.file.header_req, "[%s]:%s -> [%s]:%s",
-						 srchost, srcport, dsthost, dstport) < 0) {
+			if (asprintf(&ctx->u.file.header_req,
+			             "[%s]:%s -> [%s]:%s",
+			             srchost, srcport, dsthost, dstport) < 0) {
 				goto errout;
 			}
-			if (asprintf(&ctx->u.file.header_resp, "[%s]:%s -> [%s]:%s",
-						 dsthost, dstport, srchost, srcport) < 0) {
+			if (asprintf(&ctx->u.file.header_resp,
+			             "[%s]:%s -> [%s]:%s",
+			             dsthost, dstport, srchost, srcport) < 0) {
 				free(ctx->u.file.header_req);
 				goto errout;
 			}
@@ -685,41 +697,53 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 
 	if (opts->pcaplog) {
 		// TODO: Check init
-		unsigned char dst_ether[ETHER_ADDR_LEN] = {0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
+		unsigned char dst_ether[ETHER_ADDR_LEN] = {
+			0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
 
 		ctx->pcap.request = malloc(sizeof(pcap_packet_t));
 		ctx->pcap.response = malloc(sizeof(pcap_packet_t));
 
-		memcpy(ctx->pcap.request->dst_ether, dst_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->pcap.response->dst_ether, dst_ether, ETHER_ADDR_LEN);
+		memcpy(ctx->pcap.request->dst_ether, dst_ether,
+		       ETHER_ADDR_LEN);
+		memcpy(ctx->pcap.response->dst_ether, dst_ether,
+		       ETHER_ADDR_LEN);
 
 		if (!ctx->pcap.request || !ctx->pcap.response) {
 			free(ctx->pcap.request);
 			free(ctx->pcap.response);
 			goto errout2;
 		}
-		if (logpkt_set_packet_fields(libnet_pcap, ctx->pcap.request, srchost, srcport, dsthost, dstport) == -1)
+		if (logpkt_set_packet_fields(libnet_pcap, ctx->pcap.request,
+		                             srchost, srcport,
+		                             dsthost, dstport) == -1)
 			goto errout2;
-		if (logpkt_set_packet_fields(libnet_pcap, ctx->pcap.response, dsthost, dstport, srchost, srcport) == -1)
+		if (logpkt_set_packet_fields(libnet_pcap, ctx->pcap.response,
+		                             dsthost, dstport,
+		                             srchost, srcport) == -1)
 			goto errout2;
 
 		if (opts->pcaplog_isdir) {
 			/* per-connection-file pcap log (-Y) */
-			if (asprintf(&ctx->pcap.u.dir.filename, "%s/%s-%s,%s-%s,%s.pcap",
-						 opts->pcaplog, timebuf,
-						 srchost_clean, srcport,
-						 dsthost_clean, dstport) < 0) {
-				log_err_printf("Failed to format filename: %s (%i)\n",
-							   strerror(errno), errno);
+			if (asprintf(&ctx->pcap.u.dir.filename,
+			             "%s/%s-%s,%s-%s,%s.pcap",
+			             opts->pcaplog, timebuf,
+			             srchost_clean, srcport,
+			             dsthost_clean, dstport) < 0) {
+				log_err_printf("Failed to format filename:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
 				goto errout2;
 			}
 		} else if (opts->pcaplog_isspec) {
 			/* per-connection-file pcap log with logspec (-y) */
-			ctx->pcap.u.spec.filename = log_content_format_pathspec(
-												   opts->pcaplog,
-												   srchost_clean, srcport,
-												   dsthost_clean, dstport,
-												   exec_path, user, group);
+			ctx->pcap.u.spec.filename =
+				log_content_format_pathspec(opts->pcaplog,
+				                            srchost_clean,
+				                            srcport,
+				                            dsthost_clean,
+				                            dstport,
+				                            exec_path,
+				                            user, group);
 			if (!ctx->pcap.u.spec.filename) {
 				goto errout2;
 			}
@@ -735,17 +759,25 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 		ctx->mirror.request = malloc(sizeof(pcap_packet_t));
 		ctx->mirror.response = malloc(sizeof(pcap_packet_t));
 
-		memcpy(ctx->mirror.request->dst_ether, opts->mirrortarget_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->mirror.response->dst_ether, opts->mirrortarget_ether, ETHER_ADDR_LEN);
+		memcpy(ctx->mirror.request->dst_ether,
+		       opts->mirrortarget_ether, ETHER_ADDR_LEN);
+		memcpy(ctx->mirror.response->dst_ether,
+		       opts->mirrortarget_ether, ETHER_ADDR_LEN);
 
 		if (!ctx->mirror.request || !ctx->mirror.response) {
 			free(ctx->mirror.request);
 			free(ctx->mirror.response);
 			goto errout;
 		}
-		if (logpkt_set_packet_fields(libnet_mirror, ctx->mirror.request, srchost, srcport, dsthost, dstport) == -1)
+		if (logpkt_set_packet_fields(libnet_mirror,
+		                             ctx->mirror.request,
+		                             srchost, srcport,
+		                             dsthost, dstport) == -1)
 			goto errout2;
-		if (logpkt_set_packet_fields(libnet_mirror, ctx->mirror.response, dsthost, dstport, srchost, srcport) == -1)
+		if (logpkt_set_packet_fields(libnet_mirror,
+		                             ctx->mirror.response,
+		                             dsthost, dstport,
+		                             srchost, srcport) == -1)
 			goto errout2;
 
 		/* submit an open event */
@@ -1001,8 +1033,8 @@ static int
 log_content_file_reopencb(void)
 {
 	close(content_file_fd);
-	content_file_fd = open(content_file_fn,
-	                       O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	content_file_fd = open(content_file_fn, O_WRONLY|O_APPEND|O_CREAT,
+	                       DFLT_FILEMODE);
 	if (content_file_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
 		               content_file_fn, strerror(errno), errno);
@@ -1105,11 +1137,11 @@ log_pcap_preinit(const char *pcapfile)
 {
 	int exists = access(pcapfile, F_OK);
 
-	content_pcap_fd = open(pcapfile, O_WRONLY | O_APPEND | O_CREAT,
-			DFLT_FILEMODE);
+	content_pcap_fd = open(pcapfile, O_WRONLY|O_APPEND|O_CREAT,
+	                       DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
-				pcapfile, strerror(errno), errno);
+		               pcapfile, strerror(errno), errno);
 		return -1;
 	}
 
@@ -1123,7 +1155,7 @@ log_pcap_preinit(const char *pcapfile)
 
 	if (!(content_pcap_fn = realpath(pcapfile, NULL))) {
 		log_err_printf("Failed to realpath '%s': %s (%i)\n",
-				pcapfile, strerror(errno), errno);
+		               pcapfile, strerror(errno), errno);
 		close(content_pcap_fd);
 		content_pcap_fd = -1;
 		return -1;
@@ -1150,11 +1182,11 @@ log_content_pcap_fini(void)
 static int
 log_pcap_reopencb(void) {
 	close(content_pcap_fd);
-	content_pcap_fd = open(content_pcap_fn,
-			O_WRONLY | O_APPEND | O_CREAT, DFLT_FILEMODE);
+	content_pcap_fd = open(content_pcap_fn, O_WRONLY|O_APPEND|O_CREAT,
+	                       DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
-				content_pcap_fn, strerror(errno), errno);
+		               content_pcap_fn, strerror(errno), errno);
 		return -1;
 	}
 	return 0;
@@ -1165,25 +1197,29 @@ log_pcap_closecb_base(void *fh, int fd) {
 	log_content_ctx_t *ctx = fh;
 
 	if (ctx->pcap.request->seq > 0 && ctx->pcap.request->ack > 0) {
-		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request, TH_FIN | TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request,
+		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to pcap log"
+			               ": %s\n", strerror(errno));
 		}
 		ctx->pcap.response->ack += 1;
-		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.response, TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.response,
+		                        TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to pcap log"
+			               ": %s\n", strerror(errno));
 		}
-		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.response, TH_FIN | TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.response,
+		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to pcap log"
+			               ": %s\n", strerror(errno));
 		}
 		ctx->pcap.request->ack += 1;
 		ctx->pcap.request->seq += 1;
 
-		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request, TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request,
+		                        TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to pcap log"
+			               ": %s\n", strerror(errno));
 		}
 	}
 
@@ -1209,45 +1245,37 @@ log_pcap_closecb(void *fh) {
 static ssize_t
 log_pcap_writecb_base(void *fh, const void *buf, size_t sz, int fd) {
 	log_content_ctx_t *ctx = fh;
-	char flags = TH_PUSH | TH_ACK;
-	pcap_packet_t * from = ctx->is_request ? ctx->pcap.request : ctx->pcap.response;
-	pcap_packet_t * to = ctx->is_request ? ctx->pcap.response : ctx->pcap.request;
+	char flags = TH_PUSH|TH_ACK;
+	pcap_packet_t *from = ctx->is_request ? ctx->pcap.request
+	                                      : ctx->pcap.response;
+	pcap_packet_t *to = ctx->is_request ? ctx->pcap.response
+	                                    : ctx->pcap.request;
 
-	if (ctx->is_request) {
-		if (ctx->pcap.request->seq == 0) {
-			if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request, TH_SYN, NULL, 0) == -1) {
-				log_err_printf("Warning: Failed to write to pcap log: %s\n",
-						strerror(errno));
-				return -1;
-			}
-
-			ctx->pcap.response->ack = ctx->pcap.request->seq + 1;
-
-			if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.response, TH_SYN | TH_ACK, NULL, 0) == -1) {
-				log_err_printf("Warning: Failed to write to pcap log: %s\n",
-						strerror(errno));
-				return -1;
-			}
-
-			ctx->pcap.request->ack = ctx->pcap.response->seq + 1;
-			ctx->pcap.request->seq += 1;
-			if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request, TH_ACK, NULL, 0) == -1) {
-				log_err_printf("Warning: Failed to write to pcap log: %s\n",
-						strerror(errno));
-				return -1;
-			}
-
-			ctx->pcap.response->seq += 1;
-		}
+	if (ctx->is_request && ctx->pcap.request->seq == 0) {
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request,
+		                        TH_SYN, NULL, 0) == -1)
+			goto errout;
+		ctx->pcap.response->ack = ctx->pcap.request->seq + 1;
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.response,
+		                        TH_SYN | TH_ACK, NULL, 0) == -1)
+			goto errout;
+		ctx->pcap.request->ack = ctx->pcap.response->seq + 1;
+		ctx->pcap.request->seq += 1;
+		if (logpkt_write_packet(libnet_pcap, fd, ctx->pcap.request,
+		                        TH_ACK, NULL, 0) == -1)
+			goto errout;
+		ctx->pcap.response->seq += 1;
 	}
 
-	if (logpkt_write_payload(libnet_pcap, fd, from, to, flags, buf, sz) == -1) {
-		log_err_printf("Warning: Failed to write to pcap log: %s\n",
-				strerror(errno));
-		return -1;
-	}
+	if (logpkt_write_payload(libnet_pcap, fd,
+	                         from, to, flags, buf, sz) == -1)
+		goto errout;
 
 	return sz;
+errout:
+	log_err_printf("Warning: Failed to write to pcap log: %s (%i)\n",
+	               strerror(errno), errno);
+	return -1;
 }
 
 static ssize_t
@@ -1264,7 +1292,8 @@ log_pcap_dir_opencb(void *fh)
 	                                             ctx->pcap.u.dir.filename,
 	                                             0, 1)) == -1) {
 		log_err_printf("Opening pcapdir file '%s' failed: %s (%i)\n",
-		               ctx->pcap.u.dir.filename, strerror(errno), errno);
+		               ctx->pcap.u.dir.filename,
+		               strerror(errno), errno);
 		return -1;
 	}
 	return logpkt_write_global_pcap_hdr(ctx->pcap.u.dir.fd);
@@ -1301,7 +1330,8 @@ log_pcap_spec_opencb(void *fh)
 	                                              ctx->pcap.u.spec.filename,
 	                                              1, 1)) == -1) {
 		log_err_printf("Opening pcapspec file '%s' failed: %s (%i)\n",
-		               ctx->pcap.u.spec.filename, strerror(errno), errno);
+		               ctx->pcap.u.spec.filename,
+		               strerror(errno), errno);
 		return -1;
 	}
 	return logpkt_write_global_pcap_hdr(ctx->pcap.u.spec.fd);
@@ -1350,7 +1380,8 @@ log_mirror_preinit(const char *ifname) {
 
 	mirrorsender_ether = libnet_get_hwaddr(libnet_mirror);
 	if (mirrorsender_ether == NULL) {
-		log_err_printf("Failed to get our own ethernet address: %s", libnet_geterror(libnet_mirror));
+		log_err_printf("Failed to get our own ethernet address: %s",
+		               libnet_geterror(libnet_mirror));
 		free(content_ifname);
 		content_ifname = NULL;
 		return -1;
@@ -1377,25 +1408,29 @@ log_mirror_closecb(void *fh) {
 	log_content_ctx_t *ctx = fh;
 
 	if (ctx->mirror.request->seq > 0 && ctx->mirror.request->ack > 0) {
-		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request, TH_FIN | TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request,
+		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to mirror log"
+			               ": %s\n", strerror(errno));
 		}
 		ctx->mirror.response->ack += 1;
-		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.response, TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.response,
+		                        TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to mirror log"
+			               ": %s\n", strerror(errno));
 		}
-		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.response, TH_FIN | TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.response,
+		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to mirror log"
+			               ": %s\n", strerror(errno));
 		}
 		ctx->mirror.request->ack += 1;
 		ctx->mirror.request->seq += 1;
 
-		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request, TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log: %s\n",
-					strerror(errno));
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request,
+		                        TH_ACK, NULL, 0) == -1) {
+			log_err_printf("Warning: Failed to write to mirror log"
+			               ": %s\n", strerror(errno));
 		}
 	}
 
@@ -1413,45 +1448,37 @@ log_mirror_closecb(void *fh) {
 static ssize_t
 log_mirror_writecb(void *fh, const void *buf, size_t sz) {
 	log_content_ctx_t *ctx = fh;
-	char flags = TH_PUSH | TH_ACK;
-	pcap_packet_t * from = ctx->is_request ? ctx->mirror.request : ctx->mirror.response;
-	pcap_packet_t * to = ctx->is_request ? ctx->mirror.response : ctx->mirror.request;
+	char flags = TH_PUSH|TH_ACK;
+	pcap_packet_t *from = ctx->is_request ? ctx->mirror.request
+	                                      : ctx->mirror.response;
+	pcap_packet_t *to = ctx->is_request ? ctx->mirror.response
+	                                    : ctx->mirror.request;
 
-	if (ctx->is_request) {
-		if (ctx->mirror.request->seq == 0) {
-			if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request, TH_SYN, NULL, 0) == -1) {
-				log_err_printf("Warning: Failed to write to mirror log: %s\n",
-						strerror(errno));
-				return -1;
-			}
-
-			ctx->mirror.response->ack = ctx->mirror.request->seq + 1;
-
-			if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.response, TH_SYN | TH_ACK, NULL, 0) == -1) {
-				log_err_printf("Warning: Failed to write to mirror log: %s\n",
-						strerror(errno));
-				return -1;
-			}
-
-			ctx->mirror.request->ack = ctx->mirror.response->seq + 1;
-			ctx->mirror.request->seq += 1;
-			if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request, TH_ACK, NULL, 0) == -1) {
-				log_err_printf("Warning: Failed to write to mirror log: %s\n",
-						strerror(errno));
-				return -1;
-			}
-
-			ctx->mirror.response->seq += 1;
-		}
+	if (ctx->is_request && ctx->mirror.request->seq == 0) {
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request,
+		                        TH_SYN, NULL, 0) == -1)
+			goto errout;
+		ctx->mirror.response->ack = ctx->mirror.request->seq + 1;
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.response,
+		                        TH_SYN|TH_ACK, NULL, 0) == -1)
+			goto errout;
+		ctx->mirror.request->ack = ctx->mirror.response->seq + 1;
+		ctx->mirror.request->seq += 1;
+		if (logpkt_write_packet(libnet_mirror, 0, ctx->mirror.request,
+		                        TH_ACK, NULL, 0) == -1)
+			goto errout;
+		ctx->mirror.response->seq += 1;
 	}
 
-	if (logpkt_write_payload(libnet_mirror, 0, from, to, flags, buf, sz) == -1) {
-		log_err_printf("Warning: Failed to write to mirror log: %s\n",
-				strerror(errno));
-		return -1;
-	}
-
+	if (logpkt_write_payload(libnet_mirror, 0, from, to,
+	                         flags, buf, sz) == -1)
+		goto errout;
 	return sz;
+
+errout:
+	log_err_printf("Warning: Failed to write to mirror log: %s (%i)\n",
+	               strerror(errno), errno);
+	return -1;
 }
 
 static logbuf_t *
@@ -1565,7 +1592,8 @@ log_preinit(opts_t *opts)
 		char errbuf[LIBNET_ERRBUF_SIZE];
 		libnet_pcap = libnet_init(LIBNET_LINK, NULL, errbuf);
 		if (libnet_pcap == NULL) {
-			log_err_printf("Failed to init pcap libnet: %s", errbuf);
+			log_err_printf("Failed to init pcap libnet"
+			               ": %s", errbuf);
 			goto out;
 		}
 		libnet_seed_prand(libnet_pcap);
@@ -1592,8 +1620,8 @@ log_preinit(opts_t *opts)
 			prepcb = log_packet_prepcb;
 		}
 		if (!(pcap_log = logger_new(reopencb, opencb, closecb,
-									   writecb, prepcb,
-									   log_exceptcb))) {
+		                            writecb, prepcb,
+		                            log_exceptcb))) {
 			log_content_pcap_fini();
 			goto out;
 		}
@@ -1607,8 +1635,8 @@ log_preinit(opts_t *opts)
 		writecb = log_mirror_writecb;
 		prepcb = log_packet_prepcb;
 		if (!(mirror_log = logger_new(reopencb, opencb, closecb,
-									   writecb, prepcb,
-									   log_exceptcb))) {
+		                              writecb, prepcb,
+		                              log_exceptcb))) {
 			log_content_mirror_fini();
 			goto out;
 		}
