@@ -125,7 +125,7 @@ static void
 main_usage(void)
 {
 	const char *dflt, *warn;
-	const char *usagefmt =
+	const char *usagefmt1 =
 "Usage: %s [-D] [-f conffile] [-o opt=val] [options...] [proxyspecs...]\n"
 "  -f conffile use conffile to load configuration from\n"
 "  -o opt=val  override conffile option opt with value val\n"
@@ -212,7 +212,8 @@ main_usage(void)
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
-"  -h          print usage information and exit\n"
+"  -h          print usage information and exit\n";
+	const char *usagefmt2 =
 "  proxyspec = type listenaddr+port [natengine|targetaddr+port|\"sni\"+port]\n"
 "      e.g.    http 0.0.0.0 8080 www.roe.ch 80  # http/4; static hostname dst\n"
 "              https ::1 8443 2001:db8::1 443   # https/6; static address dst\n"
@@ -232,7 +233,8 @@ main_usage(void)
 		warn = "";
 	}
 
-	fprintf(stderr, usagefmt, build_pkgname, dflt, build_pkgname, warn);
+	fprintf(stderr, usagefmt1, build_pkgname, dflt);
+	fprintf(stderr, usagefmt2, build_pkgname, warn);
 }
 
 /*
