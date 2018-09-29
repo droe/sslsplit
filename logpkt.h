@@ -80,14 +80,17 @@ typedef struct pcap_packet {
 	unsigned char dst_ether[ETHER_ADDR_LEN];
 } pcap_packet_t;
 
-libnet_t *libnet_pcap;
-libnet_t *libnet_mirror;
+extern libnet_t *libnet_pcap;
+extern libnet_t *libnet_mirror;
 struct libnet_ether_addr *mirrorsender_ether;
 
 int logpkt_write_global_pcap_hdr(int);
-int logpkt_set_packet_fields(libnet_t *, pcap_packet_t *, char *, char *, char *, char *);
-int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char, const unsigned char *, size_t);
-int logpkt_write_payload(libnet_t *, int, pcap_packet_t *, pcap_packet_t *, char, const unsigned char *, size_t);
+int logpkt_set_packet_fields(libnet_t *, pcap_packet_t *,
+                             char *, char *, char *, char *);
+int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char,
+                        const unsigned char *, size_t);
+int logpkt_write_payload(libnet_t *, int, pcap_packet_t *, pcap_packet_t *,
+                         char, const unsigned char *, size_t);
 int logpkt_check_mirrortarget(char *, char *, char *);
 
 #endif /* !LOGPKT_H */
