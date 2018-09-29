@@ -895,9 +895,8 @@ void
 opts_set_user(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (!sys_isuser(optarg)) {
-		fprintf(stderr, "%s: '%s' is not an "
-						"existing user\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: '%s' is not an existing user\n",
+		        argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->dropuser)
@@ -913,9 +912,8 @@ opts_set_group(opts_t *opts, const char *argv0, const char *optarg)
 {
 
 	if (!sys_isgroup(optarg)) {
-		fprintf(stderr, "%s: '%s' is not an "
-						"existing group\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: '%s' is not an existing group\n",
+		        argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->dropgroup)
@@ -930,20 +928,15 @@ void
 opts_set_jaildir(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (!sys_isdir(optarg)) {
-		fprintf(stderr, "%s: '%s' is not a "
-						"directory\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: '%s' is not a directory\n", argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->jaildir)
 		free(opts->jaildir);
 	opts->jaildir = realpath(optarg, NULL);
 	if (!opts->jaildir) {
-		fprintf(stderr, "%s: Failed to "
-						"canonicalize '%s': "
-						"%s (%i)\n",
-						argv0, optarg,
-						strerror(errno), errno);
+		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		        argv0, optarg, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 	log_dbg_printf("Chroot: %s\n", opts->jaildir);
@@ -988,20 +981,15 @@ void
 opts_set_contentlogdir(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (!sys_isdir(optarg)) {
-		fprintf(stderr, "%s: '%s' is not a "
-						"directory\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: '%s' is not a directory\n", argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->contentlog)
 		free(opts->contentlog);
 	opts->contentlog = realpath(optarg, NULL);
 	if (!opts->contentlog) {
-		fprintf(stderr, "%s: Failed to "
-						"canonicalize '%s': "
-						"%s (%i)\n",
-						argv0, optarg,
-						strerror(errno), errno);
+		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		        argv0, optarg, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 	opts->contentlog_isdir = 1;
@@ -1010,7 +998,8 @@ opts_set_contentlogdir(opts_t *opts, const char *argv0, const char *optarg)
 }
 
 static void
-opts_set_logbasedir(const char *argv0, const char *optarg, char **basedir, char **log)
+opts_set_logbasedir(const char *argv0, const char *optarg,
+                    char **basedir, char **log)
 {
 	char *lhs, *rhs, *p, *q;
 	size_t n;
@@ -1018,13 +1007,10 @@ opts_set_logbasedir(const char *argv0, const char *optarg, char **basedir, char 
 		free(*basedir);
 	if (*log)
 		free(*log);
-	if (log_content_split_pathspec(optarg, &lhs,
-								   &rhs) == -1) {
-		fprintf(stderr, "%s: Failed to split "
-						"'%s' in lhs/rhs: "
-						"%s (%i)\n",
-						argv0, optarg,
-						strerror(errno), errno);
+	if (log_content_split_pathspec(optarg, &lhs, &rhs) == -1) {
+		fprintf(stderr, "%s: Failed to split '%s' in lhs/rhs:"
+		                " %s (%i)\n", argv0, optarg,
+		                strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 	/* eliminate %% from lhs */
@@ -1037,19 +1023,14 @@ opts_set_logbasedir(const char *argv0, const char *optarg, char **basedir, char 
 	*q = '\0';
 	/* all %% in lhs resolved to % */
 	if (sys_mkpath(lhs, 0777) == -1) {
-		fprintf(stderr, "%s: Failed to create "
-						"'%s': %s (%i)\n",
-						argv0, lhs,
-						strerror(errno), errno);
+		fprintf(stderr, "%s: Failed to create '%s': %s (%i)\n",
+		        argv0, lhs, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 	*basedir = realpath(lhs, NULL);
 	if (!*basedir) {
-		fprintf(stderr, "%s: Failed to "
-						"canonicalize '%s': "
-						"%s (%i)\n",
-						argv0, lhs,
-						strerror(errno), errno);
+		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		        argv0, lhs, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 	/* count '%' in basedir */
@@ -1073,8 +1054,7 @@ opts_set_logbasedir(const char *argv0, const char *optarg, char **basedir, char 
 	}
 	*q = '\0';
 	/* lhs contains encoded realpathed basedir */
-	if (asprintf(log,
-				 "%s/%s", lhs, rhs) < 0)
+	if (asprintf(log, "%s/%s", lhs, rhs) < 0)
 		oom_die(argv0);
 	free(lhs);
 	free(rhs);
@@ -1083,7 +1063,8 @@ opts_set_logbasedir(const char *argv0, const char *optarg, char **basedir, char 
 void
 opts_set_contentlogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 {
-	opts_set_logbasedir(argv0, optarg, &opts->contentlog_basedir, &opts->contentlog);
+	opts_set_logbasedir(argv0, optarg, &opts->contentlog_basedir,
+	                    &opts->contentlog);
 	opts->contentlog_isdir = 0;
 	opts->contentlog_isspec = 1;
 	log_dbg_printf("ContentLogPathSpec: basedir=%s, %s\n",
@@ -1132,20 +1113,15 @@ void
 opts_set_pcaplogdir(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (!sys_isdir(optarg)) {
-		fprintf(stderr, "%s: '%s' is not a "
-						"directory\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: '%s' is not a directory\n", argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->pcaplog)
 		free(opts->pcaplog);
 	opts->pcaplog = realpath(optarg, NULL);
 	if (!opts->pcaplog) {
-		fprintf(stderr, "%s: Failed to "
-						"canonicalize '%s': "
-						"%s (%i)\n",
-						argv0, optarg,
-						strerror(errno), errno);
+		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		        argv0, optarg, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 	opts->pcaplog_isdir = 1;
@@ -1156,7 +1132,8 @@ opts_set_pcaplogdir(opts_t *opts, const char *argv0, const char *optarg)
 void
 opts_set_pcaplogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 {
-	opts_set_logbasedir(argv0, optarg, &opts->pcaplog_basedir, &opts->pcaplog);
+	opts_set_logbasedir(argv0, optarg, &opts->pcaplog_basedir,
+	                    &opts->pcaplog);
 	opts->pcaplog_isdir = 0;
 	opts->pcaplog_isspec = 1;
 	log_dbg_printf("PcapLogPathSpec: basedir=%s, %s\n",

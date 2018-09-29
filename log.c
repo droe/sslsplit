@@ -918,7 +918,7 @@ log_content_dir_opencb(void *fh)
 
 	if ((ctx->u.dir.fd = privsep_client_openfile(content_clisock,
 	                                             ctx->u.dir.filename,
-	                                             0, 0)) == -1) {
+	                                             0)) == -1) {
 		log_err_printf("Opening logdir file '%s' failed: %s (%i)\n",
 		               ctx->u.dir.filename, strerror(errno), errno);
 		return -1;
@@ -959,7 +959,7 @@ log_content_spec_opencb(void *fh)
 
 	if ((ctx->u.spec.fd = privsep_client_openfile(content_clisock,
 	                                              ctx->u.spec.filename,
-	                                              1, 0)) == -1) {
+	                                              1)) == -1) {
 		log_err_printf("Opening logspec file '%s' failed: %s (%i)\n",
 		               ctx->u.spec.filename, strerror(errno), errno);
 		return -1;
@@ -1290,7 +1290,7 @@ log_pcap_dir_opencb(void *fh)
 
 	if ((ctx->pcap.u.dir.fd = privsep_client_openfile(content_clisock,
 	                                             ctx->pcap.u.dir.filename,
-	                                             0, 1)) == -1) {
+	                                             0)) == -1) {
 		log_err_printf("Opening pcapdir file '%s' failed: %s (%i)\n",
 		               ctx->pcap.u.dir.filename,
 		               strerror(errno), errno);
@@ -1328,7 +1328,7 @@ log_pcap_spec_opencb(void *fh)
 
 	if ((ctx->pcap.u.spec.fd = privsep_client_openfile(content_clisock,
 	                                              ctx->pcap.u.spec.filename,
-	                                              1, 1)) == -1) {
+	                                              1)) == -1) {
 		log_err_printf("Opening pcapspec file '%s' failed: %s (%i)\n",
 		               ctx->pcap.u.spec.filename,
 		               strerror(errno), errno);

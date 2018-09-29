@@ -99,10 +99,10 @@ typedef struct opts {
 	char *conffile;
 	char *connectlog;
 	char *contentlog;
-	char *contentlog_basedir; /* static part of logspec, for privsep srv */
+	char *contentlog_basedir; /* static part of logspec for privsep srv */
 	char *masterkeylog;
 	char *pcaplog;
-	char *pcaplog_basedir; /* static part of pcap logspec, for privsep srv */
+	char *pcaplog_basedir; /* static part of pcap logspec for privsep srv */
 	char *mirrorif;
 	char *mirrortarget;
 	char mirrortarget_ether[ETHER_ADDR_LEN];
