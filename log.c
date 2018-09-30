@@ -372,8 +372,9 @@ struct log_content_ctx {
 	} mirror;
 };
 
-static int content_clisock = -1; /* privsep client socket for content logger */
+static int content_clisock = -1;
 static logger_t *content_log = NULL;
+static int pcap_clisock = -1;
 static logger_t *pcap_log = NULL;
 static logger_t *mirror_log = NULL;
 
@@ -1288,7 +1289,7 @@ log_pcap_dir_opencb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
 
-	if ((ctx->pcap.u.dir.fd = privsep_client_openfile(content_clisock,
+	if ((ctx->pcap.u.dir.fd = privsep_client_openfile(pcap_clisock,
 	                                             ctx->pcap.u.dir.filename,
 	                                             0)) == -1) {
 		log_err_printf("Opening pcapdir file '%s' failed: %s (%i)\n",
@@ -1326,7 +1327,7 @@ log_pcap_spec_opencb(void *fh)
 {
 	log_content_ctx_t *ctx = fh;
 
-	if ((ctx->pcap.u.spec.fd = privsep_client_openfile(content_clisock,
+	if ((ctx->pcap.u.spec.fd = privsep_client_openfile(pcap_clisock,
 	                                              ctx->pcap.u.spec.filename,
 	                                              1)) == -1) {
 		log_err_printf("Opening pcapspec file '%s' failed: %s (%i)\n",
@@ -1735,7 +1736,7 @@ log_preinit_undo(void)
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock1, int clisock2)
+log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock[3])
 {
 	proxy_ctx = ctx;
 	if (err_log)
@@ -1751,28 +1752,29 @@ log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock1, int clisock2)
 		if (logger_start(connect_log) == -1)
 			return -1;
 	if (content_log) {
-		content_clisock = clisock1;
+		content_clisock = clisock[0];
 		if (logger_start(content_log) == -1)
 			return -1;
+	} else {
+		privsep_client_close(clisock[0]);
 	}
 	if (pcap_log) {
-		content_clisock = clisock1;
+		pcap_clisock = clisock[1];
 		if (logger_start(pcap_log) == -1)
 			return -1;
+	} else {
+		privsep_client_close(clisock[1]);
 	}
 	if (mirror_log) {
 		if (logger_start(mirror_log) == -1)
 			return -1;
 	}
-	if (content_clisock == -1) {
-		privsep_client_close(clisock1);
-	}
 	if (cert_log) {
-		cert_clisock = clisock2;
+		cert_clisock = clisock[2];
 		if (logger_start(cert_log) == -1)
 			return -1;
 	} else {
-		privsep_client_close(clisock2);
+		privsep_client_close(clisock[2]);
 	}
 	return 0;
 }
@@ -1848,6 +1850,8 @@ log_fini(void)
 		privsep_client_close(cert_clisock);
 	if (content_clisock != -1)
 		privsep_client_close(content_clisock);
+	if (pcap_clisock != -1)
+		privsep_client_close(pcap_clisock);
 }
 
 int

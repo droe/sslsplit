@@ -748,11 +748,12 @@ main(int argc, char *argv[])
 	}
 
 	/* Fork into parent monitor process and (potentially unprivileged)
-	 * child process doing the actual work.  We request 3 privsep client
-	 * sockets: content logger thread, cert writer thread, and the child
-	 * process main thread (main proxy thread) */
-	int clisock[3];
-	if (privsep_fork(opts, clisock, 3) != 0) {
+	 * child process doing the actual work.  We request 4 privsep client
+	 * sockets: three logger threads, and the child process main thread,
+	 * which will become the main proxy thread. */
+	int clisock[4];
+	if (privsep_fork(opts, clisock,
+	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
 		 * or an error occured */
 		if (opts->pidfile) {
@@ -790,7 +791,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
-	if (log_init(opts, proxy, clisock[1], clisock[2]) == -1) {
+	if (log_init(opts, proxy, &clisock[1]) == -1) {
 		fprintf(stderr, "%s: failed to init log facility: %s\n",
 		                argv0, strerror(errno));
 		goto out_log_failed;
