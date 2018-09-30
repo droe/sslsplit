@@ -858,6 +858,7 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 		               i, sockcliv[i][0], sockcliv[i][1]);
 	}
 
+	log_dbg_printf("Privsep parent pid %i\n", getpid());
 	pid = fork();
 	if (pid == -1) {
 		log_err_printf("Failed to fork: %s (%i)\n",
@@ -886,7 +887,7 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 			n = read(chldpipev[0], buf, sizeof(buf));
 		} while (n == -1 && errno == EINTR);
 		close(chldpipev[0]);
-
+		log_dbg_printf("Privsep child pid %i\n", getpid());
 		/* return the privsep client sockets */
 		for (size_t i = 0; i < nclisock; i++)
 			clisock[i] = sockcliv[i][1];
