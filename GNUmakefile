@@ -215,6 +215,9 @@ TOBJS+=		$(filter-out main.o,$(OBJS))
 
 include Mk/buildinfo.mk
 VERSION:=	$(BUILD_VERSION)
+ifdef GITDIR
+CFLAGS+=	$(DEBUG_CFLAGS)
+endif
 
 # Autodetect dependencies known to pkg-config
 PKGS:=		
@@ -368,8 +371,10 @@ LDFLAGS+=	-pthread
 endif
 
 # _FORTIFY_SOURCE requires -O on Linux
+ifeq ($(shell uname),Linux)
 ifeq (,$(findstring -O,$(CFLAGS)))
 CFLAGS+=	-O
+endif
 endif
 
 export VERSION
