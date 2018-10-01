@@ -166,7 +166,7 @@ typedef struct pxy_conn_ctx {
 #endif /* HAVE_LOCAL_PROCINFO */
 
 	/* content log context */
-	log_content_ctx_t *logctx;
+	log_content_ctx_t logctx;
 
 	/* store fd and fd event while connected is 0 */
 	evutil_socket_t fd;
@@ -229,7 +229,7 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx, int by_requestor)
 		                (void*)ctx);
 	}
 #endif /* DEBUG_PROXY */
-	if (WANT_CONTENT_LOG(ctx) && ctx->logctx) {
+	if (WANT_CONTENT_LOG(ctx)) {
 		if (log_content_close(&ctx->logctx, by_requestor) == -1) {
 			log_err_printf("Warning: Content log close failed\n");
 		}
@@ -1540,7 +1540,7 @@ deny:
 			                      NULL, NULL);
 			if (lb &&
 			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-				if (log_content_submit(ctx->logctx, lb,
+				if (log_content_submit(&ctx->logctx, lb,
 				                       1/*req*/) == -1) {
 					logbuf_free(lb);
 					log_err_printf("Warning: Content log "
@@ -1560,7 +1560,7 @@ deny:
 		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1,
 		                     NULL, NULL);
 		if (lb) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       0/*resp*/) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "
@@ -1731,7 +1731,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       1/*req*/) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "
@@ -1779,7 +1779,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       0/*resp*/) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "
@@ -1804,7 +1804,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		logbuf_t *lb;
 		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL, NULL);
 		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       (bev == ctx->src.bev)) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "

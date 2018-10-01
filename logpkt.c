@@ -162,6 +162,7 @@ logpkt_write_pcap_record(int fd)
 
 	rv = 0;
 out2:
+	/* XXX double-check this */
 	if (libnet_pcap->aligner > 0) {
 		// Don't forget to free aligned bytes
 		packet = packet - libnet_pcap->aligner;
@@ -291,9 +292,8 @@ logpkt_write_pcap_packet(libnet_t *libnet, int fd, pcap_packet_t *pcap,
                          char flags,
                          const unsigned char *payload, size_t payloadlen)
 {
-	// TODO: Check init
 	unsigned char src_ether[ETHER_ADDR_LEN] = {
-		0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A};
+		0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A}; /* XXX */
 	int rv = -1;
 
 	if (logpkt_build_packet(libnet, src_ether, pcap, flags,

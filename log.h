@@ -71,11 +71,19 @@ extern logger_t *connect_log;
         logger_write_freebuf(connect_log, NULL, 0, (buf), (sz))
 
 typedef struct log_content_ctx log_content_ctx_t;
-int log_content_open(log_content_ctx_t **, opts_t *, char *, char *, char *,
+struct log_content_file_ctx;
+struct log_content_pcap_ctx;
+struct log_content_mirror_ctx;
+struct log_content_ctx {
+	struct log_content_file_ctx *file;
+	struct log_content_pcap_ctx *pcap;
+	struct log_content_mirror_ctx *mirror;
+};
+int log_content_open(log_content_ctx_t *, opts_t *, char *, char *, char *,
                      char *, char *, char *, char *) NONNULL(1,2,3) WUNRES;
 int log_content_submit(log_content_ctx_t *, logbuf_t *, int)
                        NONNULL(1,2) WUNRES;
-int log_content_close(log_content_ctx_t **, int) NONNULL(1) WUNRES;
+int log_content_close(log_content_ctx_t *, int) NONNULL(1) WUNRES;
 int log_content_split_pathspec(const char *, char **,
                                char **) NONNULL(1,2,3) WUNRES;
 
