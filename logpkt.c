@@ -31,6 +31,24 @@
 #include "sys.h"
 #include "log.h"
 
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <pcap.h>
+#include <errno.h>
+
+#if defined(__OpenBSD__) && !defined(ETHERTYPE_IPV6)
+#include <net/ethertypes.h>
+#endif /* __OpenBSD__ && !ETHERTYPE_IPV6 */
+
+#define MSS_VAL 1420
+
 typedef struct __attribute__((packed)) {
 	uint32_t magic_number;  /* magic number */
 	uint16_t version_major; /* major version number */

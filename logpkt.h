@@ -29,26 +29,10 @@
 #ifndef LOGPKT_H
 #define LOGPKT_H
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <time.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <pcap.h>
-#include <errno.h>
 
 #include <libnet.h>
-#if defined(__OpenBSD__) && !defined(ETHERTYPE_IPV6)
-#include <net/ethertypes.h>
-#endif /* __OpenBSD__ && !ETHERTYPE_IPV6 */
-
-#define MSS_VAL 1420
 
 typedef struct pcap_packet {
 	time_t epoch;
