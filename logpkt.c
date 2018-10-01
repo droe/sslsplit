@@ -66,14 +66,16 @@ typedef struct __attribute__((packed)) {
 	uint32_t orig_len;      /* actual length of packet */
 } pcap_rec_hdr_t;
 
+libnet_t *libnet_pcap = NULL; /* XXX */
+libnet_t *libnet_mirror = NULL; /* XXX */
+struct libnet_ether_addr *mirrorsender_ether = NULL; /* XXX */
 
-libnet_t *libnet_pcap = NULL;
-libnet_t *libnet_mirror = NULL;
-struct libnet_ether_addr *mirrorsender_ether = NULL;
-
+/* XXX */
 static unsigned int mirrortarget_ip = 0; /* Pcap handler input */
 static unsigned char mirrortarget_ether[ETHER_ADDR_LEN]; /* Pcap handler output */
 static int mirrortarget_result = -1; /* Pcap handler retval */
+
+#define PCAP_MAGIC 0xa1b2c3d4
 
 int
 logpkt_write_global_pcap_hdr(int fd)
@@ -82,7 +84,7 @@ logpkt_write_global_pcap_hdr(int fd)
 
 	memset(&hdr, 0x0, sizeof(hdr));
 
-	hdr.magic_number = 0xa1b2c3d4;
+	hdr.magic_number = PCAP_MAGIC;
 	hdr.version_major = 2;
 	hdr.version_minor = 4;
 	hdr.snaplen = 1500;
@@ -155,7 +157,6 @@ logpkt_set_packet_fields(libnet_t *libnet, pcap_packet_t *pcap, char *src_addr, 
 	}
 	pcap->dst_port = atoi(dst_port);
 
-	pcap->epoch = time(NULL);
 	pcap->seq = 0;
 	pcap->ack = 0;
 	return 0;
@@ -439,7 +440,7 @@ logpkt_recv_arp_reply(UNUSED const char *user, UNUSED struct pcap_pkthdr *h,
 }
 
 int
-logpkt_check_mirrortarget(char *ip, char *ether, char *mirrorif)
+logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 {
 	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
 	            LIBNET_ERRBUF_SIZE : PCAP_ERRBUF_SIZE];
@@ -459,7 +460,8 @@ logpkt_check_mirrortarget(char *ip, char *ether, char *mirrorif)
 	}
 
 	/* Get destination IP address */
-	mirrortarget_ip = libnet_name2addr4(libnet, ip, LIBNET_DONT_RESOLVE);
+	mirrortarget_ip = libnet_name2addr4(libnet, (char *)ip,
+	                                    LIBNET_DONT_RESOLVE);
 	if ((int)mirrortarget_ip == -1) {
 		log_err_printf("Error converting IP address\n");
 		goto out2;
@@ -518,8 +520,6 @@ logpkt_check_mirrortarget(char *ip, char *ether, char *mirrorif)
 	}
 
 	do {
-		fprintf(stderr, ".");
-
 		if (libnet_write(libnet) != -1) {
 			/* Limit # of packets to process, so we can loop to
 			 * send arp requests on busy networks */
@@ -533,12 +533,9 @@ logpkt_check_mirrortarget(char *ip, char *ether, char *mirrorif)
 			log_err_printf("Error writing arp packet: %s",
 			               libnet_geterror(libnet));
 		}
-
 		sleep(1);
 	} while (mirrortarget_result == -1 && --count > 0);
 
-	fprintf(stderr, "\n");
-	
 	if (mirrortarget_result == 0) {
 		memcpy(ether, &mirrortarget_ether, ETHER_ADDR_LEN);
 		fprintf(stderr, "Mirroring target is up: "

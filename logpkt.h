@@ -34,8 +34,8 @@
 
 #include <libnet.h>
 
+/* XXX */
 typedef struct pcap_packet {
-	time_t epoch;
 	unsigned int src_ip;
 	struct libnet_in6_addr src_ip6;
 	unsigned int dst_ip;
@@ -45,12 +45,12 @@ typedef struct pcap_packet {
 	unsigned short dst_port;
 	unsigned int ack;
 	unsigned int seq;
-	unsigned char dst_ether[ETHER_ADDR_LEN];
+	unsigned char dst_ether[ETHER_ADDR_LEN]; /* XXX */
 } pcap_packet_t;
 
-extern libnet_t *libnet_pcap;
-extern libnet_t *libnet_mirror;
-struct libnet_ether_addr *mirrorsender_ether;
+extern libnet_t *libnet_pcap; /* XXX */
+extern libnet_t *libnet_mirror; /* XXX */
+struct libnet_ether_addr *mirrorsender_ether; /* XXX */
 
 int logpkt_write_global_pcap_hdr(int);
 int logpkt_set_packet_fields(libnet_t *, pcap_packet_t *,
@@ -59,6 +59,6 @@ int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char,
                         const unsigned char *, size_t);
 int logpkt_write_payload(libnet_t *, int, pcap_packet_t *, pcap_packet_t *,
                          char, const unsigned char *, size_t);
-int logpkt_check_mirrortarget(char *, char *, char *);
+int logpkt_check_mirrortarget(const char *, char *, const char *);
 
 #endif /* !LOGPKT_H */

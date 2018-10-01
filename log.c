@@ -1189,7 +1189,7 @@ log_pcap_closecb_base(void *fh, int fd) {
 
 	if (ctx->request.seq > 0 && ctx->request.ack > 0) {
 		if (logpkt_write_packet(libnet_pcap, fd, &ctx->request,
-		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
 			log_err_printf("Warning: Failed to write to pcap log"
 			               ": %s\n", strerror(errno));
 		}
@@ -1200,7 +1200,7 @@ log_pcap_closecb_base(void *fh, int fd) {
 			               ": %s\n", strerror(errno));
 		}
 		if (logpkt_write_packet(libnet_pcap, fd, &ctx->response,
-		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
 			log_err_printf("Warning: Failed to write to pcap log"
 			               ": %s\n", strerror(errno));
 		}
@@ -1342,19 +1342,22 @@ log_pcap_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb) {
 /*
  * Mirror writer for -T/-I options.
  */
-static char *content_ifname = NULL;
 
 static int
-log_mirror_preinit(const char *ifname) {
+log_mirror_preinit(const char *ifname, const char *target,
+                   char *target_ether) {
 	char errbuf[LIBNET_ERRBUF_SIZE];
 
-	content_ifname = strdup(ifname);
+	/* XXX this currently writes to opts->mirrortarget_ether via
+	 * target_ether AND keeps a static copy in logpkg.o - needs cleanup */
+	if (logpkt_check_mirrortarget(target, target_ether, ifname) == -1) {
+		log_err_printf("Failed to check mirrortarget");
+		return -1;
+	}
 
-	libnet_mirror = libnet_init(LIBNET_LINK, content_ifname, errbuf);
+	libnet_mirror = libnet_init(LIBNET_LINK, ifname, errbuf);
 	if (libnet_mirror == NULL) {
 		log_err_printf("Failed to init mirror libnet: %s", errbuf);
-		free(content_ifname);
-		content_ifname = NULL;
 		return -1;
 	}
 
@@ -1362,8 +1365,6 @@ log_mirror_preinit(const char *ifname) {
 	if (mirrorsender_ether == NULL) {
 		log_err_printf("Failed to get our own ethernet address: %s",
 		               libnet_geterror(libnet_mirror));
-		free(content_ifname);
-		content_ifname = NULL;
 		return -1;
 	}
 
@@ -1374,10 +1375,6 @@ log_mirror_preinit(const char *ifname) {
 static void
 log_content_mirror_fini(void)
 {
-	if (content_ifname) {
-		free(content_ifname);
-		content_ifname = NULL;
-	}
 	if (libnet_mirror) {
 		libnet_destroy(libnet_mirror);
 	}
@@ -1389,7 +1386,7 @@ log_mirror_closecb(void *fh) {
 
 	if (ctx->request.seq > 0 && ctx->request.ack > 0) {
 		if (logpkt_write_packet(libnet_mirror, 0, &ctx->request,
-		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
 			log_err_printf("Warning: Failed to write to mirror log"
 			               ": %s\n", strerror(errno));
 		}
@@ -1400,7 +1397,7 @@ log_mirror_closecb(void *fh) {
 			               ": %s\n", strerror(errno));
 		}
 		if (logpkt_write_packet(libnet_mirror, 0, &ctx->response,
-		                        TH_FIN | TH_ACK, NULL, 0) == -1) {
+		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
 			log_err_printf("Warning: Failed to write to mirror log"
 			               ": %s\n", strerror(errno));
 		}
@@ -1599,7 +1596,9 @@ log_preinit(opts_t *opts)
 		}
 	}
 	if (opts->mirrorif) {
-		if (log_mirror_preinit(opts->mirrorif) == -1)
+		if (log_mirror_preinit(opts->mirrorif,
+		                       opts->mirrortarget,
+		                       opts->mirrortarget_ether) == -1)
 			goto out;
 		reopencb = NULL;
 		opencb = NULL;

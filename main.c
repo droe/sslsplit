@@ -42,7 +42,6 @@
 #include "log.h"
 #include "build.h"
 #include "defaults.h"
-#include "logpkt.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -486,6 +485,14 @@ main(int argc, char *argv[])
 		                argv0);
 		exit(EXIT_FAILURE);
 	}
+	if (opts->mirrortarget && !opts->mirrorif) {
+		fprintf(stderr, "%s: -T depends on -I.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+	if (opts->mirrorif && !opts->mirrortarget) {
+		fprintf(stderr, "%s: -I depends on -T.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
 	if (!opts->spec) {
 		fprintf(stderr, "%s: no proxyspec specified.\n", argv0);
 		exit(EXIT_FAILURE);
@@ -586,24 +593,6 @@ main(int argc, char *argv[])
 	/* usage checks after defaults */
 	if (opts->dropgroup && !opts->dropuser) {
 		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
-		exit(EXIT_FAILURE);
-	}
-
-	/* mirror logging checks */
-	if (opts->mirrortarget) {
-		if (opts->mirrorif) {
-			fprintf(stderr, "Checking mirroring target: %s\n", opts->mirrortarget);
-			if (logpkt_check_mirrortarget(opts->mirrortarget, opts->mirrortarget_ether, opts->mirrorif) == -1) {
-				log_err_printf("Error checking mirroring target\n");
-				exit(EXIT_FAILURE);
-			}
-		} else {
-			fprintf(stderr, "%s: -T depends on -I.\n", argv0);
-			exit(EXIT_FAILURE);
-		}
-	}
-	if (opts->mirrorif && !opts->mirrortarget) {
-		fprintf(stderr, "%s: -I is used with -T.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 
