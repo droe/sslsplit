@@ -68,12 +68,8 @@ typedef struct __attribute__((packed)) {
 
 libnet_t *libnet_pcap = NULL; /* XXX */
 libnet_t *libnet_mirror = NULL; /* XXX */
-struct libnet_ether_addr *mirrorsender_ether = NULL; /* XXX */
 
-/* XXX */
-static unsigned int mirrortarget_ip = 0; /* Pcap handler input */
-static unsigned char mirrortarget_ether[ETHER_ADDR_LEN]; /* Pcap handler output */
-static int mirrortarget_result = -1; /* Pcap handler retval */
+struct libnet_ether_addr *mirrorsender_ether = NULL;
 
 #define PCAP_MAGIC 0xa1b2c3d4
 
@@ -383,6 +379,11 @@ logpkt_write_packet(libnet_t *libnet, int fd, pcap_packet_t *pcap, char flags,
 	return rv;
 }
 
+/* XXX */
+static unsigned int mirrortarget_ip = 0; /* Pcap handler input */
+static unsigned char mirrortarget_ether[ETHER_ADDR_LEN]; /* Pcap handler output */
+static int mirrortarget_result = -1; /* Pcap handler retval */
+
 /* Pcap handler */
 static void
 logpkt_recv_arp_reply(UNUSED const char *user, UNUSED struct pcap_pkthdr *h,
@@ -440,7 +441,7 @@ logpkt_recv_arp_reply(UNUSED const char *user, UNUSED struct pcap_pkthdr *h,
 }
 
 int
-logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
+logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
 {
 	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
 	            LIBNET_ERRBUF_SIZE : PCAP_ERRBUF_SIZE];
@@ -453,14 +454,8 @@ logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 	struct bpf_program bp;
 	int count = 50;
 
-	libnet_t *libnet = libnet_init(LIBNET_LINK, mirrorif, errbuf);
-	if (libnet == NULL) {
-		log_err_printf("Error initializing libnet: %s", errbuf);
-		goto out;
-	}
-
 	/* Get destination IP address */
-	mirrortarget_ip = libnet_name2addr4(libnet, (char *)ip,
+	mirrortarget_ip = libnet_name2addr4(libnet_mirror, (char *)ip,
 	                                    LIBNET_DONT_RESOLVE);
 	if ((int)mirrortarget_ip == -1) {
 		log_err_printf("Error converting IP address\n");
@@ -469,17 +464,17 @@ logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 
 	// TODO: IPv6?
 	/* Get our own IP and ethernet addresses */
-	src_ip = libnet_get_ipaddr4(libnet);
+	src_ip = libnet_get_ipaddr4(libnet_mirror);
 	if ((int32_t)src_ip == -1) {
 		log_err_printf("Error getting IP address: %s",
-		               libnet_geterror(libnet));
+		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
 
-	src_ether = libnet_get_hwaddr(libnet);
+	src_ether = libnet_get_hwaddr(libnet_mirror);
 	if (src_ether == NULL) {
 		log_err_printf("Error getting ethernet address: %s",
-		               libnet_geterror(libnet));
+		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
 
@@ -487,17 +482,17 @@ logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 	if (libnet_autobuild_arp(ARPOP_REQUEST,
 			src_ether->ether_addr_octet,
 			(u_int8_t*)&src_ip, zero_ether,
-			(u_int8_t*)&mirrortarget_ip, libnet) == -1) {
+			(u_int8_t*)&mirrortarget_ip, libnet_mirror) == -1) {
 		log_err_printf("Error building arp header: %s",
-		               libnet_geterror(libnet));
+		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
 
 	/* Build ethernet header */
 	if (libnet_autobuild_ethernet(broadcast_ether, ETHERTYPE_ARP,
-	                              libnet) == -1) {
+	                              libnet_mirror) == -1) {
 		log_err_printf("Error building ethernet header: %s",
-		               libnet_geterror(libnet));
+		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
 
@@ -520,7 +515,7 @@ logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 	}
 
 	do {
-		if (libnet_write(libnet) != -1) {
+		if (libnet_write(libnet_mirror) != -1) {
 			/* Limit # of packets to process, so we can loop to
 			 * send arp requests on busy networks */
 			if (pcap_dispatch(pcap, 1000,
@@ -531,7 +526,7 @@ logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 			}
 		} else {
 			log_err_printf("Error writing arp packet: %s",
-			               libnet_geterror(libnet));
+			               libnet_geterror(libnet_mirror));
 		}
 		sleep(1);
 	} while (mirrortarget_result == -1 && --count > 0);
@@ -543,13 +538,19 @@ logpkt_check_mirrortarget(const char *ip, char *ether, const char *mirrorif)
 		        ether[0], ether[1], ether[2],
 		        ether[3], ether[4], ether[5]);
 	}
+
+	mirrorsender_ether = libnet_get_hwaddr(libnet_mirror);
+	if (mirrorsender_ether == NULL) {
+		log_err_printf("Failed to get our own ethernet address: %s",
+		               libnet_geterror(libnet_mirror));
+		return -1;
+	}
+
 out4:
 	pcap_freecode(&bp);
 out3:
 	pcap_close(pcap);
 out2:
-	libnet_destroy(libnet);
-out:
 	return mirrortarget_result;
 }
 

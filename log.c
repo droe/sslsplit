@@ -1348,27 +1348,20 @@ log_mirror_preinit(const char *ifname, const char *target,
                    char *target_ether) {
 	char errbuf[LIBNET_ERRBUF_SIZE];
 
-	/* XXX this currently writes to opts->mirrortarget_ether via
-	 * target_ether AND keeps a static copy in logpkg.o - needs cleanup */
-	if (logpkt_check_mirrortarget(target, target_ether, ifname) == -1) {
-		log_err_printf("Failed to check mirrortarget");
-		return -1;
-	}
-
 	libnet_mirror = libnet_init(LIBNET_LINK, ifname, errbuf);
 	if (libnet_mirror == NULL) {
 		log_err_printf("Failed to init mirror libnet: %s", errbuf);
 		return -1;
 	}
+	libnet_seed_prand(libnet_mirror);
 
-	mirrorsender_ether = libnet_get_hwaddr(libnet_mirror);
-	if (mirrorsender_ether == NULL) {
-		log_err_printf("Failed to get our own ethernet address: %s",
-		               libnet_geterror(libnet_mirror));
+	/* XXX writes to opts->mirrortarget_ether via target_ether */
+	if (logpkt_mirror_preinit(target, target_ether, ifname) == -1) {
+		log_err_printf("Failed to preinit logpkt mirror");
+		libnet_destroy(libnet_mirror);
 		return -1;
 	}
 
-	libnet_seed_prand(libnet_mirror);
 	return 0;
 }
 
