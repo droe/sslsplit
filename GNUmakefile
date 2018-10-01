@@ -29,8 +29,23 @@
 # LDFLAGS	Additional linker flags
 # LIBS		Additional libraries to link against
 #
-# You can e.g. create a statically linked binary by running:
+# On macOS, the following build environment variables are respected:
+#
+# DEVELOPER_DIR		Override Xcode Command Line Developer Tools directory
+# MACOSX_VERSION_MIN	Minimal version of macOS to target, e.g. 10.11
+# SDK			SDK name to build against, e.g. macosx, macosx10.11
+#
+# Examples:
+#
+# Build against custom installed libraries under /opt:
+# % OPENSSL_BASE=/opt/openssl LIBEVENT_BASE=/opt/libevent make
+#
+# Create a statically linked binary:
 # % PCFLAGS='--static' CFLAGS='-static' LDFLAGS='-static' make
+#
+# Build a macOS binary for El Capitan using the default SDK from Xcode 7.3.1:
+# % MACOSX_VERSION_MIN=10.11 DEVELOPER_DIR=/Applications/Xcode-7.3.1.app/Contents/Developer make
+
 
 
 ### OpenSSL tweaking
@@ -89,6 +104,7 @@ DEBUG_CFLAGS?=	-g
 # Note that you can override the XNU headers used by defining XNU_VERSION.
 
 ifeq ($(shell uname),Darwin)
+include Mk/xcode.mk
 ifneq ($(wildcard /usr/include/libproc.h),)
 FEATURES+=	-DHAVE_DARWIN_LIBPROC
 endif

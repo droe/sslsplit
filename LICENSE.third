@@ -4,19 +4,24 @@ different copyright and license terms:
 khash.h:
 
     Copyright (c) 2008, 2009, 2011, Attractive Chaos.
-    All rights reserved.
     Licensed under the MIT license.
+    https://github.com/attractivechaos/klib
 
 xnu/xnu-*:
 
     Copyright (c) 1988-2017, Apple Inc. and original copyright holders.
-    All rights reserved.
     Licensed under the APSL.
+    https://opensource.apple.com/
 
 extra/log*.py:
 
     Copyright (C) 2015, Maciej Kotowicz and Daniel Roethlisberger.
-    All rights reserved.
     Licensed under a 2-clause BSD license.
+
+Mk/xcode.mk:
+
+    Copyright (c) Daniel Roethlisberger.
+    Released under the Unlicense.
+    https://github.com/droe/example.kext
 
 See the respective source and/or license files for details.
