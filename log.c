@@ -885,7 +885,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 
 	if (by_requestor)
 		prepflags |= PREPFLAG_REQUEST;
-	if (content_file_log) {
+	if (content_file_log && ctx->file) {
 		if (logger_submit(content_file_log, ctx->file,
 		                  prepflags, NULL) == -1) {
 			return -1;
@@ -895,7 +895,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 		}
 		ctx->file = NULL;
 	}
-	if (content_pcap_log) {
+	if (content_pcap_log && ctx->pcap) {
 		if (logger_submit(content_pcap_log, ctx->pcap,
 		                  prepflags, NULL) == -1) {
 			return -1;
@@ -905,7 +905,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 		}
 		ctx->pcap = NULL;
 	}
-	if (content_mirror_log) {
+	if (content_mirror_log && ctx->mirror) {
 		if (logger_submit(content_mirror_log, ctx->mirror,
 		                  prepflags, NULL) == -1) {
 			return -1;
