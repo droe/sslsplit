@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 #include <arpa/inet.h>
@@ -50,20 +51,20 @@
 #define MSS_VAL 1420
 
 typedef struct pcap_file_hdr {
-	unsigned int magic_number; /* magic number */
-	unsigned short version_major; /* major version number */
-	unsigned short version_minor; /* minor version number */
-	unsigned int thiszone; /* GMT to local correction */
-	unsigned int sigfigs; /* accuracy of timestamps */
-	unsigned int snaplen; /* max length of captured packets, in octets */
-	unsigned int network; /* data link type */
+	uint32_t magic_number;  /* magic number */
+	uint16_t version_major; /* major version number */
+	uint16_t version_minor; /* minor version number */
+	uint32_t thiszone;      /* GMT to local correction */
+	uint32_t sigfigs;       /* accuracy of timestamps */
+	uint32_t snaplen;       /* max length of captured packets, in octets */
+	uint32_t network;       /* data link type */
 } pcap_file_hdr_t;
 
 typedef struct pcap_rec_hdr {
-	unsigned int ts_sec; /* timestamp seconds */
-	unsigned int ts_usec; /* timestamp microseconds */
-	unsigned int incl_len; /* number of octets of packet saved in file */
-	unsigned int orig_len; /* actual length of packet */
+	uint32_t ts_sec;        /* timestamp seconds */
+	uint32_t ts_usec;       /* timestamp microseconds */
+	uint32_t incl_len;      /* number of octets of packet saved in file */
+	uint32_t orig_len;      /* actual length of packet */
 } pcap_rec_hdr_t;
 
 typedef struct pcap_packet {
