@@ -155,37 +155,52 @@ privsep_server_openfile_verify(opts_t *opts, char *fn, int mkpath)
 static int WUNRES
 privsep_server_openfile(char *fn, int mkpath)
 {
-	int fd;
+	int fd, tmp;
 
 	if (mkpath) {
 		char *filedir, *fn2;
 
 		fn2 = strdup(fn);
 		if (!fn2) {
+			tmp = errno;
 			log_err_printf("Could not duplicate filname: %s (%i)\n",
 			               strerror(errno), errno);
+			errno = tmp;
 			return -1;
 		}
 		filedir = dirname(fn2);
 		if (!filedir) {
+			tmp = errno;
 			log_err_printf("Could not get dirname: %s (%i)\n",
 			               strerror(errno), errno);
 			free(fn2);
+			errno = tmp;
 			return -1;
 		}
 		if (sys_mkpath(filedir, DFLT_DIRMODE) == -1) {
+			tmp = errno;
 			log_err_printf("Could not create directory '%s': %s (%i)\n",
 			               filedir, strerror(errno), errno);
 			free(fn2);
+			errno = tmp;
 			return -1;
 		}
 		free(fn2);
 	}
 
-	fd = open(fn, O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	fd = open(fn, O_RDWR|O_CREAT, DFLT_FILEMODE);
 	if (fd == -1) {
+		tmp = errno;
 		log_err_printf("Failed to open '%s': %s (%i)\n",
 		               fn, strerror(errno), errno);
+		errno = tmp;
+		return -1;
+	}
+	if (lseek(fd, 0, SEEK_END) == -1) {
+		tmp = errno;
+		log_err_printf("Failed to seek on '%s': %s (%i)\n",
+		               fn, strerror(errno), errno);
+		errno = tmp;
 		return -1;
 	}
 	return fd;

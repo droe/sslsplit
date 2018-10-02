@@ -29,6 +29,8 @@
 #ifndef LOGPKT_H
 #define LOGPKT_H
 
+#include "attrib.h"
+
 #include <stdint.h>
 #include <time.h>
 
@@ -51,7 +53,7 @@ typedef struct pcap_packet {
 extern libnet_t *libnet_pcap; /* XXX */
 extern libnet_t *libnet_mirror; /* XXX */
 
-int logpkt_write_global_pcap_hdr(int);
+int logpkt_pcap_open_fd(int fd) WUNRES;
 int logpkt_set_packet_fields(libnet_t *, pcap_packet_t *,
                              char *, char *, char *, char *);
 int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char,

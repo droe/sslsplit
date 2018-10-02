@@ -1126,22 +1126,19 @@ static char *content_pcap_fn = NULL;
 static int
 log_pcap_preinit(const char *pcapfile)
 {
-	int exists = access(pcapfile, F_OK);
-
-	content_pcap_fd = open(pcapfile, O_WRONLY|O_APPEND|O_CREAT,
-	                       DFLT_FILEMODE);
+	content_pcap_fd = open(pcapfile, O_RDWR|O_CREAT, DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
 		               pcapfile, strerror(errno), errno);
 		return -1;
 	}
-
-	if (exists == -1) {
-		if (logpkt_write_global_pcap_hdr(content_pcap_fd) == -1) {
-			close(content_pcap_fd);
-			content_pcap_fd = -1;
-			return -1;
-		}
+	if (logpkt_pcap_open_fd(content_pcap_fd) == -1) {
+		log_err_printf("Failed to prepare '%s' for PCAP writing"
+		               ": %s (%i)\n",
+		               pcapfile, strerror(errno), errno);
+		close(content_pcap_fd);
+		content_pcap_fd = -1;
+		return -1;
 	}
 
 	if (!(content_pcap_fn = realpath(pcapfile, NULL))) {
@@ -1173,11 +1170,18 @@ log_content_pcap_fini(void)
 static int
 log_pcap_reopencb(void) {
 	close(content_pcap_fd);
-	content_pcap_fd = open(content_pcap_fn, O_WRONLY|O_APPEND|O_CREAT,
-	                       DFLT_FILEMODE);
+	content_pcap_fd = open(content_pcap_fn, O_RDWR|O_CREAT, DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
 		               content_pcap_fn, strerror(errno), errno);
+		return -1;
+	}
+	if (logpkt_pcap_open_fd(content_pcap_fd) == -1) {
+		log_err_printf("Failed to prepare '%s' for PCAP writing"
+		               ": %s (%i)\n",
+		               content_pcap_fn, strerror(errno), errno);
+		close(content_pcap_fd);
+		content_pcap_fd = -1;
 		return -1;
 	}
 	return 0;
@@ -1276,7 +1280,7 @@ log_pcap_dir_opencb(void *fh)
 		               ctx->u.dir.filename, strerror(errno), errno);
 		return -1;
 	}
-	return logpkt_write_global_pcap_hdr(ctx->u.dir.fd);
+	return logpkt_pcap_open_fd(ctx->u.dir.fd);
 }
 
 static void
@@ -1310,7 +1314,7 @@ log_pcap_spec_opencb(void *fh)
 		               ctx->u.spec.filename, strerror(errno), errno);
 		return -1;
 	}
-	return logpkt_write_global_pcap_hdr(ctx->u.spec.fd);
+	return logpkt_pcap_open_fd(ctx->u.spec.fd);
 }
 
 static void
@@ -1824,9 +1828,6 @@ log_reopen(void)
 
 	if (masterkey_log)
 		if (logger_reopen(masterkey_log) == -1)
-			rv = -1;
-	if (content_mirror_log)
-		if (logger_reopen(content_mirror_log) == -1)
 			rv = -1;
 	if (content_pcap_log)
 		if (logger_reopen(content_pcap_log) == -1)

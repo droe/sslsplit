@@ -70,26 +70,61 @@ libnet_t *libnet_pcap = NULL; /* XXX */
 libnet_t *libnet_mirror = NULL; /* XXX */
 
 struct libnet_ether_addr *mirrorsender_ether = NULL;
+static unsigned char pcap_src_ether[ETHER_ADDR_LEN] = {
+	0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A};
 
 #define PCAP_MAGIC 0xa1b2c3d4
 
-int
+static int
 logpkt_write_global_pcap_hdr(int fd)
 {
 	pcap_file_hdr_t hdr;
 
 	memset(&hdr, 0x0, sizeof(hdr));
-
 	hdr.magic_number = PCAP_MAGIC;
 	hdr.version_major = 2;
 	hdr.version_minor = 4;
 	hdr.snaplen = 1500;
 	hdr.network = 1;
+	return write(fd, &hdr, sizeof(hdr)) != sizeof(hdr) ? -1 : 0;
+}
 
-	if (write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
+/*
+ * Called on a file descriptor open for reading and writing.
+ * If the fd points to an empty file, a pcap header is added and 0 is returned.
+ * If the fd points to a file with PCAP magic bytes, the file position is moved
+ * to the end of the file and 0 is returned.
+ * If the fd points to a file without PCAP magic bytes, the file is truncated
+ * to zero bytes and a new PCAP header is written.
+ * On a return value of 0, the caller can continue to write PCAP records to the
+ * file descriptor.  On error, -1 is returned and the file descriptor is in an
+ * undefined but still open state.
+ */
+int
+logpkt_pcap_open_fd(int fd) {
+	pcap_file_hdr_t hdr;
+	off_t sz;
+	ssize_t n;
+
+	sz = lseek(fd, 0, SEEK_END);
+	if (sz == -1)
 		return -1;
+
+	if (sz > 0) {
+		if (lseek(fd, 0, SEEK_SET) == -1)
+			return -1;
+		n = read(fd, &hdr, sizeof(pcap_file_hdr_t));
+		if (n != sizeof(pcap_file_hdr_t))
+			return -1;
+		if (hdr.magic_number == PCAP_MAGIC)
+			return lseek(fd, 0, SEEK_END) == -1 ? -1 : 0;
+		if (lseek(fd, 0, SEEK_SET) == -1)
+			return -1;
+		if (ftruncate(fd, 0) == -1)
+			return -1;
 	}
-	return 0;
+
+	return logpkt_write_global_pcap_hdr(fd);
 }
 
 /*
@@ -325,11 +360,9 @@ logpkt_write_pcap_packet(libnet_t *libnet, int fd, pcap_packet_t *pcap,
                          char flags,
                          const unsigned char *payload, size_t payloadlen)
 {
-	unsigned char src_ether[ETHER_ADDR_LEN] = {
-		0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A}; /* XXX */
 	int rv = -1;
 
-	if (logpkt_build_packet(libnet, src_ether, pcap, flags,
+	if (logpkt_build_packet(libnet, pcap_src_ether, pcap, flags,
 	                        payload, payloadlen) == -1) {
 		log_err_printf("Error building pcap packet\n");
 		goto out;
