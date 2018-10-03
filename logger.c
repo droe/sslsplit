@@ -54,10 +54,6 @@ struct logger {
 	thrqueue_t *queue;
 };
 
-#define LBFLAG_REOPEN	(1 << 0)
-#define LBFLAG_OPEN	(1 << 1)
-#define LBFLAG_CLOSE	(1 << 2)
-
 static void
 logger_clear(logger_t *logger)
 {

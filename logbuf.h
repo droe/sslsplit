@@ -59,6 +59,10 @@ void logbuf_free(logbuf_t *) NONNULL(1);
 #define logbuf_ctl_unset(x, y) (x)->ctl &= ~(y)
 #define logbuf_ctl_isset(x, y) (!!((x)->ctl & (y)))
 
+#define LBFLAG_REOPEN   (1 << 0)        /* logger */
+#define LBFLAG_OPEN     (1 << 1)        /* logger */
+#define LBFLAG_CLOSE    (1 << 2)        /* logger */
+
 #endif /* !LOGBUF_H */
 
 /* vim: set noet ft=c: */
