@@ -42,7 +42,7 @@ typedef struct logbuf {
 	struct logbuf *next;
 } logbuf_t;
 
-typedef ssize_t (*writefunc_t)(void *, const void *, size_t);
+typedef ssize_t (*writefunc_t)(void *, int, const void *, size_t);
 
 logbuf_t * logbuf_new(void *, size_t, void *, logbuf_t *) MALLOC;
 logbuf_t * logbuf_new_alloc(size_t, void *, logbuf_t *) MALLOC;
@@ -62,6 +62,8 @@ void logbuf_free(logbuf_t *) NONNULL(1);
 #define LBFLAG_REOPEN   (1 << 0)        /* logger */
 #define LBFLAG_OPEN     (1 << 1)        /* logger */
 #define LBFLAG_CLOSE    (1 << 2)        /* logger */
+#define LBFLAG_IS_REQ   (1 << 3)        /* pcap/mirror content log */
+#define LBFLAG_IS_RESP  (1 << 4)        /* pcap/mirror content log */
 
 #endif /* !LOGBUF_H */
 

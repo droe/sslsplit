@@ -38,7 +38,7 @@
 typedef int (*logger_reopen_func_t)(void);
 typedef int (*logger_open_func_t)(void *);
 typedef void (*logger_close_func_t)(void *);
-typedef ssize_t (*logger_write_func_t)(void *, const void *, size_t);
+typedef ssize_t (*logger_write_func_t)(void *, int, const void *, size_t);
 typedef logbuf_t * (*logger_prep_func_t)(void *, unsigned long, logbuf_t *);
 typedef void (*logger_except_func_t)(void);
 typedef struct logger logger_t;

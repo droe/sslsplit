@@ -61,9 +61,19 @@ logger_clear(logger_t *logger)
 }
 
 /*
- * Create new logger with a specific write function callback.
- * The callback will be executed in the logger's writer thread,
- * not in the thread calling logger_submit().
+ * Create new logger with a set of specific function callbacks:
+ *
+ * reopenfunc:  handle SIGHUP for the log by reopening all open files across
+ *              multiple connections
+ * openfunc:    open a new log for a new connection
+ * closefunc:   close a log for a connection
+ * writefunc:   write a single logbuf to the log
+ * prepfunc:    prepare a log buffer before adding it to the logbuffer's queue
+ * exceptfunc:  called after failed callback operations
+ *
+ * All callbacks except prepfunc will be executed in the logger's writer
+ * thread, not in the thread calling logger_submit().  Prepfunc will be called
+ * in the thread calling logger_submit().
  */
 logger_t *
 logger_new(logger_reopen_func_t reopenfunc, logger_open_func_t openfunc,
