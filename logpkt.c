@@ -69,6 +69,7 @@ typedef struct __attribute__((packed)) {
 libnet_t *libnet_pcap = NULL; /* XXX */
 libnet_t *libnet_mirror = NULL; /* XXX */
 
+/* XXX */
 struct libnet_ether_addr *mirrorsender_ether = NULL;
 static unsigned char pcap_src_ether[ETHER_ADDR_LEN] = {
 	0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A};
@@ -412,117 +413,94 @@ logpkt_write_packet(libnet_t *libnet, int fd, pcap_packet_t *pcap, char flags,
 	return rv;
 }
 
-/* XXX */
-static unsigned int mirrortarget_ip = 0; /* Pcap handler input */
-static unsigned char mirrortarget_ether[ETHER_ADDR_LEN]; /* Pcap handler output */
-static int mirrortarget_result = -1; /* Pcap handler retval */
-
-/* Pcap handler */
-static void
-logpkt_recv_arp_reply(UNUSED const char *user, UNUSED struct pcap_pkthdr *h,
-                      uint8_t *packet)
-{
-	struct libnet_802_3_hdr *heth;
-	struct libnet_arp_hdr *harp;
-	unsigned char *ether;
+typedef struct {
 	uint32_t ip;
+	int result;
+	unsigned char ether[ETHER_ADDR_LEN];
+} logpkt_recv_arp_reply_ctx_t;
 
-	heth = (void*)packet;
-	harp = (void*)((char*)heth + LIBNET_ETH_H);
+static void
+logpkt_recv_arp_reply(unsigned char *user,
+                      UNUSED const struct pcap_pkthdr *h,
+                      const unsigned char *packet)
+{
+	logpkt_recv_arp_reply_ctx_t *ctx = (logpkt_recv_arp_reply_ctx_t*)user;
+	struct libnet_802_3_hdr *heth = (void*)packet;
+	struct libnet_arp_hdr *harp = (void*)((char*)heth + LIBNET_ETH_H);
 
-	/* Check if ARP reply */
-	if (htons(harp->ar_op) != ARPOP_REPLY) {
-		/* Not an error, as we filter to recv all arp packets */
+	/* skip if wrong protocol */
+	if (htons(harp->ar_op) != ARPOP_REPLY)
 		return;
-	}
-
-	/* Check if IPv4 address reply */
-	if (htons(harp->ar_pro) != ETHERTYPE_IP) {
-		log_err_printf("Not ETHERTYPE_IP: %u\n", harp->ar_pro);
+	if (htons(harp->ar_pro) != ETHERTYPE_IP)
 		return;
-	}
-
-	/* Check if ethernet address reply */
-	if (htons(harp->ar_hrd) != ARPHRD_ETHER) {
-		log_err_printf("Not ARPHRD_ETHER: %u\n", harp->ar_hrd);
+	if (htons(harp->ar_hrd) != ARPHRD_ETHER)
 		return;
-	}
 
-	/* Check if IPv4 address is the one we asked for */
-	memcpy(&ip, (char*)harp + harp->ar_hln + LIBNET_ARP_H, 4);
-	if (mirrortarget_ip != ip) {
-		log_err_printf("Reply not for mirror target ip: %.2x != %.2x\n",
-		               ip, mirrortarget_ip);
+	/* skip if wrong target IP address */
+	if (!!memcmp(&ctx->ip, (char*)harp + harp->ar_hln + LIBNET_ARP_H, 4))
 		return;
-	}
 
-	/* Must be sent from mirror target, so we know it is reachable */
-	if (memcmp((u_char*)harp + sizeof(struct libnet_arp_hdr),
-			   heth->_802_3_shost, ETHER_ADDR_LEN)) {
-		ether = heth->_802_3_shost;
-		log_err_printf("Reply not from mirror target ether"
-		               ": %02x:%02x:%02x:%02x:%02x:%02x\n",
-		               ether[0], ether[1], ether[2],
-		               ether[3], ether[4], ether[5]);
+	/* skip if source ether mismatch */
+	if (!!memcmp((u_char*)harp + sizeof(struct libnet_arp_hdr),
+	             heth->_802_3_shost, ETHER_ADDR_LEN))
 		return;
-	}
 
-	/* Success: Got ethernet address of mirror target, and it is up */
-	memcpy(&mirrortarget_ether,
-	       (u_char*)harp + sizeof(struct libnet_arp_hdr), ETHER_ADDR_LEN);
-	mirrortarget_result = 0;
+	memcpy(ctx->ether,
+	       (u_char*)harp + sizeof(struct libnet_arp_hdr),
+	       ETHER_ADDR_LEN);
+	ctx->result = 0;
 }
 
+/*
+ * Currently, only IPv4 mirror targets are supported.
+ */
 int
 logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
 {
 	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
 	            LIBNET_ERRBUF_SIZE : PCAP_ERRBUF_SIZE];
-	unsigned int src_ip;
-	struct libnet_ether_addr *src_ether;
 	unsigned char broadcast_ether[ETHER_ADDR_LEN] = {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	unsigned char zero_ether[ETHER_ADDR_LEN] = {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+	struct libnet_ether_addr *src_ether;
+	unsigned int src_ip;
 	struct bpf_program bp;
 	int count = 50;
+	logpkt_recv_arp_reply_ctx_t ctx;
 
-	/* Get destination IP address */
-	mirrortarget_ip = libnet_name2addr4(libnet_mirror, (char *)ip,
-	                                    LIBNET_DONT_RESOLVE);
-	if ((int)mirrortarget_ip == -1) {
+	ctx.ip = libnet_name2addr4(libnet_mirror, (char *)ip,
+	                           LIBNET_DONT_RESOLVE);
+	if (ctx.ip == (uint32_t)-1) {
 		log_err_printf("Error converting IP address\n");
 		goto out2;
 	}
-
-	// TODO: IPv6?
-	/* Get our own IP and ethernet addresses */
 	src_ip = libnet_get_ipaddr4(libnet_mirror);
-	if ((int32_t)src_ip == -1) {
-		log_err_printf("Error getting IP address: %s",
+	if (src_ip == (uint32_t)-1) {
+		log_err_printf("Error getting IP address: %s\n",
 		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
-
 	src_ether = libnet_get_hwaddr(libnet_mirror);
 	if (src_ether == NULL) {
-		log_err_printf("Error getting ethernet address: %s",
+		log_err_printf("Error getting ethernet address: %s\n",
 		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
 
-	/* Build ARP header */
 	if (libnet_autobuild_arp(ARPOP_REQUEST,
-			src_ether->ether_addr_octet,
-			(u_int8_t*)&src_ip, zero_ether,
-			(u_int8_t*)&mirrortarget_ip, libnet_mirror) == -1) {
-		log_err_printf("Error building arp header: %s",
+	                         src_ether->ether_addr_octet,
+	                         (u_int8_t*)&src_ip,
+	                         zero_ether,
+	                         (u_int8_t*)&ctx.ip,
+	                         libnet_mirror) == -1) {
+		log_err_printf("Error building arp header: %s\n",
 		               libnet_geterror(libnet_mirror));
 		goto out2;
 	}
 
-	/* Build ethernet header */
-	if (libnet_autobuild_ethernet(broadcast_ether, ETHERTYPE_ARP,
+	if (libnet_autobuild_ethernet(broadcast_ether,
+	                              ETHERTYPE_ARP,
 	                              libnet_mirror) == -1) {
 		log_err_printf("Error building ethernet header: %s",
 		               libnet_geterror(libnet_mirror));
@@ -535,7 +513,6 @@ logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
 		goto out2;
 	}
 
-	/* Interested in ARP packets only */
 	if (pcap_compile(pcap, &bp, "arp", 0, -1) == -1) {
 		log_err_printf("Error in pcap_compile(): %s\n",
 		               pcap_geterr(pcap));
@@ -547,26 +524,29 @@ logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
 		goto out4;
 	}
 
+	ctx.result = -1;
 	do {
 		if (libnet_write(libnet_mirror) != -1) {
 			/* Limit # of packets to process, so we can loop to
-			 * send arp requests on busy networks */
+			 * send arp requests on busy networks. */
 			if (pcap_dispatch(pcap, 1000,
-			                  (pcap_handler)logpkt_recv_arp_reply,
-			                  NULL) < 0) {
+			                  /*(pcap_handler)*/logpkt_recv_arp_reply,
+			                  (u_char*)&ctx) < 0) {
 				log_err_printf("Error in pcap_dispatch(): %s\n",
 				               pcap_geterr(pcap));
+				break;
 			}
 		} else {
 			log_err_printf("Error writing arp packet: %s",
 			               libnet_geterror(libnet_mirror));
+			break;
 		}
 		sleep(1);
-	} while (mirrortarget_result == -1 && --count > 0);
+	} while (ctx.result == -1 && --count > 0);
 
-	if (mirrortarget_result == 0) {
-		memcpy(ether, &mirrortarget_ether, ETHER_ADDR_LEN);
-		fprintf(stderr, "Mirroring target is up: "
+	if (ctx.result == 0) {
+		memcpy(ether, &ctx.ether, ETHER_ADDR_LEN);
+		log_dbg_printf("Mirror target is up: "
 		        "%02x:%02x:%02x:%02x:%02x:%02x\n",
 		        ether[0], ether[1], ether[2],
 		        ether[3], ether[4], ether[5]);
@@ -574,9 +554,9 @@ logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
 
 	mirrorsender_ether = libnet_get_hwaddr(libnet_mirror);
 	if (mirrorsender_ether == NULL) {
-		log_err_printf("Failed to get our own ethernet address: %s",
+		log_err_printf("Failed to get our own ethernet address: %s\n",
 		               libnet_geterror(libnet_mirror));
-		return -1;
+		ctx.result = -1;
 	}
 
 out4:
@@ -584,6 +564,6 @@ out4:
 out3:
 	pcap_close(pcap);
 out2:
-	return mirrortarget_result;
+	return ctx.result;
 }
 
