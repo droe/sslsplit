@@ -45,7 +45,7 @@
  * logbuf_new() in case it fails returning NULL.
  */
 logbuf_t *
-logbuf_new(void *buf, size_t sz, void *fh, logbuf_t *next)
+logbuf_new(void *buf, size_t sz, logbuf_t *next)
 {
 	logbuf_t *lb;
 
@@ -56,9 +56,15 @@ logbuf_new(void *buf, size_t sz, void *fh, logbuf_t *next)
 	}
 	lb->buf = buf;
 	lb->sz = sz;
-	lb->fh = fh;
-	lb->ctl = 0;
-	lb->next = next;
+	if (next) {
+		lb->fh = next->fh;
+		lb->ctl = next->ctl;
+		lb->next = next;
+	} else {
+		lb->fh = NULL;
+		lb->ctl = 0;
+		lb->next = NULL;
+	}
 	return lb;
 }
 
@@ -66,7 +72,7 @@ logbuf_new(void *buf, size_t sz, void *fh, logbuf_t *next)
  * Create new logbuf, allocating sz bytes into the internal buffer.
  */
 logbuf_t *
-logbuf_new_alloc(size_t sz, void *fh, logbuf_t *next)
+logbuf_new_alloc(size_t sz, logbuf_t *next)
 {
 	logbuf_t *lb;
 
@@ -77,9 +83,15 @@ logbuf_new_alloc(size_t sz, void *fh, logbuf_t *next)
 		return NULL;
 	}
 	lb->sz = sz;
-	lb->fh = fh;
-	lb->ctl = 0;
-	lb->next = next;
+	if (next) {
+		lb->fh = next->fh;
+		lb->ctl = next->ctl;
+		lb->next = next;
+	} else {
+		lb->fh = NULL;
+		lb->ctl = 0;
+		lb->next = NULL;
+	}
 	return lb;
 }
 
@@ -87,7 +99,7 @@ logbuf_new_alloc(size_t sz, void *fh, logbuf_t *next)
  * Create new logbuf, copying buf into a newly allocated internal buffer.
  */
 logbuf_t *
-logbuf_new_copy(const void *buf, size_t sz, void *fh, logbuf_t *next)
+logbuf_new_copy(const void *buf, size_t sz, logbuf_t *next)
 {
 	logbuf_t *lb;
 
@@ -99,33 +111,23 @@ logbuf_new_copy(const void *buf, size_t sz, void *fh, logbuf_t *next)
 	}
 	memcpy(lb->buf, buf, sz);
 	lb->sz = sz;
-	lb->fh = fh;
-	lb->ctl = 0;
-	lb->next = next;
+	if (next) {
+		lb->fh = next->fh;
+		lb->ctl = next->ctl;
+		lb->next = next;
+	} else {
+		lb->fh = NULL;
+		lb->ctl = 0;
+		lb->next = NULL;
+	}
 	return lb;
 }
 
 /*
- * Create new logbuf from lb, recursively creating next logbuf.
+ * Create new logbuf using printf.
  */
 logbuf_t *
-logbuf_new_rcopy(logbuf_t *lb)
-{
-	logbuf_t *lbnew = NULL;
-	if (lb) {
-		lbnew = logbuf_new_copy(lb->buf, lb->sz, lb->fh, NULL);
-		if (!lbnew)
-			return NULL;
-		lbnew->next = logbuf_new_rcopy(lb->next);
-	}
-	return lbnew;
-}
-
-/*
- * Create new logbuf using printf, setting fh and next.
- */
-logbuf_t *
-logbuf_new_printf(void *fh, logbuf_t *next, const char *fmt, ...)
+logbuf_new_printf(logbuf_t *next, const char *fmt, ...)
 {
 	va_list ap;
 	logbuf_t *lb;
@@ -139,9 +141,70 @@ logbuf_new_printf(void *fh, logbuf_t *next, const char *fmt, ...)
 		free(lb);
 		return NULL;
 	}
-	lb->fh = fh;
-	lb->ctl = 0;
-	lb->next = next;
+	if (next) {
+		lb->fh = next->fh;
+		lb->ctl = next->ctl;
+		lb->next = next;
+	} else {
+		lb->fh = NULL;
+		lb->ctl = 0;
+		lb->next = NULL;
+	}
+	return lb;
+}
+
+/*
+ * Create new logbuf from lb.  If combine is set, combine all the buffer
+ * segments into a single contiguous one.  Otherwise, copy segment by segment.
+ */
+logbuf_t *
+logbuf_new_deepcopy(logbuf_t *lb, int combine)
+{
+	logbuf_t *lbnew;
+	unsigned char *p;
+
+	if (!lb)
+		return NULL;
+
+	if (combine) {
+		lbnew = logbuf_new_alloc(logbuf_size(lb), NULL);
+		if (!lbnew)
+			return NULL;
+		lbnew->fh = lb->fh;
+		lbnew->ctl = lb->ctl;
+		p = lbnew->buf;
+		while (lb) {
+			memcpy(p, lb->buf, lb->sz);
+			p += lb->sz;
+			lb = lb->next;
+		}
+	} else {
+		lbnew = logbuf_new_copy(lb->buf, lb->sz, NULL);
+		if (!lbnew)
+			return NULL;
+		lbnew->fh = lb->fh;
+		lbnew->ctl = lb->ctl;
+		lbnew->next = logbuf_new_deepcopy(lb->next, 0);
+	}
+	return lbnew;
+}
+
+logbuf_t *
+logbuf_make_contiguous(logbuf_t *lb) {
+	unsigned char *p;
+
+	if (!lb)
+		return NULL;
+	if (!lb->next)
+		return lb;
+	p = realloc(lb->buf, logbuf_size(lb));
+	if (!p)
+		return NULL;
+	lb->buf = p;
+	while ((lb = lb->next)) {
+		memcpy(p, lb->buf, lb->sz);
+		p += lb->sz;
+	}
 	return lb;
 }
 
@@ -163,45 +226,29 @@ logbuf_size(logbuf_t *lb)
 /*
  * Write content of logbuf using writefunc and free all buffers.
  * Returns -1 on errors and sets errno according to write().
- * Returns total of bytes written by write() call on success.
+ * Returns total of bytes written by 1 .. n write() calls on success.
  */
 ssize_t
 logbuf_write_free(logbuf_t *lb, writefunc_t writefunc)
 {
-	unsigned char *buf = NULL;
-	ssize_t sz = 0;
-	logbuf_t *lbnext;
-	void *fh;
-	int ctl;
-	int rv = 0;
-
-	if (lb) {
-		// Save fh, as only lb has fh set and lb is freed in while loop
-		fh = lb->fh;
-		ctl = lb->ctl;
-
-		while (lb) {
-			buf = realloc(buf, sz + lb->sz);
-			if (!buf) {
-				logbuf_free(lb);
-				return -1;
-			}
-
-			memcpy(buf + sz, lb->buf, lb->sz);
-			sz += lb->sz;
-
-			lbnext = lb->next;
-			if (lb->buf) {
-				free(lb->buf);
-			}
-			free(lb);
-			lb = lbnext;
-		}
-
-		rv = writefunc(fh, ctl, buf, sz);
-		free(buf);
+	ssize_t rv1, rv2 = 0;
+	rv1 = writefunc(lb->fh, lb->ctl, lb->buf, lb->sz);
+	if (lb->buf) {
+		free(lb->buf);
 	}
-	return rv;
+	if (lb->next) {
+		if (rv1 == -1) {
+			logbuf_free(lb->next);
+		} else {
+			lb->next->fh = lb->fh;
+			rv2 = logbuf_write_free(lb->next, writefunc);
+		}
+	}
+	free(lb);
+	if (rv1 == -1 || rv2 == -1)
+		return -1;
+	else
+		return rv1 + rv2;
 }
 
 /*

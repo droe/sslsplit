@@ -801,59 +801,66 @@ errout:
 	return -1;
 }
 
+/*
+ * On failure, lb is not freed.
+ */
 int
 log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 {
 	unsigned long prepflags = 0;
+	logbuf_t *lbpcap, *lbmirror;
 
 	if (is_request)
 		prepflags |= PREPFLAG_REQUEST;
 
-	logbuf_t *lbpcap = lb;
-	logbuf_t *lbmirror = lb;
+	lb = logbuf_make_contiguous(lb);
+	if (!lb)
+		return -1;
+
+	lbpcap = lbmirror = lb;
 	if (content_file_log) {
 		if (content_pcap_log) {
-			lbpcap = logbuf_new_rcopy(lb);
-			if (!lbpcap) {
-				goto out;
-			}
+			lbpcap = logbuf_new_deepcopy(lb, 1);
+			if (!lbpcap)
+				goto errout;
 		}
 		if (content_mirror_log) {
-			lbmirror = logbuf_new_rcopy(lb);
-			if (!lbmirror) {
-				if (content_pcap_log) {
-					logbuf_free(lbpcap);
-				}
-				goto out;
-			}
+			lbmirror = logbuf_new_deepcopy(lb, 1);
+			if (!lbmirror)
+				goto errout;
 		}
-	} else if (content_pcap_log) {
-		lbmirror = logbuf_new_rcopy(lb);
-		if (!lbmirror) {
-			goto out;
-		}
+	} else if (content_pcap_log && content_mirror_log) {
+		lbmirror = logbuf_new_deepcopy(lb, 1);
+		if (!lbmirror)
+			goto errout;
 	}
 
-	if (content_file_log) {
-		if (logger_submit(content_file_log, ctx->file,
-		                  prepflags, lb) == -1) {
-			goto out;
-		}
-	}
 	if (content_pcap_log) {
 		if (logger_submit(content_pcap_log, ctx->pcap,
 		                  prepflags, lbpcap) == -1) {
-			goto out;
+			goto errout;
 		}
+		lbpcap = NULL;
 	}
 	if (content_mirror_log) {
 		if (logger_submit(content_mirror_log, ctx->mirror,
 		                  prepflags, lbmirror) == -1) {
-			goto out;
+			goto errout;
+		}
+		lbmirror = NULL;
+	}
+	if (content_file_log) {
+		if (logger_submit(content_file_log, ctx->file,
+		                  prepflags, lb) == -1) {
+			return -1;
 		}
 	}
 	return 0;
-out:
+errout:
+	if (lbpcap && lbpcap != lb)
+		logbuf_free(lbpcap);
+	if (lbmirror && lbmirror != lb)
+		logbuf_free(lbmirror);
 	return -1;
 }
 
@@ -1082,10 +1089,9 @@ log_content_file_single_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 
 	/* prepend size tag or EOF, and newline */
 	if (prepflags & PREPFLAG_EOF) {
-		head = logbuf_new_printf(NULL, NULL, " (EOF)\n");
+		head = logbuf_new_printf(NULL, " (EOF)\n");
 	} else {
-		head = logbuf_new_printf(lb->fh, lb, " (%zu):\n",
-		                         logbuf_size(lb));
+		head = logbuf_new_printf(lb, " (%zu):\n", logbuf_size(lb));
 	}
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
@@ -1095,7 +1101,7 @@ log_content_file_single_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 	lb = head;
 
 	/* prepend header */
-	head = logbuf_new_copy(header, strlen(header), lb->fh, lb);
+	head = logbuf_new_copy(header, strlen(header), lb);
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
 		logbuf_free(lb);
@@ -1104,7 +1110,7 @@ log_content_file_single_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 	lb = head;
 
 	/* prepend timestamp */
-	head = logbuf_new_alloc(32, lb->fh, lb);
+	head = logbuf_new_alloc(32, lb);
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
 		logbuf_free(lb);
@@ -1342,6 +1348,8 @@ log_pcap_spec_writecb(void *fh, int ctl, const void *buf, size_t sz)
 static logbuf_t *
 log_pcap_prepcb(UNUSED void *fh, unsigned long prepflags, logbuf_t *lb) {
 	/* log_content_pcap_ctx_t *ctx = fh; */
+	if (prepflags & PREPFLAG_EOF)
+		return lb;
 	logbuf_ctl_set(lb, (prepflags & PREPFLAG_REQUEST) ? LBFLAG_IS_REQ
 	                                                  : LBFLAG_IS_RESP);
 	return lb;
@@ -1454,6 +1462,8 @@ errout:
 static logbuf_t *
 log_mirror_prepcb(UNUSED void *fh, unsigned long prepflags, logbuf_t *lb) {
 	/* log_content_mirror_ctx_t *ctx = fh; */
+	if (prepflags & PREPFLAG_EOF)
+		return lb;
 	logbuf_ctl_set(lb, (prepflags & PREPFLAG_REQUEST) ? LBFLAG_IS_REQ
 	                                                  : LBFLAG_IS_RESP);
 	return lb;
@@ -1476,7 +1486,7 @@ log_cert_submit(const char *fn, X509 *crt)
 		goto errout1;
 	if (!(pem = ssl_x509_to_pem(crt)))
 		goto errout2;
-	if (!(lb = logbuf_new(pem, strlen(pem), NULL, NULL)))
+	if (!(lb = logbuf_new(pem, strlen(pem), NULL)))
 		goto errout3;
 	return logger_submit(cert_log, fh, 0, lb);
 errout3:
@@ -1574,13 +1584,13 @@ log_preinit(opts_t *opts)
 			opencb = log_pcap_dir_opencb;
 			closecb = log_pcap_dir_closecb;
 			writecb = log_pcap_dir_writecb;
-			prepcb = NULL;
+			prepcb = log_pcap_prepcb;
 		} else if (opts->pcaplog_isspec) {
 			reopencb = NULL;
 			opencb = log_pcap_spec_opencb;
 			closecb = log_pcap_spec_closecb;
 			writecb = log_pcap_spec_writecb;
-			prepcb = NULL;
+			prepcb = log_pcap_prepcb;
 		} else {
 			if (log_pcap_preinit(opts->pcaplog) == -1)
 				goto out;

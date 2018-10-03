@@ -44,12 +44,12 @@ typedef struct logbuf {
 
 typedef ssize_t (*writefunc_t)(void *, int, const void *, size_t);
 
-logbuf_t * logbuf_new(void *, size_t, void *, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_alloc(size_t, void *, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_copy(const void *, size_t, void *, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_rcopy(logbuf_t *);
-logbuf_t * logbuf_new_printf(void *, logbuf_t *, const char *, ...)
-           MALLOC PRINTF(3,4);
+logbuf_t * logbuf_new(void *, size_t, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_alloc(size_t, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_copy(const void *, size_t, logbuf_t *) MALLOC;
+logbuf_t * logbuf_new_printf(logbuf_t *, const char *, ...) MALLOC PRINTF(2,3);
+logbuf_t * logbuf_new_deepcopy(logbuf_t *, int) MALLOC;
+logbuf_t * logbuf_make_contiguous(logbuf_t *) WUNRES;
 ssize_t logbuf_size(logbuf_t *) NONNULL(1) WUNRES;
 ssize_t logbuf_write_free(logbuf_t *, writefunc_t);
 void logbuf_free(logbuf_t *) NONNULL(1);

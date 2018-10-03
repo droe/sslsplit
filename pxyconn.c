@@ -1536,8 +1536,7 @@ deny:
 	if (evbuffer_get_length(inbuf) > 0) {
 		if (WANT_CONTENT_LOG(ctx)) {
 			logbuf_t *lb;
-			lb = logbuf_new_alloc(evbuffer_get_length(inbuf),
-			                      NULL, NULL);
+			lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL);
 			if (lb &&
 			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
 				if (log_content_submit(&ctx->logctx, lb,
@@ -1557,8 +1556,7 @@ deny:
 	ctx->ocsp_denied = 1;
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
-		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1,
-		                     NULL, NULL);
+		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1, NULL);
 		if (lb) {
 			if (log_content_submit(&ctx->logctx, lb,
 			                       0/*resp*/) == -1) {
@@ -1703,8 +1701,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
-				tmp = logbuf_new_printf(NULL, NULL,
-				                        "%s\r\n", line);
+				tmp = logbuf_new_printf(NULL, "%s\r\n", line);
 				if (tail) {
 					if (tmp) {
 						tail->next = tmp;
@@ -1751,8 +1748,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
-				tmp = logbuf_new_printf(NULL, NULL,
-				                        "%s\r\n", line);
+				tmp = logbuf_new_printf(NULL, "%s\r\n", line);
 				if (tail) {
 					if (tmp) {
 						tail->next = tmp;
@@ -1802,7 +1798,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
-		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL, NULL);
+		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL);
 		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
 			if (log_content_submit(&ctx->logctx, lb,
 			                       (bev == ctx->src.bev)) == -1) {
