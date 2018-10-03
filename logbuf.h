@@ -51,7 +51,7 @@ logbuf_t * logbuf_new_printf(logbuf_t *, const char *, ...) MALLOC PRINTF(2,3);
 logbuf_t * logbuf_new_deepcopy(logbuf_t *, int) MALLOC;
 logbuf_t * logbuf_make_contiguous(logbuf_t *) WUNRES;
 ssize_t logbuf_size(logbuf_t *) NONNULL(1) WUNRES;
-ssize_t logbuf_write_free(logbuf_t *, writefunc_t);
+ssize_t logbuf_write_free(logbuf_t *, writefunc_t) NONNULL(1);
 void logbuf_free(logbuf_t *) NONNULL(1);
 
 #define logbuf_ctl_clear(x) (x)->ctl = 0
