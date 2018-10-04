@@ -362,13 +362,11 @@ typedef struct log_content_pcap_ctx {
 			char *filename;
 		} spec;
 	} u;
-	logpkt_ctx_t request;
-	logpkt_ctx_t response;
+	logpkt_ctx_t state;
 } log_content_pcap_ctx_t;
 
 typedef struct log_content_mirror_ctx {
-	logpkt_ctx_t request;
-	logpkt_ctx_t response;
+	logpkt_ctx_t state;
 } log_content_mirror_ctx_t;
 
 static int content_file_clisock = -1;
@@ -379,9 +377,9 @@ static logger_t *content_mirror_log = NULL;
 libnet_t *content_pcap_libnet = NULL;
 libnet_t *content_mirror_libnet = NULL;
 static uint8_t content_pcap_src_ether[ETHER_ADDR_LEN] = {
-	0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A};
+	0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A}; // XXX
 static uint8_t content_pcap_dst_ether[ETHER_ADDR_LEN] = {
-	0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
+	0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9}; // XXX
 static uint8_t content_mirror_src_ether[ETHER_ADDR_LEN];
 static uint8_t content_mirror_dst_ether[ETHER_ADDR_LEN];
 
@@ -705,22 +703,12 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->pcap, 0, sizeof(log_content_pcap_ctx_t));
 
-		memcpy(ctx->pcap->request.src_ether,
-		       content_pcap_src_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->pcap->response.src_ether,
-		       content_pcap_src_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->pcap->request.dst_ether,
-		       content_pcap_dst_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->pcap->response.dst_ether,
-		       content_pcap_dst_ether, ETHER_ADDR_LEN);
-
-		if (logpkt_ctx_init(&ctx->pcap->request, content_pcap_libnet,
+		if (logpkt_ctx_init(&ctx->pcap->state,
+		                    content_pcap_libnet,
+		                    content_pcap_src_ether,
+		                    content_pcap_dst_ether,
 		                    srchost, srcport,
 		                    dsthost, dstport) == -1)
-			goto errout;
-		if (logpkt_ctx_init(&ctx->pcap->response, content_pcap_libnet,
-		                    dsthost, dstport,
-		                    srchost, srcport) == -1)
 			goto errout;
 
 		if (opts->pcaplog_isdir) {
@@ -757,24 +745,12 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->mirror, 0, sizeof(log_content_mirror_ctx_t));
 
-		memcpy(ctx->mirror->request.src_ether,
-		       content_mirror_src_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->mirror->response.src_ether,
-		       content_mirror_src_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->mirror->request.dst_ether,
-		       content_mirror_dst_ether, ETHER_ADDR_LEN);
-		memcpy(ctx->mirror->response.dst_ether,
-		       content_mirror_dst_ether, ETHER_ADDR_LEN);
-
-		if (logpkt_ctx_init(&ctx->mirror->request,
+		if (logpkt_ctx_init(&ctx->mirror->state,
 		                    content_mirror_libnet,
+		                    content_mirror_src_ether,
+		                    content_mirror_dst_ether,
 		                    srchost, srcport,
 		                    dsthost, dstport) == -1)
-			goto errout;
-		if (logpkt_ctx_init(&ctx->mirror->response,
-		                    content_mirror_libnet,
-		                    dsthost, dstport,
-		                    srchost, srcport) == -1)
 			goto errout;
 	}
 
@@ -1231,33 +1207,7 @@ log_content_pcap_reopencb(void) {
 static void
 log_content_pcap_closecb_base(void *fh, int fd) {
 	log_content_pcap_ctx_t *ctx = fh;
-
-	if (ctx->request.seq > 0 && ctx->request.ack > 0) {
-		if (logpkt_write_packet(&ctx->request, fd,
-		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log"
-			               ": %s\n", strerror(errno));
-		}
-		ctx->response.ack += 1;
-		if (logpkt_write_packet(&ctx->response, fd,
-		                        TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log"
-			               ": %s\n", strerror(errno));
-		}
-		if (logpkt_write_packet(&ctx->response, fd,
-		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log"
-			               ": %s\n", strerror(errno));
-		}
-		ctx->request.ack += 1;
-		ctx->request.seq += 1;
-
-		if (logpkt_write_packet(&ctx->request, fd,
-		                        TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to pcap log"
-			               ": %s\n", strerror(errno));
-		}
-	}
+	logpkt_write_close(&ctx->state, fd, LOGPKT_REQUEST);
 }
 
 static void
@@ -1271,30 +1221,10 @@ static ssize_t
 log_content_pcap_writecb_base(void *fh, int ctl, const void *buf, size_t sz,
                               int fd) {
 	log_content_pcap_ctx_t *ctx = fh;
-	char flags = TH_PUSH|TH_ACK;
+	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
+	                                      : LOGPKT_RESPONSE;
 
-	logpkt_ctx_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
-	                                           : &ctx->response;
-	logpkt_ctx_t *to   = (ctl & LBFLAG_IS_REQ) ? &ctx->response
-	                                           : &ctx->request;
-
-	if ((ctl & LBFLAG_IS_REQ) && ctx->request.seq == 0) {
-		if (logpkt_write_packet(&ctx->request, fd,
-		                        TH_SYN, NULL, 0) == -1)
-			goto errout;
-		ctx->response.ack = ctx->request.seq + 1;
-		if (logpkt_write_packet(&ctx->response, fd,
-		                        TH_SYN|TH_ACK, NULL, 0) == -1)
-			goto errout;
-		ctx->request.ack = ctx->response.seq + 1;
-		ctx->request.seq += 1;
-		if (logpkt_write_packet(&ctx->request, fd,
-		                        TH_ACK, NULL, 0) == -1)
-			goto errout;
-		ctx->response.seq += 1;
-	}
-
-	if (logpkt_write_payload(from, to, fd, flags, buf, sz) == -1)
+	if (logpkt_write_payload(&ctx->state, fd, direction, buf, sz) == -1)
 		goto errout;
 
 	return sz;
@@ -1428,63 +1358,17 @@ log_content_mirror_fini(void)
 static void
 log_content_mirror_closecb(void *fh) {
 	log_content_mirror_ctx_t *ctx = fh;
-
-	if (ctx->request.seq > 0 && ctx->request.ack > 0) {
-		if (logpkt_write_packet(&ctx->request, -1,
-		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log"
-			               ": %s\n", strerror(errno));
-		}
-		ctx->response.ack += 1;
-		if (logpkt_write_packet(&ctx->response, -1,
-		                        TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log"
-			               ": %s\n", strerror(errno));
-		}
-		if (logpkt_write_packet(&ctx->response, -1,
-		                        TH_FIN|TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log"
-			               ": %s\n", strerror(errno));
-		}
-		ctx->request.ack += 1;
-		ctx->request.seq += 1;
-
-		if (logpkt_write_packet(&ctx->request, -1,
-		                        TH_ACK, NULL, 0) == -1) {
-			log_err_printf("Warning: Failed to write to mirror log"
-			               ": %s\n", strerror(errno));
-		}
-	}
-
+	logpkt_write_close(&ctx->state, -1, LOGPKT_REQUEST);
 	free(ctx);
 }
 
 static ssize_t
 log_content_mirror_writecb(void *fh, int ctl, const void *buf, size_t sz) {
 	log_content_mirror_ctx_t *ctx = fh;
-	char flags = TH_PUSH|TH_ACK;
-	logpkt_ctx_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
-	                                           : &ctx->response;
-	logpkt_ctx_t *to   = (ctl & LBFLAG_IS_REQ) ? &ctx->response
-	                                           : &ctx->request;
+	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
+	                                      : LOGPKT_RESPONSE;
 
-	if ((ctl & LBFLAG_IS_REQ) && ctx->request.seq == 0) {
-		if (logpkt_write_packet(&ctx->request, -1,
-		                        TH_SYN, NULL, 0) == -1)
-			goto errout;
-		ctx->response.ack = ctx->request.seq + 1;
-		if (logpkt_write_packet(&ctx->response, -1,
-		                        TH_SYN|TH_ACK, NULL, 0) == -1)
-			goto errout;
-		ctx->request.ack = ctx->response.seq + 1;
-		ctx->request.seq += 1;
-		if (logpkt_write_packet(&ctx->request, -1,
-		                        TH_ACK, NULL, 0) == -1)
-			goto errout;
-		ctx->response.seq += 1;
-	}
-
-	if (logpkt_write_payload(from, to, -1, flags, buf, sz) == -1)
+	if (logpkt_write_payload(&ctx->state, -1, direction, buf, sz) == -1)
 		goto errout;
 	return sz;
 

@@ -41,28 +41,33 @@ typedef union {
 	struct libnet_in6_addr ip6;
 } logpkt_ip46addr_t;
 
-/* XXX */
 typedef struct {
 	libnet_t *libnet;
-	int af;
-	logpkt_ip46addr_t src_ip;
-	logpkt_ip46addr_t dst_ip;
-	uint16_t src_port;
-	uint16_t dst_port;
-	uint32_t ack;
-	uint32_t seq;
 	uint8_t src_ether[ETHER_ADDR_LEN];
 	uint8_t dst_ether[ETHER_ADDR_LEN];
+	logpkt_ip46addr_t src_ip;
+	logpkt_ip46addr_t dst_ip;
+	int af;
+	uint16_t src_port;
+	uint16_t dst_port;
+	uint32_t src_seq;
+	uint32_t dst_seq;
+	uint32_t src_ack;
+	uint32_t dst_ack;
 } logpkt_ctx_t;
+
+#define LOGPKT_REQUEST  0
+#define LOGPKT_RESPONSE 1
 
 int logpkt_pcap_open_fd(int fd) WUNRES;
 int logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
-                    const char *, const char *, const char *, const char *);
-int logpkt_write_packet(logpkt_ctx_t *, int, char,
-                        const unsigned char *, size_t);
-int logpkt_write_payload(logpkt_ctx_t *, logpkt_ctx_t *, int,
-                         char, const unsigned char *, size_t);
+                    const uint8_t *, const uint8_t *,
+                    const char *, const char *, const char *, const char *)
+    WUNRES;
+int logpkt_write_payload(logpkt_ctx_t *, int, int,
+                         const unsigned char *, size_t) WUNRES;
+int logpkt_write_close(logpkt_ctx_t *, int, int);
 int logpkt_ether_lookup(libnet_t *, uint8_t *, uint8_t *,
-                        const char *, const char *);
+                        const char *, const char *) WUNRES;
 
 #endif /* !LOGPKT_H */
