@@ -376,6 +376,10 @@ static logger_t *content_file_log = NULL;
 static int content_pcap_clisock = -1;
 static logger_t *content_pcap_log = NULL;
 static logger_t *content_mirror_log = NULL;
+static unsigned char content_pcap_dst_ether[ETHER_ADDR_LEN] = {
+	0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
+static unsigned char content_mirror_dst_ether[ETHER_ADDR_LEN];
+
 
 /*
  * Split a pathname into static LHS (including final slashes) and dynamic RHS.
@@ -696,13 +700,10 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->pcap, 0, sizeof(log_content_pcap_ctx_t));
 
-		unsigned char dst_ether[ETHER_ADDR_LEN] = {
-			0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9}; /* XXX */
-
-		memcpy(ctx->pcap->request.dst_ether, dst_ether,
-		       ETHER_ADDR_LEN);
-		memcpy(ctx->pcap->response.dst_ether, dst_ether,
-		       ETHER_ADDR_LEN);
+		memcpy(ctx->pcap->request.dst_ether,
+		       content_pcap_dst_ether, ETHER_ADDR_LEN);
+		memcpy(ctx->pcap->response.dst_ether,
+		       content_pcap_dst_ether, ETHER_ADDR_LEN);
 
 		if (logpkt_set_packet_fields(libnet_pcap, &ctx->pcap->request,
 		                             srchost, srcport,
@@ -748,9 +749,9 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		memset(ctx->mirror, 0, sizeof(log_content_mirror_ctx_t));
 
 		memcpy(ctx->mirror->request.dst_ether,
-		       opts->mirrortarget_ether, ETHER_ADDR_LEN);
+		       content_mirror_dst_ether, ETHER_ADDR_LEN);
 		memcpy(ctx->mirror->response.dst_ether,
-		       opts->mirrortarget_ether, ETHER_ADDR_LEN);
+		       content_mirror_dst_ether, ETHER_ADDR_LEN);
 
 		if (logpkt_set_packet_fields(libnet_mirror,
 		                             &ctx->mirror->request,
@@ -1132,9 +1133,27 @@ out:
 static int content_pcap_fd = -1;
 static char *content_pcap_fn = NULL;
 
+/*
+ * Initialize pcap content logging.  For single-file mode, pcapfile is the
+ * path to the file.  For dir/spec modes, pcapfile is NULL.
+ */
 static int
-log_pcap_preinit(const char *pcapfile)
+log_content_pcap_preinit(const char *pcapfile)
 {
+	char errbuf[LIBNET_ERRBUF_SIZE];
+
+	libnet_pcap = libnet_init(LIBNET_LINK, NULL, errbuf);
+	if (libnet_pcap == NULL) {
+		log_err_printf("Failed to init pcap libnet: %s", errbuf);
+		return -1;
+	}
+	libnet_seed_prand(libnet_pcap);
+
+	if (!pcapfile)
+		return 0;
+
+	/* single file pcap mode */
+
 	content_pcap_fd = open(pcapfile, O_RDWR|O_CREAT, DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
@@ -1177,7 +1196,7 @@ log_content_pcap_fini(void)
 }
 
 static int
-log_pcap_reopencb(void) {
+log_content_pcap_reopencb(void) {
 	close(content_pcap_fd);
 	content_pcap_fd = open(content_pcap_fn, O_RDWR|O_CREAT, DFLT_FILEMODE);
 	if (content_pcap_fd == -1) {
@@ -1197,7 +1216,7 @@ log_pcap_reopencb(void) {
 }
 
 static void
-log_pcap_closecb_base(void *fh, int fd) {
+log_content_pcap_closecb_base(void *fh, int fd) {
 	log_content_pcap_ctx_t *ctx = fh;
 
 	if (ctx->request.seq > 0 && ctx->request.ack > 0) {
@@ -1229,14 +1248,15 @@ log_pcap_closecb_base(void *fh, int fd) {
 }
 
 static void
-log_pcap_closecb(void *fh) {
+log_content_pcap_closecb(void *fh) {
 	log_content_pcap_ctx_t *ctx = fh;
-	log_pcap_closecb_base(fh, content_pcap_fd);
+	log_content_pcap_closecb_base(fh, content_pcap_fd);
 	free(ctx);
 }
 
 static ssize_t
-log_pcap_writecb_base(void *fh, int ctl, const void *buf, size_t sz, int fd) {
+log_content_pcap_writecb_base(void *fh, int ctl, const void *buf, size_t sz,
+                              int fd) {
 	log_content_pcap_ctx_t *ctx = fh;
 	char flags = TH_PUSH|TH_ACK;
 
@@ -1273,12 +1293,12 @@ errout:
 }
 
 static ssize_t
-log_pcap_writecb(void *fh, int ctl, const void *buf, size_t sz) {
-	return log_pcap_writecb_base(fh, ctl, buf, sz, content_pcap_fd);
+log_content_pcap_writecb(void *fh, int ctl, const void *buf, size_t sz) {
+	return log_content_pcap_writecb_base(fh, ctl, buf, sz, content_pcap_fd);
 }
 
 static int
-log_pcap_dir_opencb(void *fh)
+log_content_pcap_dir_opencb(void *fh)
 {
 	log_content_pcap_ctx_t *ctx = fh;
 
@@ -1293,10 +1313,10 @@ log_pcap_dir_opencb(void *fh)
 }
 
 static void
-log_pcap_dir_closecb(void *fh)
+log_content_pcap_dir_closecb(void *fh)
 {
 	log_content_pcap_ctx_t *ctx = fh;
-	log_pcap_closecb_base(fh, ctx->u.dir.fd);
+	log_content_pcap_closecb_base(fh, ctx->u.dir.fd);
 	if (ctx->u.dir.filename)
 		free(ctx->u.dir.filename);
 	if (ctx->u.dir.fd != -1)
@@ -1305,14 +1325,14 @@ log_pcap_dir_closecb(void *fh)
 }
 
 static ssize_t
-log_pcap_dir_writecb(void *fh, int ctl, const void *buf, size_t sz)
+log_content_pcap_dir_writecb(void *fh, int ctl, const void *buf, size_t sz)
 {
 	log_content_pcap_ctx_t *ctx = fh;
-	return log_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.dir.fd);
+	return log_content_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.dir.fd);
 }
 
 static int
-log_pcap_spec_opencb(void *fh)
+log_content_pcap_spec_opencb(void *fh)
 {
 	log_content_pcap_ctx_t *ctx = fh;
 
@@ -1327,10 +1347,10 @@ log_pcap_spec_opencb(void *fh)
 }
 
 static void
-log_pcap_spec_closecb(void *fh)
+log_content_pcap_spec_closecb(void *fh)
 {
 	log_content_pcap_ctx_t *ctx = fh;
-	log_pcap_closecb_base(fh, ctx->u.spec.fd);
+	log_content_pcap_closecb_base(fh, ctx->u.spec.fd);
 	if (ctx->u.spec.filename)
 		free(ctx->u.spec.filename);
 	if (ctx->u.spec.fd != -1)
@@ -1339,14 +1359,15 @@ log_pcap_spec_closecb(void *fh)
 }
 
 static ssize_t
-log_pcap_spec_writecb(void *fh, int ctl, const void *buf, size_t sz)
+log_content_pcap_spec_writecb(void *fh, int ctl, const void *buf, size_t sz)
 {
 	log_content_pcap_ctx_t *ctx = fh;
-	return log_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.spec.fd);
+	return log_content_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.spec.fd);
 }
 
 static logbuf_t *
-log_pcap_prepcb(UNUSED void *fh, unsigned long prepflags, logbuf_t *lb) {
+log_content_pcap_prepcb(UNUSED void *fh, unsigned long prepflags,
+                        logbuf_t *lb) {
 	/* log_content_pcap_ctx_t *ctx = fh; */
 	if (prepflags & PREPFLAG_EOF)
 		return lb;
@@ -1360,20 +1381,19 @@ log_pcap_prepcb(UNUSED void *fh, unsigned long prepflags, logbuf_t *lb) {
  */
 
 static int
-log_mirror_preinit(const char *ifname, const char *target,
-                   char *target_ether) {
+log_content_mirror_preinit(const char *ifname, const char *target) {
 	char errbuf[LIBNET_ERRBUF_SIZE];
 
 	libnet_mirror = libnet_init(LIBNET_LINK, ifname, errbuf);
 	if (libnet_mirror == NULL) {
-		log_err_printf("Failed to init mirror libnet: %s", errbuf);
+		log_err_printf("Failed to init mirror libnet: %s\n", errbuf);
 		return -1;
 	}
 	libnet_seed_prand(libnet_mirror);
 
-	/* XXX writes to opts->mirrortarget_ether via target_ether */
-	if (logpkt_mirror_preinit(target, target_ether, ifname) == -1) {
-		log_err_printf("Failed to preinit logpkt mirror");
+	if (logpkt_ether_lookup(content_mirror_dst_ether,
+	                        target, ifname) == -1) {
+		log_err_printf("Failed to lookup target ether\n");
 		libnet_destroy(libnet_mirror);
 		return -1;
 	}
@@ -1390,7 +1410,7 @@ log_content_mirror_fini(void)
 }
 
 static void
-log_mirror_closecb(void *fh) {
+log_content_mirror_closecb(void *fh) {
 	log_content_mirror_ctx_t *ctx = fh;
 
 	if (ctx->request.seq > 0 && ctx->request.ack > 0) {
@@ -1424,7 +1444,7 @@ log_mirror_closecb(void *fh) {
 }
 
 static ssize_t
-log_mirror_writecb(void *fh, int ctl, const void *buf, size_t sz) {
+log_content_mirror_writecb(void *fh, int ctl, const void *buf, size_t sz) {
 	log_content_mirror_ctx_t *ctx = fh;
 	char flags = TH_PUSH|TH_ACK;
 	pcap_packet_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
@@ -1460,7 +1480,8 @@ errout:
 }
 
 static logbuf_t *
-log_mirror_prepcb(UNUSED void *fh, unsigned long prepflags, logbuf_t *lb) {
+log_content_mirror_prepcb(UNUSED void *fh, unsigned long prepflags,
+                          logbuf_t *lb) {
 	/* log_content_mirror_ctx_t *ctx = fh; */
 	if (prepflags & PREPFLAG_EOF)
 		return lb;
@@ -1570,35 +1591,29 @@ log_preinit(opts_t *opts)
 		}
 	}
 	if (opts->pcaplog) {
-		char errbuf[LIBNET_ERRBUF_SIZE];
-		libnet_pcap = libnet_init(LIBNET_LINK, NULL, errbuf);
-		if (libnet_pcap == NULL) {
-			log_err_printf("Failed to init pcap libnet"
-			               ": %s", errbuf);
+		if (log_content_pcap_preinit((opts->pcaplog_isdir ||
+		                              opts->pcaplog_isspec) ?
+		                              NULL :
+		                              opts->pcaplog) == -1)
 			goto out;
-		}
-		libnet_seed_prand(libnet_pcap);
-
 		if (opts->pcaplog_isdir) {
 			reopencb = NULL;
-			opencb = log_pcap_dir_opencb;
-			closecb = log_pcap_dir_closecb;
-			writecb = log_pcap_dir_writecb;
-			prepcb = log_pcap_prepcb;
+			opencb = log_content_pcap_dir_opencb;
+			closecb = log_content_pcap_dir_closecb;
+			writecb = log_content_pcap_dir_writecb;
+			prepcb = log_content_pcap_prepcb;
 		} else if (opts->pcaplog_isspec) {
 			reopencb = NULL;
-			opencb = log_pcap_spec_opencb;
-			closecb = log_pcap_spec_closecb;
-			writecb = log_pcap_spec_writecb;
-			prepcb = log_pcap_prepcb;
+			opencb = log_content_pcap_spec_opencb;
+			closecb = log_content_pcap_spec_closecb;
+			writecb = log_content_pcap_spec_writecb;
+			prepcb = log_content_pcap_prepcb;
 		} else {
-			if (log_pcap_preinit(opts->pcaplog) == -1)
-				goto out;
-			reopencb = log_pcap_reopencb;
+			reopencb = log_content_pcap_reopencb;
 			opencb = NULL;
-			closecb = log_pcap_closecb;
-			writecb = log_pcap_writecb;
-			prepcb = log_pcap_prepcb;
+			closecb = log_content_pcap_closecb;
+			writecb = log_content_pcap_writecb;
+			prepcb = log_content_pcap_prepcb;
 		}
 		if (!(content_pcap_log = logger_new(reopencb, opencb, closecb,
 		                                    writecb, prepcb,
@@ -1608,15 +1623,14 @@ log_preinit(opts_t *opts)
 		}
 	}
 	if (opts->mirrorif) {
-		if (log_mirror_preinit(opts->mirrorif,
-		                       opts->mirrortarget,
-		                       opts->mirrortarget_ether) == -1)
+		if (log_content_mirror_preinit(opts->mirrorif,
+		                               opts->mirrortarget) == -1)
 			goto out;
 		reopencb = NULL;
 		opencb = NULL;
-		closecb = log_mirror_closecb;
-		writecb = log_mirror_writecb;
-		prepcb = log_mirror_prepcb;
+		closecb = log_content_mirror_closecb;
+		writecb = log_content_mirror_writecb;
+		prepcb = log_content_mirror_prepcb;
 		if (!(content_mirror_log = logger_new(reopencb, opencb, closecb,
 		                                      writecb, prepcb,
 		                                      log_exceptcb))) {

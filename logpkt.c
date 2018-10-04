@@ -455,7 +455,7 @@ logpkt_recv_arp_reply(unsigned char *user,
  * Currently, only IPv4 mirror targets are supported.
  */
 int
-logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
+logpkt_ether_lookup(unsigned char *ether, const char *ip, const char *intf)
 {
 	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
 	            LIBNET_ERRBUF_SIZE : PCAP_ERRBUF_SIZE];
@@ -507,7 +507,7 @@ logpkt_mirror_preinit(const char *ip, char *ether, const char *mirrorif)
 		goto out2;
 	}
 
-	pcap_t *pcap = pcap_open_live(mirrorif, 100, 0, 10, errbuf);
+	pcap_t *pcap = pcap_open_live(intf, 100, 0, 10, errbuf);
 	if (pcap == NULL) {
 		log_err_printf("Error in pcap_open_live(): %s\n", errbuf);
 		goto out2;

@@ -60,6 +60,6 @@ int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char,
                         const unsigned char *, size_t);
 int logpkt_write_payload(libnet_t *, int, pcap_packet_t *, pcap_packet_t *,
                          char, const unsigned char *, size_t);
-int logpkt_mirror_preinit(const char *, char *, const char *);
+int logpkt_ether_lookup(unsigned char *, const char *, const char *);
 
 #endif /* !LOGPKT_H */

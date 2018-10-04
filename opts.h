@@ -34,10 +34,6 @@
 #include "ssl.h"
 #include "attrib.h"
 
-#ifndef ETHER_ADDR_LEN
-#define ETHER_ADDR_LEN 6
-#endif
-
 typedef struct proxyspec {
 	unsigned int ssl : 1;
 	unsigned int http : 1;
@@ -105,7 +101,6 @@ typedef struct opts {
 	char *pcaplog_basedir; /* static part of pcap logspec for privsep srv */
 	char *mirrorif;
 	char *mirrortarget;
-	char mirrortarget_ether[ETHER_ADDR_LEN];
 	CONST_SSL_METHOD *(*sslmethod)(void);
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	int sslversion;
