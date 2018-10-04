@@ -509,6 +509,7 @@ logpkt_ether_lookup(libnet_t *libnet,
 	int count = 50;
 	logpkt_recv_arp_reply_ctx_t ctx;
 
+	ctx.result = -1;
 	ctx.ip = libnet_name2addr4(libnet, (char *)dst_ip_s,
 	                           LIBNET_DONT_RESOLVE);
 	if (ctx.ip == (uint32_t)-1) {
@@ -566,7 +567,6 @@ logpkt_ether_lookup(libnet_t *libnet,
 		goto out4;
 	}
 
-	ctx.result = -1;
 	do {
 		if (libnet_write(libnet) != -1) {
 			/* Limit # of packets to process, so we can loop to
@@ -599,6 +599,7 @@ out4:
 out3:
 	pcap_close(pcap);
 out2:
+	libnet_clear_packet(libnet);
 	return ctx.result;
 }
 
