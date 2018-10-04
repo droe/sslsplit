@@ -377,9 +377,9 @@ static logger_t *content_mirror_log = NULL;
 libnet_t *content_pcap_libnet = NULL;
 libnet_t *content_mirror_libnet = NULL;
 static uint8_t content_pcap_src_ether[ETHER_ADDR_LEN] = {
-	0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A}; // XXX
+	0x02, 0x00, 0x00, 0x11, 0x11, 0x11};
 static uint8_t content_pcap_dst_ether[ETHER_ADDR_LEN] = {
-	0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9}; // XXX
+	0x02, 0x00, 0x00, 0x22, 0x22, 0x22};
 static uint8_t content_mirror_src_ether[ETHER_ADDR_LEN];
 static uint8_t content_mirror_dst_ether[ETHER_ADDR_LEN];
 
