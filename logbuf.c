@@ -192,6 +192,7 @@ logbuf_new_deepcopy(logbuf_t *lb, int combine)
 logbuf_t *
 logbuf_make_contiguous(logbuf_t *lb) {
 	unsigned char *p;
+	logbuf_t *lbtmp;
 
 	if (!lb)
 		return NULL;
@@ -201,9 +202,10 @@ logbuf_make_contiguous(logbuf_t *lb) {
 	if (!p)
 		return NULL;
 	lb->buf = p;
-	while ((lb = lb->next)) {
-		memcpy(p, lb->buf, lb->sz);
-		p += lb->sz;
+	lbtmp = lb;
+	while ((lbtmp = lbtmp->next)) {
+		memcpy(p, lbtmp->buf, lbtmp->sz);
+		p += lbtmp->sz;
 	}
 	return lb;
 }
