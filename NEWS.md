@@ -1,6 +1,13 @@
 
 ### SSLsplit develop
 
+This release contains work sponsored by HackerOne.
+
+-   Add PCAP content log modes (-X, -Y, -y) and a packet mirroring content log
+    mode (-T, -I) to encapsulate decrypted network segments in emulated TCP,
+    IP and Ethernet headers and write the result to PCAP files or send it to
+    a packet capture host on the local network segment (issue #215, based on
+    pull req #149).
 -   Suppress Expect-CT header in order to avoid Certificate Transparency log
     lookup failures (issue #205).
 -   Add -x option for activating an OpenSSL engine (issue #204, pull req #206).

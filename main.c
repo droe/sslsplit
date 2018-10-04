@@ -195,19 +195,22 @@ main_usage(void)
 "              %%%% - literal '%%'\n"
 #ifdef HAVE_LOCAL_PROCINFO
 "      e.g.    \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T.log\"\n"
-"  -i          look up local process owning each connection for logging\n"
-#define OPT_i "i"
 #else /* !HAVE_LOCAL_PROCINFO */
 "      e.g.    \"/var/log/sslsplit/%%T-%%s-%%d.log\"\n"
-#define OPT_i 
 #endif /* HAVE_LOCAL_PROCINFO */
-"  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
 "  -X pcapfile pcap log: packets to pcapfile (excludes -Y/-y)\n"
 "  -Y pcapdir  pcap log: packets to separate files in dir (excludes -X/-y)\n"
 "  -y pathspec pcap log: packets to sep files with %% subst (excl. -X/-Y):\n"
 "              see option -F for pathspec format\n"
 "  -I if       mirror packets to interface\n"
 "  -T addr     mirror packets to target address (used with -I)\n"
+"  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
+#ifdef HAVE_LOCAL_PROCINFO
+"  -i          look up local process owning each connection for logging\n"
+#define OPT_i "i"
+#else /* !HAVE_LOCAL_PROCINFO */
+#define OPT_i 
+#endif /* HAVE_LOCAL_PROCINFO */
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"

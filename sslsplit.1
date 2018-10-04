@@ -30,18 +30,18 @@ sslsplit \-\- transparent SSL/TLS interception
 .SH SYNOPSIS
 .na
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrRxeumjplLSFiMab\fP] \fB-c\fP \fIpem\fP
+[\fB-kCKqwWOPZdDgGsrRxeumjplLSFXYyTIMiab\fP] \fB-c\fP \fIpem\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-kCKqwWOPZdDgGsrRxeumjplLSFiMab\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
+[\fB-kCKqwWOPZdDgGsrRxeumjplLSFXYyTIMiab\fP] \fB-c\fP \fIpem\fP \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
 .B sslsplit
-[\fB-OPZwWdDgGsrRxeumjplLSFiMab\fP] \fB-t\fP \fIdir\fP
+[\fB-OPZwWdDgGsrRxeumjplLSFXYyTIMiab\fP] \fB-t\fP \fIdir\fP
 \fIproxyspecs\fP [...]
 .br
-.B sslsplit [\fB-kCKwWOPZdDgGsrRxeumjplLSFiM\fP] -f \fIconffile\fP
+.B sslsplit [\fB-kCKwWOPZdDgGsrRxeumjplLSFXYyTIMi\fP] -f \fIconffile\fP
 .br
 .B sslsplit -E
 .br
@@ -185,6 +185,10 @@ connect log and enables the respective \fB-F\fP path specification directives.
 \fB-i\fP is available on Mac OS X and FreeBSD; support for other platforms has
 not been implemented yet.
 .TP
+.B \-I \fIif\fP
+Mirror connection content as emulated packets to interface \fIif\fP with
+destination address given by \fB-T\fP.
+.TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
 Note that this has implications for \fBsni\fP \fIproxyspecs\fP.
@@ -327,6 +331,10 @@ loaded from \fIcertdir\fP.
 Otherwise, connections matching no certificate will be dropped, or if
 \fB-P\fP is given, passed through without splitting SSL/TLS.
 .TP
+.B \-T \fIaddr\fP
+Mirror connection content as emulated packets to destination address \fIaddr\fP
+on the interface given by \fB-I\fP.
+.TP
 .B \-u
 Drop privileges after opening sockets and files by setting the real,
 effective and stored user IDs to \fIuser\fP and loading the appropriate
@@ -347,6 +355,20 @@ engine dynamically linked library and loaded by path, regardless of global
 OpenSSL configuration.
 This option is only available if built against a version of OpenSSL with engine
 support.
+.TP
+.B \-X \fIpcapfile\fP
+Log connection content to \fIpcapfile\fP in PCAP format, with emulated TCP, IP
+and Ethernet headers.
+SIGUSR1 will cause \fIpcapfile\fP to be re-opened.
+.TP
+.B \-Y \fIpcapdir\fP
+Log connection content to separate PCAP files under \fIpcapdir\fP.  For each
+connection, a separate PCAP file will be written.
+.TP
+.B \-y \fIpcapspec\fP
+Log connection content to separate PCAP files with the given path specification
+(see LOG SPECIFICATIONS below).  For each connection, a separate PCAP file will
+be written.
 .TP
 .B \-V
 Display version and compiled features information and exit.
@@ -447,9 +469,9 @@ Note that when using \fB-j\fP with \fBsni\fP, you may need to prepare
 \fIjaildir\fP to make name resolution work from within the chroot directory.
 .SH SIGNALS
 A running \fBsslsplit\fP accepts SIGINT and SIGQUIT for a clean shutdown and
-SIGUSR1 to re-open the long-living log files (\fB-l\fP and \fB-L\fP).
-Per-connection log files (\fB-S\fP and \fB-F\fP) are not re-opened because
-their filename is specific to the connection.
+SIGUSR1 to re-open the long-living log files (such as \fB-l\fP, \fB-L\fP).
+Per-connection log files (such as \fB-S\fP and \fB-F\fP) are not re-opened
+because their filename is specific to the connection.
 .SH "LOG SPECIFICATIONS"
 Log specifications are composed of zero or more printf-style directives;
 ordinary characters are included directly in the output path.
@@ -763,6 +785,8 @@ Steve Wills, Landon Fuller, Wayne Jensen, Rory McNamara, Alexander Neumann,
 Adam Jacob Muller, Richard Poole, Maciej Kotowicz, Eun Soo Park, Christian
 Groschupp, Alexander Savchenkov, Soner Tari, Petr Vanek, Hilko Bengen,
 Philip Duldig, Levente Polyak, Nick French and Cihan Komecoglu.
+
+SSLsplit contains work sponsored by HackerOne.
 .SH BUGS
 Use Github for submission of bug reports or patches:
 .LP
