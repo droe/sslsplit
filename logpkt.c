@@ -135,19 +135,20 @@ logpkt_ip6addr_is_error(struct libnet_in6_addr *addr)
 }
 
 static int
-logpkt_str2ip46addr(libnet_t *libnet, char *addr, int af,
-                    unsigned int *ip4addr, struct libnet_in6_addr *ip6addr)
+logpkt_str2ip46addr(libnet_t *libnet, const char *addr, int af,
+                    logpkt_ip46addr_t *ip46)
 {
 	if (af == AF_INET) {
-		*ip4addr = inet_addr(addr);
-		if (*ip4addr == 0) {
+		ip46->ip4 = inet_addr(addr);
+		if (ip46->ip4 == 0) {
 			log_err_printf("Error converting IPv4 address: %s\n",
 			               addr);
 			goto out;
 		}
 	} else {
-		*ip6addr = libnet_name2addr6(libnet, addr, LIBNET_DONT_RESOLVE);
-		if (logpkt_ip6addr_is_error(ip6addr)) {
+		ip46->ip6 = libnet_name2addr6(libnet, (char *)addr,
+		                              LIBNET_DONT_RESOLVE);
+		if (logpkt_ip6addr_is_error(&ip46->ip6)) {
 			log_err_printf("Error converting IPv6 address: %s\n",
 			               addr);
 			goto out;
@@ -159,9 +160,9 @@ out:
 }
 
 int
-logpkt_set_packet_fields(libnet_t *libnet, pcap_packet_t *ctx,
-                         char *src_addr, char *src_port,
-                         char *dst_addr, char *dst_port)
+logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
+                const char *src_addr, const char *src_port,
+                const char *dst_addr, const char *dst_port)
 {
 	ctx->af = sys_get_af(src_addr);
 	if (ctx->af == AF_UNSPEC) {
@@ -175,15 +176,13 @@ logpkt_set_packet_fields(libnet_t *libnet, pcap_packet_t *ctx,
 	}
 
 	if (logpkt_str2ip46addr(libnet, src_addr, ctx->af,
-	                        &ctx->src_ip, &ctx->src_ip6) == -1) {
+	                        &ctx->src_ip) == -1)
 		goto out;
-	}
 	ctx->src_port = atoi(src_port);
 
 	if (logpkt_str2ip46addr(libnet, dst_addr, ctx->af,
-	                        &ctx->dst_ip, &ctx->dst_ip6) == -1) {
+	                        &ctx->dst_ip) == -1)
 		goto out;
-	}
 	ctx->dst_port = atoi(dst_port);
 
 	ctx->seq = 0;
@@ -228,9 +227,8 @@ logpkt_write_pcap_record(int fd)
 
 	rv = 0;
 out2:
-	/* XXX double-check this */
+	/* this depends on libnet_pblock_coalesce() internals */
 	if (libnet_pcap->aligner > 0) {
-		// Don't forget to free aligned bytes
 		packet = packet - libnet_pcap->aligner;
 	}
 	free(packet);
@@ -240,7 +238,7 @@ out:
 
 int
 logpkt_write_payload(libnet_t *libnet, int fd,
-                     pcap_packet_t *from, pcap_packet_t *to, char flags,
+                     logpkt_ctx_t *from, logpkt_ctx_t *to, char flags,
                      const uint8_t *payload, size_t payloadlen)
 {
 	int sendsize = 0;
@@ -269,100 +267,99 @@ logpkt_write_payload(libnet_t *libnet, int fd,
 }
 
 static int
-logpkt_build_packet(libnet_t *libnet, pcap_packet_t *ctx, char flags,
+logpkt_build_packet(libnet_t *libnet,
+                    uint8_t *src_ether, uint8_t *dst_ether, int af,
+                    logpkt_ip46addr_t *src_ip, logpkt_ip46addr_t *dst_ip,
+                    uint16_t src_port, uint16_t dst_port,
+                    char flags, uint32_t seq, uint32_t ack,
                     const uint8_t *payload, size_t payloadlen)
 {
 	libnet_ptag_t ptag;
+
+	ptag = libnet_build_tcp(src_port,
+	                        dst_port,
+	                        seq,
+	                        ack,
+	                        flags,
+	                        32767,          /* window size */
+	                        0,              /* checksum */
+	                        0,              /* urgent pointer */
+	                        LIBNET_TCP_H + payloadlen,
+	                        (uint8_t *)payload, payloadlen,
+	                        libnet, 0);
+	if (ptag == -1) {
+		log_err_printf("Error building tcp header: %s",
+		               libnet_geterror(libnet));
+		return -1;
+	}
+
+	if (af == AF_INET) {
+		ptag = libnet_build_ipv4(LIBNET_IPV4_H + LIBNET_TCP_H +
+		                         payloadlen,
+		                         0,             /* TOS */
+		                         (uint16_t)
+		                         libnet_get_prand(LIBNET_PRu16), /*id*/
+		                         0x4000,        /* frag */
+		                         64,            /* TTL */
+		                         IPPROTO_TCP,   /* protocol */
+		                         0,             /* checksum */
+		                         src_ip->ip4,
+		                         dst_ip->ip4,
+		                         NULL, 0,
+		                         libnet, 0);
+	} else {
+		ptag = libnet_build_ipv6(0,             /* traffic class */
+		                         0,             /* flow label */
+		                         LIBNET_IPV6_H + LIBNET_TCP_H +
+		                         payloadlen,
+		                         IPPROTO_TCP,
+		                         255,           /* hop limit */
+		                         src_ip->ip6,
+		                         dst_ip->ip6,
+		                         NULL, 0,
+		                         libnet, 0);
+	}
+	if (ptag == -1) {
+		log_err_printf("Error building ip header: %s",
+		               libnet_geterror(libnet));
+		return -1;
+	}
+
+	ptag = libnet_build_ethernet(dst_ether,
+	                             src_ether,
+	                             af == AF_INET ? ETHERTYPE_IP
+	                                           : ETHERTYPE_IPV6,
+	                             NULL, 0,
+	                             libnet, 0);
+	if (ptag == -1) {
+		log_err_printf("Error building ethernet header: %s",
+		               libnet_geterror(libnet));
+		return -1;
+	}
+	return 0;
+}
+
+int
+logpkt_write_packet(libnet_t *libnet, int fd, logpkt_ctx_t *ctx, char flags,
+                    const uint8_t *payload, size_t payloadlen)
+{
+	int rv;
 
 	if (flags & TH_SYN) {
 		ctx->seq = libnet_get_prand(LIBNET_PRu32);
 	}
 
-	ptag = libnet_build_tcp(
-			ctx->src_port, /* source port */
-			ctx->dst_port, /* destination port */
-			ctx->seq, /* sequence number */
-			ctx->ack, /* acknowledgement num */
-			flags, /* control flags */
-			32767, /* window size */
-			0, /* checksum */
-			0, /* urgent pointer */
-			LIBNET_TCP_H + payloadlen, /* TCP packet size */
-			// payload type differs in different libnet versions
-			(uint8_t *)payload, /* payload */
-			payloadlen, /* payload size */
-			libnet, /* libnet handle */
-			0); /* libnet id */
-	if (ptag == -1) {
-		log_err_printf("Error building tcp header: %s",
-		               libnet_geterror(libnet));
-		goto out;
-	}
-
-	if (ctx->af == AF_INET) {
-		ptag = libnet_build_ipv4(
-				LIBNET_IPV4_H + LIBNET_TCP_H + payloadlen, /* length */
-				0, /* TOS */
-				(uint16_t)libnet_get_prand(LIBNET_PRu16), /* IP ID */
-				0x4000, /* IP Frag */
-				64, /* TTL */
-				IPPROTO_TCP, /* protocol */
-				0, /* checksum */
-				ctx->src_ip, /* source IP */
-				ctx->dst_ip, /* destination IP */
-				NULL, /* payload */
-				0, /* payload size */
-				libnet, /* libnet handle */
-				0); /* libnet id */
-	} else {
-		// TODO: Check values of tc, fl, nh, and hl
-		ptag = libnet_build_ipv6(
-				0, /* traffic class */
-				0, /* flow label */
-				LIBNET_IPV6_H + LIBNET_TCP_H + payloadlen, /* total length of the IP packet */
-				IPPROTO_TCP, /* next header */
-				255, /* hop limit */
-				ctx->src_ip6, /* source IPv6 address */
-				ctx->dst_ip6, /* destination IPv6 address */
-				NULL, /* optional payload or NULL */
-				0, /* payload length or 0 */
-				libnet, /* pointer to a libnet context */
-				0); /* protocol tag to modify an existing header, 0 to build a new one */
-	}
-	if (ptag == -1) {
-		log_err_printf("Error building ip header: %s", libnet_geterror(libnet));
-		goto out;
-	}
-
-	ptag = libnet_build_ethernet(
-			ctx->dst_ether, /* ethernet destination */
-			ctx->src_ether, /* ethernet source */
-			ctx->af == AF_INET ? ETHERTYPE_IP : ETHERTYPE_IPV6, /* protocol type */
-			NULL, /* payload */
-			0, /* payload size */
-			libnet, /* libnet handle */
-			0); /* libnet id */
-	if (ptag == -1) {
-		log_err_printf("Error building ethernet header: %s", libnet_geterror(libnet));
-		goto out;
-	}
-
-	ctx->seq += payloadlen;
-out:
-	return ptag;
-}
-
-int
-logpkt_write_packet(libnet_t *libnet, int fd, pcap_packet_t *ctx, char flags,
-                    const uint8_t *payload, size_t payloadlen)
-{
-	int rv;
-
-	if (logpkt_build_packet(libnet, ctx, flags,
+	if (logpkt_build_packet(libnet,
+	                        ctx->src_ether, ctx->dst_ether,
+	                        ctx->af, &ctx->src_ip, &ctx->dst_ip,
+	                        ctx->src_port, ctx->dst_port,
+	                        flags, ctx->seq, ctx->ack,
 	                        payload, payloadlen) == -1) {
 		log_err_printf("Error building packet\n");
 		return -1;
 	}
+
+	ctx->seq += payloadlen;
 
 	if (libnet == libnet_pcap) {
 		rv = logpkt_write_pcap_record(fd);

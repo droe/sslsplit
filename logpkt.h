@@ -36,30 +36,33 @@
 
 #include <libnet.h>
 
+typedef union {
+	uint32_t ip4;
+	struct libnet_in6_addr ip6;
+} logpkt_ip46addr_t;
+
 /* XXX */
 typedef struct pcap_packet {
-	unsigned int src_ip;
-	struct libnet_in6_addr src_ip6;
-	unsigned int dst_ip;
-	struct libnet_in6_addr dst_ip6;
 	int af;
-	unsigned short src_port;
-	unsigned short dst_port;
-	unsigned int ack;
-	unsigned int seq;
-	unsigned char src_ether[ETHER_ADDR_LEN];
-	unsigned char dst_ether[ETHER_ADDR_LEN];
-} pcap_packet_t;
+	logpkt_ip46addr_t src_ip;
+	logpkt_ip46addr_t dst_ip;
+	uint16_t src_port;
+	uint16_t dst_port;
+	uint32_t ack;
+	uint32_t seq;
+	uint8_t src_ether[ETHER_ADDR_LEN];
+	uint8_t dst_ether[ETHER_ADDR_LEN];
+} logpkt_ctx_t;
 
 extern libnet_t *libnet_pcap; /* XXX */
 extern libnet_t *libnet_mirror; /* XXX */
 
 int logpkt_pcap_open_fd(int fd) WUNRES;
-int logpkt_set_packet_fields(libnet_t *, pcap_packet_t *,
-                             char *, char *, char *, char *);
-int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char,
+int logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
+                    const char *, const char *, const char *, const char *);
+int logpkt_write_packet(libnet_t *, int, logpkt_ctx_t *, char,
                         const unsigned char *, size_t);
-int logpkt_write_payload(libnet_t *, int, pcap_packet_t *, pcap_packet_t *,
+int logpkt_write_payload(libnet_t *, int, logpkt_ctx_t *, logpkt_ctx_t *,
                          char, const unsigned char *, size_t);
 int logpkt_ether_lookup(uint8_t *, uint8_t *, const char *, const char *);
 

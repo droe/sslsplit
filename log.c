@@ -362,13 +362,13 @@ typedef struct log_content_pcap_ctx {
 			char *filename;
 		} spec;
 	} u;
-	pcap_packet_t request;
-	pcap_packet_t response;
+	logpkt_ctx_t request;
+	logpkt_ctx_t response;
 } log_content_pcap_ctx_t;
 
 typedef struct log_content_mirror_ctx {
-	pcap_packet_t request;
-	pcap_packet_t response;
+	logpkt_ctx_t request;
+	logpkt_ctx_t response;
 } log_content_mirror_ctx_t;
 
 static int content_file_clisock = -1;
@@ -712,13 +712,13 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		memcpy(ctx->pcap->response.dst_ether,
 		       content_pcap_dst_ether, ETHER_ADDR_LEN);
 
-		if (logpkt_set_packet_fields(libnet_pcap, &ctx->pcap->request,
-		                             srchost, srcport,
-		                             dsthost, dstport) == -1)
+		if (logpkt_ctx_init(&ctx->pcap->request, libnet_pcap,
+		                    srchost, srcport,
+		                    dsthost, dstport) == -1)
 			goto errout;
-		if (logpkt_set_packet_fields(libnet_pcap, &ctx->pcap->response,
-		                             dsthost, dstport,
-		                             srchost, srcport) == -1)
+		if (logpkt_ctx_init(&ctx->pcap->response, libnet_pcap,
+		                    dsthost, dstport,
+		                    srchost, srcport) == -1)
 			goto errout;
 
 		if (opts->pcaplog_isdir) {
@@ -764,15 +764,13 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		memcpy(ctx->mirror->response.dst_ether,
 		       content_mirror_dst_ether, ETHER_ADDR_LEN);
 
-		if (logpkt_set_packet_fields(libnet_mirror,
-		                             &ctx->mirror->request,
-		                             srchost, srcport,
-		                             dsthost, dstport) == -1)
+		if (logpkt_ctx_init(&ctx->mirror->request, libnet_mirror,
+		                    srchost, srcport,
+		                    dsthost, dstport) == -1)
 			goto errout;
-		if (logpkt_set_packet_fields(libnet_mirror,
-		                             &ctx->mirror->response,
-		                             dsthost, dstport,
-		                             srchost, srcport) == -1)
+		if (logpkt_ctx_init(&ctx->mirror->response, libnet_mirror,
+		                    dsthost, dstport,
+		                    srchost, srcport) == -1)
 			goto errout;
 	}
 
@@ -1271,10 +1269,10 @@ log_content_pcap_writecb_base(void *fh, int ctl, const void *buf, size_t sz,
 	log_content_pcap_ctx_t *ctx = fh;
 	char flags = TH_PUSH|TH_ACK;
 
-	pcap_packet_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
-	                                            : &ctx->response;
-	pcap_packet_t *to   = (ctl & LBFLAG_IS_REQ) ? &ctx->response
-	                                            : &ctx->request;
+	logpkt_ctx_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
+	                                           : &ctx->response;
+	logpkt_ctx_t *to   = (ctl & LBFLAG_IS_REQ) ? &ctx->response
+	                                           : &ctx->request;
 
 	if ((ctl & LBFLAG_IS_REQ) && ctx->request.seq == 0) {
 		if (logpkt_write_packet(libnet_pcap, fd, &ctx->request,
@@ -1460,10 +1458,10 @@ static ssize_t
 log_content_mirror_writecb(void *fh, int ctl, const void *buf, size_t sz) {
 	log_content_mirror_ctx_t *ctx = fh;
 	char flags = TH_PUSH|TH_ACK;
-	pcap_packet_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
-	                                            : &ctx->response;
-	pcap_packet_t *to   = (ctl & LBFLAG_IS_REQ) ? &ctx->response
-	                                            : &ctx->request;
+	logpkt_ctx_t *from = (ctl & LBFLAG_IS_REQ) ? &ctx->request
+	                                           : &ctx->response;
+	logpkt_ctx_t *to   = (ctl & LBFLAG_IS_REQ) ? &ctx->response
+	                                           : &ctx->request;
 
 	if ((ctl & LBFLAG_IS_REQ) && ctx->request.seq == 0) {
 		if (logpkt_write_packet(libnet_mirror, 0, &ctx->request,
