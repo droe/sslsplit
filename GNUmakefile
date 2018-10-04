@@ -362,10 +362,7 @@ TCPPFLAGS+=	$(TPKG_CPPFLAGS)
 LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
 
-ifeq ($(shell uname),Darwin)
-LDFLAGS+=	-Xlinker -fatal_warnings
-else
-LDFLAGS+=	-Xlinker --fatal-warnings
+ifneq ($(shell uname),Darwin)
 CFLAGS+=	-pthread
 LDFLAGS+=	-pthread
 endif
