@@ -66,9 +66,6 @@ typedef struct __attribute__((packed)) {
 	uint32_t orig_len;      /* actual length of packet */
 } pcap_rec_hdr_t;
 
-libnet_t *libnet_pcap = NULL; /* XXX */
-libnet_t *libnet_mirror = NULL; /* XXX */
-
 #define PCAP_MAGIC 0xa1b2c3d4
 
 static int
@@ -164,6 +161,8 @@ logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
                 const char *src_addr, const char *src_port,
                 const char *dst_addr, const char *dst_port)
 {
+	ctx->libnet = libnet;
+
 	ctx->af = sys_get_af(src_addr);
 	if (ctx->af == AF_UNSPEC) {
 		log_err_printf("Unspec address family: %s\n", src_addr);
@@ -193,7 +192,7 @@ out:
 }
 
 static int
-logpkt_write_pcap_record(int fd)
+logpkt_write_pcap_record(libnet_t *libnet, int fd)
 {
 	uint32_t len;
 	uint8_t *packet = NULL;
@@ -201,9 +200,9 @@ logpkt_write_pcap_record(int fd)
 	struct timeval tv;
 	int rv = -1;
 
-	if (libnet_pblock_coalesce(libnet_pcap, &packet, &len) == -1) {
+	if (libnet_pblock_coalesce(libnet, &packet, &len) == -1) {
 		log_err_printf("Error in libnet_pblock_coalesce(): %s",
-		               libnet_geterror(libnet_pcap));
+		               libnet_geterror(libnet));
 		goto out;
 	}
 
@@ -228,8 +227,8 @@ logpkt_write_pcap_record(int fd)
 	rv = 0;
 out2:
 	/* this depends on libnet_pblock_coalesce() internals */
-	if (libnet_pcap->aligner > 0) {
-		packet = packet - libnet_pcap->aligner;
+	if (libnet->aligner > 0) {
+		packet = packet - libnet->aligner;
 	}
 	free(packet);
 out:
@@ -237,8 +236,7 @@ out:
 }
 
 int
-logpkt_write_payload(libnet_t *libnet, int fd,
-                     logpkt_ctx_t *from, logpkt_ctx_t *to, char flags,
+logpkt_write_payload(logpkt_ctx_t *from, logpkt_ctx_t *to, int fd, char flags,
                      const uint8_t *payload, size_t payloadlen)
 {
 	int sendsize = 0;
@@ -247,8 +245,8 @@ logpkt_write_payload(libnet_t *libnet, int fd,
 		payload += sendsize;
 		sendsize = payloadlen > MSS_VAL ? MSS_VAL : payloadlen;
 
-		if (logpkt_write_packet(libnet, fd, from, flags, payload,
-		                        sendsize) == -1) {
+		if (logpkt_write_packet(from, fd, flags,
+		                        payload, sendsize) == -1) {
 			log_err_printf("Warning: Failed to write to pcap log"
 			               ": %s\n", strerror(errno));
 			return -1;
@@ -258,7 +256,7 @@ logpkt_write_payload(libnet_t *libnet, int fd,
 		payloadlen -= sendsize;
 	}
 
-	if (logpkt_write_packet(libnet, fd, to, TH_ACK, NULL, 0) == -1) {
+	if (logpkt_write_packet(to, fd, TH_ACK, NULL, 0) == -1) {
 		log_err_printf("Warning: Failed to write to pcap log: %s\n",
 		               strerror(errno));
 		return -1;
@@ -340,7 +338,7 @@ logpkt_build_packet(libnet_t *libnet,
 }
 
 int
-logpkt_write_packet(libnet_t *libnet, int fd, logpkt_ctx_t *ctx, char flags,
+logpkt_write_packet(logpkt_ctx_t *ctx, int fd, char flags,
                     const uint8_t *payload, size_t payloadlen)
 {
 	int rv;
@@ -349,7 +347,7 @@ logpkt_write_packet(libnet_t *libnet, int fd, logpkt_ctx_t *ctx, char flags,
 		ctx->seq = libnet_get_prand(LIBNET_PRu32);
 	}
 
-	if (logpkt_build_packet(libnet,
+	if (logpkt_build_packet(ctx->libnet,
 	                        ctx->src_ether, ctx->dst_ether,
 	                        ctx->af, &ctx->src_ip, &ctx->dst_ip,
 	                        ctx->src_port, ctx->dst_port,
@@ -361,17 +359,17 @@ logpkt_write_packet(libnet_t *libnet, int fd, logpkt_ctx_t *ctx, char flags,
 
 	ctx->seq += payloadlen;
 
-	if (libnet == libnet_pcap) {
-		rv = logpkt_write_pcap_record(fd);
+	if (fd != -1) {
+		rv = logpkt_write_pcap_record(ctx->libnet, fd);
 	} else {
-		rv = libnet_write(libnet);
+		rv = libnet_write(ctx->libnet);
 	}
 	if (rv == -1) {
 		log_err_printf("Error writing packet: %s",
-		               libnet_geterror(libnet));
+		               libnet_geterror(ctx->libnet));
 	}
 
-	libnet_clear_packet(libnet);
+	libnet_clear_packet(ctx->libnet);
 	return rv;
 }
 
@@ -414,10 +412,13 @@ logpkt_recv_arp_reply(uint8_t *user,
 }
 
 /*
- * Currently, only IPv4 mirror targets are supported.
+ * Look up the appropriate source and destination ethernet addresses for
+ * mirroring packets to dst_ip_s on interface dst_if_s.
+ * Only IPv4 mirror targets are supported.
  */
 int
-logpkt_ether_lookup(uint8_t *src_ether, uint8_t *dst_ether,
+logpkt_ether_lookup(libnet_t *libnet,
+                    uint8_t *src_ether, uint8_t *dst_ether,
                     const char *dst_ip_s, const char *dst_if_s)
 {
 	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
@@ -432,23 +433,23 @@ logpkt_ether_lookup(uint8_t *src_ether, uint8_t *dst_ether,
 	int count = 50;
 	logpkt_recv_arp_reply_ctx_t ctx;
 
-	ctx.ip = libnet_name2addr4(libnet_mirror, (char *)dst_ip_s,
+	ctx.ip = libnet_name2addr4(libnet, (char *)dst_ip_s,
 	                           LIBNET_DONT_RESOLVE);
 	if (ctx.ip == (uint32_t)-1) {
 		log_err_printf("Error converting dst IP address: %s\n",
-		               libnet_geterror(libnet_mirror));
+		               libnet_geterror(libnet));
 		goto out2;
 	}
-	src_ip = libnet_get_ipaddr4(libnet_mirror);
+	src_ip = libnet_get_ipaddr4(libnet);
 	if (src_ip == (uint32_t)-1) {
 		log_err_printf("Error getting src IP address: %s\n",
-		               libnet_geterror(libnet_mirror));
+		               libnet_geterror(libnet));
 		goto out2;
 	}
-	src_ether_addr = libnet_get_hwaddr(libnet_mirror);
+	src_ether_addr = libnet_get_hwaddr(libnet);
 	if (src_ether_addr == NULL) {
 		log_err_printf("Error getting src ethernet address: %s\n",
-		               libnet_geterror(libnet_mirror));
+		               libnet_geterror(libnet));
 		goto out2;
 	}
 	memcpy(src_ether, src_ether_addr->ether_addr_octet, ETHER_ADDR_LEN);
@@ -458,17 +459,17 @@ logpkt_ether_lookup(uint8_t *src_ether, uint8_t *dst_ether,
 	                         (uint8_t*)&src_ip,
 	                         zero_ether,
 	                         (uint8_t*)&ctx.ip,
-	                         libnet_mirror) == -1) {
+	                         libnet) == -1) {
 		log_err_printf("Error building arp header: %s\n",
-		               libnet_geterror(libnet_mirror));
+		               libnet_geterror(libnet));
 		goto out2;
 	}
 
 	if (libnet_autobuild_ethernet(broadcast_ether,
 	                              ETHERTYPE_ARP,
-	                              libnet_mirror) == -1) {
+	                              libnet) == -1) {
 		log_err_printf("Error building ethernet header: %s",
-		               libnet_geterror(libnet_mirror));
+		               libnet_geterror(libnet));
 		goto out2;
 	}
 
@@ -491,7 +492,7 @@ logpkt_ether_lookup(uint8_t *src_ether, uint8_t *dst_ether,
 
 	ctx.result = -1;
 	do {
-		if (libnet_write(libnet_mirror) != -1) {
+		if (libnet_write(libnet) != -1) {
 			/* Limit # of packets to process, so we can loop to
 			 * send arp requests on busy networks. */
 			if (pcap_dispatch(pcap, 1000,
@@ -503,7 +504,7 @@ logpkt_ether_lookup(uint8_t *src_ether, uint8_t *dst_ether,
 			}
 		} else {
 			log_err_printf("Error writing arp packet: %s",
-			               libnet_geterror(libnet_mirror));
+			               libnet_geterror(libnet));
 			break;
 		}
 		sleep(1);

@@ -42,7 +42,8 @@ typedef union {
 } logpkt_ip46addr_t;
 
 /* XXX */
-typedef struct pcap_packet {
+typedef struct {
+	libnet_t *libnet;
 	int af;
 	logpkt_ip46addr_t src_ip;
 	logpkt_ip46addr_t dst_ip;
@@ -54,16 +55,14 @@ typedef struct pcap_packet {
 	uint8_t dst_ether[ETHER_ADDR_LEN];
 } logpkt_ctx_t;
 
-extern libnet_t *libnet_pcap; /* XXX */
-extern libnet_t *libnet_mirror; /* XXX */
-
 int logpkt_pcap_open_fd(int fd) WUNRES;
 int logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
                     const char *, const char *, const char *, const char *);
-int logpkt_write_packet(libnet_t *, int, logpkt_ctx_t *, char,
+int logpkt_write_packet(logpkt_ctx_t *, int, char,
                         const unsigned char *, size_t);
-int logpkt_write_payload(libnet_t *, int, logpkt_ctx_t *, logpkt_ctx_t *,
+int logpkt_write_payload(logpkt_ctx_t *, logpkt_ctx_t *, int,
                          char, const unsigned char *, size_t);
-int logpkt_ether_lookup(uint8_t *, uint8_t *, const char *, const char *);
+int logpkt_ether_lookup(libnet_t *, uint8_t *, uint8_t *,
+                        const char *, const char *);
 
 #endif /* !LOGPKT_H */
