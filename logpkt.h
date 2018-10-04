@@ -47,7 +47,8 @@ typedef struct pcap_packet {
 	unsigned short dst_port;
 	unsigned int ack;
 	unsigned int seq;
-	unsigned char dst_ether[ETHER_ADDR_LEN]; /* XXX */
+	unsigned char src_ether[ETHER_ADDR_LEN];
+	unsigned char dst_ether[ETHER_ADDR_LEN];
 } pcap_packet_t;
 
 extern libnet_t *libnet_pcap; /* XXX */
@@ -60,6 +61,6 @@ int logpkt_write_packet(libnet_t *, int, pcap_packet_t *, char,
                         const unsigned char *, size_t);
 int logpkt_write_payload(libnet_t *, int, pcap_packet_t *, pcap_packet_t *,
                          char, const unsigned char *, size_t);
-int logpkt_ether_lookup(unsigned char *, const char *, const char *);
+int logpkt_ether_lookup(uint8_t *, uint8_t *, const char *, const char *);
 
 #endif /* !LOGPKT_H */

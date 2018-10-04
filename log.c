@@ -376,9 +376,12 @@ static logger_t *content_file_log = NULL;
 static int content_pcap_clisock = -1;
 static logger_t *content_pcap_log = NULL;
 static logger_t *content_mirror_log = NULL;
-static unsigned char content_pcap_dst_ether[ETHER_ADDR_LEN] = {
+static uint8_t content_pcap_src_ether[ETHER_ADDR_LEN] = {
+	0x84, 0x34, 0xC3, 0x50, 0x68, 0x8A};
+static uint8_t content_pcap_dst_ether[ETHER_ADDR_LEN] = {
 	0x2B, 0xDE, 0x7C, 0x01, 0x7C, 0xA9};
-static unsigned char content_mirror_dst_ether[ETHER_ADDR_LEN];
+static uint8_t content_mirror_src_ether[ETHER_ADDR_LEN];
+static uint8_t content_mirror_dst_ether[ETHER_ADDR_LEN];
 
 
 /*
@@ -700,6 +703,10 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->pcap, 0, sizeof(log_content_pcap_ctx_t));
 
+		memcpy(ctx->pcap->request.src_ether,
+		       content_pcap_src_ether, ETHER_ADDR_LEN);
+		memcpy(ctx->pcap->response.src_ether,
+		       content_pcap_src_ether, ETHER_ADDR_LEN);
 		memcpy(ctx->pcap->request.dst_ether,
 		       content_pcap_dst_ether, ETHER_ADDR_LEN);
 		memcpy(ctx->pcap->response.dst_ether,
@@ -748,6 +755,10 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->mirror, 0, sizeof(log_content_mirror_ctx_t));
 
+		memcpy(ctx->mirror->request.src_ether,
+		       content_mirror_src_ether, ETHER_ADDR_LEN);
+		memcpy(ctx->mirror->response.src_ether,
+		       content_mirror_src_ether, ETHER_ADDR_LEN);
 		memcpy(ctx->mirror->request.dst_ether,
 		       content_mirror_dst_ether, ETHER_ADDR_LEN);
 		memcpy(ctx->mirror->response.dst_ether,
@@ -1392,7 +1403,8 @@ log_content_mirror_preinit(const char *ifname, const char *target) {
 	}
 	libnet_seed_prand(libnet_mirror);
 
-	if (logpkt_ether_lookup(content_mirror_dst_ether,
+	if (logpkt_ether_lookup(content_mirror_src_ether,
+	                        content_mirror_dst_ether,
 	                        target, ifname) == -1) {
 		log_err_printf("Failed to lookup target ether\n");
 		libnet_destroy(libnet_mirror);
