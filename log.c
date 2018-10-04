@@ -1384,7 +1384,8 @@ static int
 log_content_mirror_preinit(const char *ifname, const char *target) {
 	char errbuf[LIBNET_ERRBUF_SIZE];
 
-	libnet_mirror = libnet_init(LIBNET_LINK, ifname, errbuf);
+	/* cast to char* needed on OpenBSD */
+	libnet_mirror = libnet_init(LIBNET_LINK, (char *)ifname, errbuf);
 	if (libnet_mirror == NULL) {
 		log_err_printf("Failed to init mirror libnet: %s\n", errbuf);
 		return -1;
