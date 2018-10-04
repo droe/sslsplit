@@ -241,7 +241,7 @@ out:
 int
 logpkt_write_payload(libnet_t *libnet, int fd,
                      pcap_packet_t *from, pcap_packet_t *to, char flags,
-                     const unsigned char *payload, size_t payloadlen)
+                     const uint8_t *payload, size_t payloadlen)
 {
 	int sendsize = 0;
 
@@ -270,7 +270,7 @@ logpkt_write_payload(libnet_t *libnet, int fd,
 
 static int
 logpkt_build_packet(libnet_t *libnet, pcap_packet_t *ctx, char flags,
-                    const unsigned char *payload, size_t payloadlen)
+                    const uint8_t *payload, size_t payloadlen)
 {
 	libnet_ptag_t ptag;
 
@@ -352,58 +352,28 @@ out:
 	return ptag;
 }
 
-static int
-logpkt_write_pcap_packet(libnet_t *libnet, int fd, pcap_packet_t *ctx,
-                         char flags, const uint8_t *payload, size_t payloadlen)
-{
-	int rv = -1;
-
-	if (logpkt_build_packet(libnet, ctx, flags,
-	                        payload, payloadlen) == -1) {
-		log_err_printf("Error building pcap packet\n");
-		goto out;
-	}
-	rv = logpkt_write_pcap_record(fd);
-	if (rv == -1) {
-		log_err_printf("Error writing pcap record\n");
-	}
-out:
-	return rv;
-}
-
-static int
-logpkt_write_mirror_packet(libnet_t *libnet, pcap_packet_t *ctx, char flags,
-                           const uint8_t *payload, size_t payloadlen)
-{
-	int rv = -1;
-
-	if (logpkt_build_packet(libnet, ctx, flags,
-	                        payload, payloadlen) == -1) {
-		log_err_printf("Error building mirror packet\n");
-		goto out;
-	}
-	rv = libnet_write(libnet);
-	if (rv == -1) {
-		log_err_printf("Error writing mirror packet: %s",
-		               libnet_geterror(libnet));
-	}
-out:
-	return rv;
-}
-
 int
-logpkt_write_packet(libnet_t *libnet, int fd, pcap_packet_t *pcap, char flags,
-                    const unsigned char *payload, size_t payloadlen)
+logpkt_write_packet(libnet_t *libnet, int fd, pcap_packet_t *ctx, char flags,
+                    const uint8_t *payload, size_t payloadlen)
 {
 	int rv;
 
-	if (libnet == libnet_pcap) {
-		rv = logpkt_write_pcap_packet(libnet, fd, pcap, flags,
-		                              payload, payloadlen);
-	} else {
-		rv = logpkt_write_mirror_packet(libnet, pcap, flags,
-		                                payload, payloadlen);
+	if (logpkt_build_packet(libnet, ctx, flags,
+	                        payload, payloadlen) == -1) {
+		log_err_printf("Error building packet\n");
+		return -1;
 	}
+
+	if (libnet == libnet_pcap) {
+		rv = logpkt_write_pcap_record(fd);
+	} else {
+		rv = libnet_write(libnet);
+	}
+	if (rv == -1) {
+		log_err_printf("Error writing packet: %s",
+		               libnet_geterror(libnet));
+	}
+
 	libnet_clear_packet(libnet);
 	return rv;
 }
@@ -411,13 +381,13 @@ logpkt_write_packet(libnet_t *libnet, int fd, pcap_packet_t *pcap, char flags,
 typedef struct {
 	uint32_t ip;
 	int result;
-	unsigned char ether[ETHER_ADDR_LEN];
+	uint8_t ether[ETHER_ADDR_LEN];
 } logpkt_recv_arp_reply_ctx_t;
 
 static void
-logpkt_recv_arp_reply(unsigned char *user,
+logpkt_recv_arp_reply(uint8_t *user,
                       UNUSED const struct pcap_pkthdr *h,
-                      const unsigned char *packet)
+                      const uint8_t *packet)
 {
 	logpkt_recv_arp_reply_ctx_t *ctx = (logpkt_recv_arp_reply_ctx_t*)user;
 	struct libnet_802_3_hdr *heth = (void*)packet;
@@ -455,9 +425,9 @@ logpkt_ether_lookup(uint8_t *src_ether, uint8_t *dst_ether,
 {
 	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
 	            LIBNET_ERRBUF_SIZE : PCAP_ERRBUF_SIZE];
-	unsigned char broadcast_ether[ETHER_ADDR_LEN] = {
+	uint8_t broadcast_ether[ETHER_ADDR_LEN] = {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	unsigned char zero_ether[ETHER_ADDR_LEN] = {
+	uint8_t zero_ether[ETHER_ADDR_LEN] = {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 	struct libnet_ether_addr *src_ether_addr;
 	uint32_t src_ip;
