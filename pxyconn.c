@@ -374,7 +374,7 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 			goto out;
 		}
 	} else {
-		lpi = "";
+		lpi = "-";
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
@@ -478,6 +478,8 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 			ctx->enomem = 1;
 			goto out;
 		}
+	} else {
+		lpi = "-";
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
 
@@ -554,7 +556,7 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	}
 out:
 #ifdef HAVE_LOCAL_PROCINFO
-	if (lpi) {
+	if (lpi && ctx->opts->lprocinfo) {
 		free(lpi);
 	}
 #endif /* HAVE_LOCAL_PROCINFO */
