@@ -509,6 +509,11 @@ logpkt_ether_lookup(libnet_t *libnet,
 	int count = 50;
 	logpkt_recv_arp_reply_ctx_t ctx;
 
+	if (sys_get_af(dst_ip_s) != AF_INET) {
+		log_err_printf("Mirroring target must be an IPv4 address.\n");
+		return -1;
+	}
+
 	ctx.result = -1;
 	ctx.ip = libnet_name2addr4(libnet, (char *)dst_ip_s,
 	                           LIBNET_DONT_RESOLVE);

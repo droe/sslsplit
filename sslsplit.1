@@ -333,7 +333,8 @@ Otherwise, connections matching no certificate will be dropped, or if
 .TP
 .B \-T \fIaddr\fP
 Mirror connection content as emulated packets to destination address \fIaddr\fP
-on the interface given by \fB-I\fP.
+on the interface given by \fB-I\fP.  Only IPv4 target addresses are currently
+supported.
 .TP
 .B \-u
 Drop privileges after opening sockets and files by setting the real,
