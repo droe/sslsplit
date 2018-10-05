@@ -65,6 +65,7 @@
 #define PRIVSEP_REQ_OPENFILE_P	2	/* open content log file w/mkpath */
 #define PRIVSEP_REQ_OPENSOCK	3	/* open socket and pass fd */
 #define PRIVSEP_REQ_CERTFILE	4	/* open cert file in certgendir */
+
 /* response byte */
 #define PRIVSEP_ANS_SUCCESS	0	/* success */
 #define PRIVSEP_ANS_UNK_CMD	1	/* unknown command */
@@ -137,13 +138,16 @@ privsep_server_signal_handler(int sig)
 static int WUNRES
 privsep_server_openfile_verify(opts_t *opts, char *fn, int mkpath)
 {
-	if (mkpath && !opts->contentlog_isspec)
+	if (mkpath && !(opts->contentlog_isspec || opts->pcaplog_isspec))
 		return -1;
-	if (!mkpath && !opts->contentlog_isdir)
+	if (!mkpath && !(opts->contentlog_isdir || opts->pcaplog_isdir))
 		return -1;
-	if (strstr(fn, mkpath ? opts->contentlog_basedir
-	                      : opts->contentlog) != fn ||
-	    strstr(fn, "/../"))
+	if (strstr(fn, opts->contentlog_isspec ? opts->contentlog_basedir
+	                                        : opts->contentlog) != fn &&
+	    strstr(fn, opts->pcaplog_isspec ? opts->pcaplog_basedir
+	                                     : opts->pcaplog) != fn)
+		return -1;
+	if (strstr(fn, "/../"))
 		return -1;
 	return 0;
 }
@@ -151,37 +155,52 @@ privsep_server_openfile_verify(opts_t *opts, char *fn, int mkpath)
 static int WUNRES
 privsep_server_openfile(char *fn, int mkpath)
 {
-	int fd;
+	int fd, tmp;
 
 	if (mkpath) {
 		char *filedir, *fn2;
 
 		fn2 = strdup(fn);
 		if (!fn2) {
+			tmp = errno;
 			log_err_printf("Could not duplicate filname: %s (%i)\n",
 			               strerror(errno), errno);
+			errno = tmp;
 			return -1;
 		}
 		filedir = dirname(fn2);
 		if (!filedir) {
+			tmp = errno;
 			log_err_printf("Could not get dirname: %s (%i)\n",
 			               strerror(errno), errno);
 			free(fn2);
+			errno = tmp;
 			return -1;
 		}
 		if (sys_mkpath(filedir, DFLT_DIRMODE) == -1) {
+			tmp = errno;
 			log_err_printf("Could not create directory '%s': %s (%i)\n",
 			               filedir, strerror(errno), errno);
 			free(fn2);
+			errno = tmp;
 			return -1;
 		}
 		free(fn2);
 	}
 
-	fd = open(fn, O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	fd = open(fn, O_RDWR|O_CREAT, DFLT_FILEMODE);
 	if (fd == -1) {
+		tmp = errno;
 		log_err_printf("Failed to open '%s': %s (%i)\n",
 		               fn, strerror(errno), errno);
+		errno = tmp;
+		return -1;
+	}
+	if (lseek(fd, 0, SEEK_END) == -1) {
+		tmp = errno;
+		log_err_printf("Failed to seek on '%s': %s (%i)\n",
+		               fn, strerror(errno), errno);
+		errno = tmp;
 		return -1;
 	}
 	return fd;
@@ -854,6 +873,7 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 		               i, sockcliv[i][0], sockcliv[i][1]);
 	}
 
+	log_dbg_printf("Privsep parent pid %i\n", getpid());
 	pid = fork();
 	if (pid == -1) {
 		log_err_printf("Failed to fork: %s (%i)\n",
@@ -882,7 +902,7 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 			n = read(chldpipev[0], buf, sizeof(buf));
 		} while (n == -1 && errno == EINTR);
 		close(chldpipev[0]);
-
+		log_dbg_printf("Privsep child pid %i\n", getpid());
 		/* return the privsep client sockets */
 		for (size_t i = 0; i < nclisock; i++)
 			clisock[i] = sockcliv[i][1];

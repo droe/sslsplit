@@ -46,7 +46,7 @@ the various NAT engines.
 
 ## Requirements
 
-SSLsplit depends on the OpenSSL and libevent 2.x libraries.
+SSLsplit depends on the OpenSSL, libevent 2.x, libpcap and libnet libraries.
 The build depends on GNU make and a POSIX.2 environment in `PATH`.
 If available, pkg-config is used to locate and configure the dependencies.
 The optional unit tests depend on the check library.

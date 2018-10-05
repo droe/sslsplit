@@ -124,7 +124,7 @@ static void
 main_usage(void)
 {
 	const char *dflt, *warn;
-	const char *usagefmt =
+	const char *usagefmt1 =
 "Usage: %s [-D] [-f conffile] [-o opt=val] [options...] [proxyspecs...]\n"
 "  -f conffile use conffile to load configuration from\n"
 "  -o opt=val  override conffile option opt with value val\n"
@@ -195,17 +195,27 @@ main_usage(void)
 "              %%%% - literal '%%'\n"
 #ifdef HAVE_LOCAL_PROCINFO
 "      e.g.    \"/var/log/sslsplit/%%X/%%u-%%s-%%d-%%T.log\"\n"
+#else /* !HAVE_LOCAL_PROCINFO */
+"      e.g.    \"/var/log/sslsplit/%%T-%%s-%%d.log\"\n"
+#endif /* HAVE_LOCAL_PROCINFO */
+"  -X pcapfile pcap log: packets to pcapfile (excludes -Y/-y)\n"
+"  -Y pcapdir  pcap log: packets to separate files in dir (excludes -X/-y)\n"
+"  -y pathspec pcap log: packets to sep files with %% subst (excl. -X/-Y):\n"
+"              see option -F for pathspec format\n"
+"  -I if       mirror packets to interface\n"
+"  -T addr     mirror packets to target address (used with -I)\n"
+"  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
+#ifdef HAVE_LOCAL_PROCINFO
 "  -i          look up local process owning each connection for logging\n"
 #define OPT_i "i"
 #else /* !HAVE_LOCAL_PROCINFO */
-"      e.g.    \"/var/log/sslsplit/%%T-%%s-%%d.log\"\n"
 #define OPT_i 
 #endif /* HAVE_LOCAL_PROCINFO */
-"  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
 "  -d          daemon mode: run in background, log error messages to syslog\n"
 "  -D          debug mode: run in foreground, log debug messages on stderr\n"
 "  -V          print version information and exit\n"
-"  -h          print usage information and exit\n"
+"  -h          print usage information and exit\n";
+	const char *usagefmt2 =
 "  proxyspec = type listenaddr+port [natengine|targetaddr+port|\"sni\"+port]\n"
 "      e.g.    http 0.0.0.0 8080 www.roe.ch 80  # http/4; static hostname dst\n"
 "              https ::1 8443 2001:db8::1 443   # https/6; static address dst\n"
@@ -225,7 +235,8 @@ main_usage(void)
 		warn = "";
 	}
 
-	fprintf(stderr, usagefmt, build_pkgname, dflt, build_pkgname, warn);
+	fprintf(stderr, usagefmt1, build_pkgname, dflt);
+	fprintf(stderr, usagefmt2, build_pkgname, warn);
 }
 
 /*
@@ -307,7 +318,7 @@ main(int argc, char *argv[])
 
 	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i OPT_x
 	                    "k:c:C:K:t:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
-	                    "dDVhW:w:q:f:o:")) != -1) {
+	                    "dDVhW:w:q:f:o:X:Y:y:I:T:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
@@ -416,8 +427,23 @@ main(int argc, char *argv[])
 			case 'S':
 				opts_set_contentlogdir(opts, argv0, optarg);
 				break;
-			case 'F': {
+			case 'F':
 				opts_set_contentlogpathspec(opts, argv0, optarg);
+				break;
+			case 'X':
+				opts_set_pcaplog(opts, argv0, optarg);
+				break;
+			case 'Y':
+				opts_set_pcaplogdir(opts, argv0, optarg);
+				break;
+			case 'y':
+				opts_set_pcaplogpathspec(opts, argv0, optarg);
+				break;
+			case 'I':
+				opts_set_mirrorif(opts, argv0, optarg);
+				break;
+			case 'T':
+				opts_set_mirrortarget(opts, argv0, optarg);
 				break;
 			case 'W':
 				opts_set_certgendir_writeall(opts, argv0, optarg);
@@ -425,7 +451,6 @@ main(int argc, char *argv[])
 			case 'w':
 				opts_set_certgendir_writegencerts(opts, argv0, optarg);
 				break;
-			}
 #ifdef HAVE_LOCAL_PROCINFO
 			case 'i':
 				opts_set_lprocinfo(opts);
@@ -461,6 +486,14 @@ main(int argc, char *argv[])
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",
 		                argv0);
+		exit(EXIT_FAILURE);
+	}
+	if (opts->mirrortarget && !opts->mirrorif) {
+		fprintf(stderr, "%s: -T depends on -I.\n", argv0);
+		exit(EXIT_FAILURE);
+	}
+	if (opts->mirrorif && !opts->mirrortarget) {
+		fprintf(stderr, "%s: -I depends on -T.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 	if (!opts->spec) {
@@ -707,11 +740,12 @@ main(int argc, char *argv[])
 	}
 
 	/* Fork into parent monitor process and (potentially unprivileged)
-	 * child process doing the actual work.  We request 3 privsep client
-	 * sockets: content logger thread, cert writer thread, and the child
-	 * process main thread (main proxy thread) */
-	int clisock[3];
-	if (privsep_fork(opts, clisock, 3) != 0) {
+	 * child process doing the actual work.  We request 4 privsep client
+	 * sockets: three logger threads, and the child process main thread,
+	 * which will become the main proxy thread. */
+	int clisock[4];
+	if (privsep_fork(opts, clisock,
+	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
 		 * or an error occured */
 		if (opts->pidfile) {
@@ -749,7 +783,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
-	if (log_init(opts, proxy, clisock[1], clisock[2]) == -1) {
+	if (log_init(opts, proxy, &clisock[1]) == -1) {
 		fprintf(stderr, "%s: failed to init log facility: %s\n",
 		                argv0, strerror(errno));
 		goto out_log_failed;

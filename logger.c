@@ -54,10 +54,6 @@ struct logger {
 	thrqueue_t *queue;
 };
 
-#define LBFLAG_REOPEN	(1 << 0)
-#define LBFLAG_OPEN	(1 << 1)
-#define LBFLAG_CLOSE	(1 << 2)
-
 static void
 logger_clear(logger_t *logger)
 {
@@ -65,9 +61,19 @@ logger_clear(logger_t *logger)
 }
 
 /*
- * Create new logger with a specific write function callback.
- * The callback will be executed in the logger's writer thread,
- * not in the thread calling logger_submit().
+ * Create new logger with a set of specific function callbacks:
+ *
+ * reopenfunc:  handle SIGHUP for the log by reopening all open files across
+ *              multiple connections
+ * openfunc:    open a new log for a new connection
+ * closefunc:   close a log for a connection
+ * writefunc:   write a single logbuf to the log
+ * prepfunc:    prepare a log buffer before adding it to the logbuffer's queue
+ * exceptfunc:  called after failed callback operations
+ *
+ * All callbacks except prepfunc will be executed in the logger's writer
+ * thread, not in the thread calling logger_submit().  Prepfunc will be called
+ * in the thread calling logger_submit().
  */
 logger_t *
 logger_new(logger_reopen_func_t reopenfunc, logger_open_func_t openfunc,
@@ -113,12 +119,14 @@ int
 logger_submit(logger_t *logger, void *fh, unsigned long prepflags,
               logbuf_t *lb)
 {
+	if (lb) {
+		lb->fh = fh;
+		logbuf_ctl_clear(lb);
+	}
 	if (logger->prep)
 		lb = logger->prep(fh, prepflags, lb);
 	if (!lb)
 		return 0;
-	lb->fh = fh;
-	logbuf_ctl_clear(lb);
 	if (thrqueue_enqueue(logger->queue, lb)) {
 		return 0;
 	} else {
@@ -138,7 +146,8 @@ logger_reopen(logger_t *logger)
 	if (!logger->reopen)
 		return 0;
 
-	lb = logbuf_new(NULL, 0, NULL, NULL);
+	if (!(lb = logbuf_new(NULL, 0, NULL)))
+		return -1;
 	logbuf_ctl_set(lb, LBFLAG_REOPEN);
 	return thrqueue_enqueue(logger->queue, lb) ? 0 : -1;
 }
@@ -157,7 +166,8 @@ logger_open(logger_t *logger, void *fh)
 	if (!logger->open)
 		return 0;
 
-	lb = logbuf_new(NULL, 0, NULL, NULL);
+	if (!(lb = logbuf_new(NULL, 0, NULL)))
+		return -1;
 	lb->fh = fh;
 	logbuf_ctl_set(lb, LBFLAG_OPEN);
 	return thrqueue_enqueue(logger->queue, lb) ? 0 : -1;
@@ -176,7 +186,8 @@ logger_close(logger_t *logger, void *fh)
 	if (!logger->close)
 		return 0;
 
-	lb = logbuf_new(NULL, 0, NULL, NULL);
+	if (!(lb = logbuf_new(NULL, 0, NULL)))
+		return -1;
 	lb->fh = fh;
 	logbuf_ctl_set(lb, LBFLAG_CLOSE);
 	return thrqueue_enqueue(logger->queue, lb) ? 0 : -1;
@@ -287,9 +298,9 @@ logger_printf(logger_t *logger, void *fh, unsigned long prepflags,
 	va_list ap;
 	logbuf_t *lb;
 
-	lb = logbuf_new(NULL, 0, fh, NULL);
-	if (!lb)
+	if (!(lb = logbuf_new(NULL, 0, NULL)))
 		return -1;
+	lb->fh = fh;
 	va_start(ap, fmt);
 	lb->sz = vasprintf((char**)&lb->buf, fmt, ap);
 	va_end(ap);
@@ -305,8 +316,9 @@ logger_write(logger_t *logger, void *fh, unsigned long prepflags,
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new_copy(buf, sz, fh, NULL)))
+	if (!(lb = logbuf_new_copy(buf, sz, NULL)))
 		return -1;
+	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 int
@@ -315,8 +327,9 @@ logger_print(logger_t *logger, void *fh, unsigned long prepflags,
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new_copy(s, strlen(s), fh, NULL)))
+	if (!(lb = logbuf_new_copy(s, strlen(s), NULL)))
 		return -1;
+	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 int
@@ -325,8 +338,9 @@ logger_write_freebuf(logger_t *logger, void *fh, unsigned long prepflags,
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new(buf, sz, fh, NULL)))
+	if (!(lb = logbuf_new(buf, sz, NULL)))
 		return -1;
+	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 int
@@ -335,8 +349,9 @@ logger_print_freebuf(logger_t *logger, void *fh, unsigned long prepflags,
 {
 	logbuf_t *lb;
 
-	if (!(lb = logbuf_new(s, strlen(s), fh, NULL)))
+	if (!(lb = logbuf_new(s, strlen(s), NULL)))
 		return -1;
+	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 

@@ -166,7 +166,7 @@ typedef struct pxy_conn_ctx {
 #endif /* HAVE_LOCAL_PROCINFO */
 
 	/* content log context */
-	log_content_ctx_t *logctx;
+	log_content_ctx_t logctx;
 
 	/* store fd and fd event while connected is 0 */
 	evutil_socket_t fd;
@@ -188,7 +188,7 @@ typedef struct pxy_conn_ctx {
 } pxy_conn_ctx_t;
 
 #define WANT_CONNECT_LOG(ctx)	((ctx)->opts->connectlog||!(ctx)->opts->detach)
-#define WANT_CONTENT_LOG(ctx)	((ctx)->opts->contentlog&&!(ctx)->passthrough)
+#define WANT_CONTENT_LOG(ctx)	(((ctx)->opts->contentlog||(ctx)->opts->pcaplog||(ctx)->opts->mirrorif)&&!(ctx)->passthrough)
 
 static pxy_conn_ctx_t *
 pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
@@ -229,7 +229,7 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx, int by_requestor)
 		                (void*)ctx);
 	}
 #endif /* DEBUG_PROXY */
-	if (WANT_CONTENT_LOG(ctx) && ctx->logctx) {
+	if (WANT_CONTENT_LOG(ctx)) {
 		if (log_content_close(&ctx->logctx, by_requestor) == -1) {
 			log_err_printf("Warning: Content log close failed\n");
 		}
@@ -1538,11 +1538,10 @@ deny:
 	if (evbuffer_get_length(inbuf) > 0) {
 		if (WANT_CONTENT_LOG(ctx)) {
 			logbuf_t *lb;
-			lb = logbuf_new_alloc(evbuffer_get_length(inbuf),
-			                      NULL, NULL);
+			lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL);
 			if (lb &&
 			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-				if (log_content_submit(ctx->logctx, lb,
+				if (log_content_submit(&ctx->logctx, lb,
 				                       1/*req*/) == -1) {
 					logbuf_free(lb);
 					log_err_printf("Warning: Content log "
@@ -1559,10 +1558,9 @@ deny:
 	ctx->ocsp_denied = 1;
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
-		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1,
-		                     NULL, NULL);
+		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1, NULL);
 		if (lb) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       0/*resp*/) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "
@@ -1705,8 +1703,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
-				tmp = logbuf_new_printf(NULL, NULL,
-				                        "%s\r\n", line);
+				tmp = logbuf_new_printf(NULL, "%s\r\n", line);
 				if (tail) {
 					if (tmp) {
 						tail->next = tmp;
@@ -1733,7 +1730,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       1/*req*/) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "
@@ -1753,8 +1750,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
 				logbuf_t *tmp;
-				tmp = logbuf_new_printf(NULL, NULL,
-				                        "%s\r\n", line);
+				tmp = logbuf_new_printf(NULL, "%s\r\n", line);
 				if (tail) {
 					if (tmp) {
 						tail->next = tmp;
@@ -1781,7 +1777,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 		if (lb && WANT_CONTENT_LOG(ctx)) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       0/*resp*/) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "
@@ -1804,9 +1800,9 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
-		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL, NULL);
+		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL);
 		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-			if (log_content_submit(ctx->logctx, lb,
+			if (log_content_submit(&ctx->logctx, lb,
 			                       (bev == ctx->src.bev)) == -1) {
 				logbuf_free(lb);
 				log_err_printf("Warning: Content log "

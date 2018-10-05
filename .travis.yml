@@ -6,12 +6,12 @@ matrix:
       compiler: gcc
       env: SSL=ubuntu EVENT=ubuntu
       before_install:
-        - sudo apt-get install -qq libssl-dev libevent-dev check
+        - sudo apt-get install -qq libssl-dev libevent-dev libnet1-dev libpcap-dev check
     - os: linux
       compiler: clang
       env: SSL=ubuntu EVENT=ubuntu
       before_install:
-        - sudo apt-get install -qq libssl-dev libevent-dev check
+        - sudo apt-get install -qq libssl-dev libevent-dev libnet1-dev libpcap-dev check
     - os: linux
       compiler: clang
       env: SSL=openssl-0.9.8zh EVENT=libevent-2.0.22
@@ -19,7 +19,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -33,7 +33,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -47,7 +47,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -61,7 +61,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -75,7 +75,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -89,7 +89,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -103,7 +103,7 @@ matrix:
         directories:
           - $HOME/opt
       before_install:
-        - sudo apt-get install -qq check
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
       install:
         - ./Mk/bin/install-opt.sh
       before_script:
@@ -118,9 +118,15 @@ matrix:
           - /usr/local/opt/openssl
           - /usr/local/Cellar/libevent
           - /usr/local/opt/libevent
+          - /usr/local/Cellar/libnet
+          - /usr/local/opt/libnet
+          - /usr/local/Cellar/libpcap
+          - /usr/local/opt/libpcap
           - /usr/local/Cellar/check
           - /usr/local/opt/check
       before_install:
         - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
         - test -d /usr/local/opt/libevent/lib || { rmdir /usr/local/opt/libevent; brew install libevent; }
+        - test -d /usr/local/opt/libnet/lib || { rmdir /usr/local/opt/libnet; brew install libnet; }
+        - test -d /usr/local/opt/libpcap/lib || { rmdir /usr/local/opt/libpcap; brew install libpcap; }
         - test -d /usr/local/opt/check/lib    || { rmdir /usr/local/opt/check; brew install check; }

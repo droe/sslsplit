@@ -33,6 +33,7 @@
 #include "attrib.h"
 #include "privsep.h"
 #include "defaults.h"
+#include "logpkt.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,7 +79,7 @@ static int err_shortcut_logger = 0;
 static int err_mode = LOG_ERR_MODE_STDERR;
 
 static ssize_t
-log_err_writecb(UNUSED void *fh, const void *buf, size_t sz)
+log_err_writecb(UNUSED void *fh, UNUSED int ctl, const void *buf, size_t sz)
 {
 	switch (err_mode) {
 		case LOG_ERR_MODE_STDERR:
@@ -106,7 +107,7 @@ log_err_printf(const char *fmt, ...)
 		return logger_write_freebuf(err_log, NULL, 0,
 		                            buf, strlen(buf) + 1);
 	} else {
-		log_err_writecb(NULL, (unsigned char*)buf, strlen(buf) + 1);
+		log_err_writecb(NULL, 0, (unsigned char*)buf, strlen(buf) + 1);
 		free(buf);
 	}
 	return 0;
@@ -136,7 +137,7 @@ log_dbg_write_free(void *buf, size_t sz)
 	if (err_shortcut_logger) {
 		return logger_write_freebuf(err_log, NULL, 0, buf, sz);
 	} else {
-		log_err_writecb(NULL, buf, sz);
+		log_err_writecb(NULL, 0, buf, sz);
 		free(buf);
 	}
 	return 0;
@@ -221,7 +222,8 @@ log_masterkey_reopencb(void)
  * Do the actual write to the open master key log file descriptor.
  */
 static ssize_t
-log_masterkey_writecb(UNUSED void *fh, const void *buf, size_t sz)
+log_masterkey_writecb(UNUSED void *fh, UNUSED int ctl,
+                      const void *buf, size_t sz)
 {
 	if (write(masterkey_fd, buf, sz) == -1) {
 		log_err_printf("Warning: Failed to write to masterkey log:"
@@ -288,7 +290,8 @@ log_connect_reopencb(void)
  * resolution that should not make any difference.
  */
 static ssize_t
-log_connect_writecb(UNUSED void *fh, const void *buf, size_t sz)
+log_connect_writecb(UNUSED void *fh, UNUSED int ctl,
+                    const void *buf, size_t sz)
 {
 	char timebuf[32];
 	time_t epoch;
@@ -331,13 +334,12 @@ log_connect_fini(void)
 #define PREPFLAG_REQUEST 1
 #define PREPFLAG_EOF     2
 
-struct log_content_ctx {
-	unsigned int open : 1;
+typedef struct log_content_file_ctx {
 	union {
 		struct {
 			char *header_req;
 			char *header_resp;
-		} file;
+		} single;
 		struct {
 			int fd;
 			char *filename;
@@ -347,10 +349,40 @@ struct log_content_ctx {
 			char *filename;
 		} spec;
 	} u;
-};
+} log_content_file_ctx_t;
 
-static logger_t *content_log = NULL;
-static int content_clisock = -1; /* privsep client socket for content logger */
+typedef struct log_content_pcap_ctx {
+	union {
+		struct {
+			int fd;
+			char *filename;
+		} dir;
+		struct {
+			int fd;
+			char *filename;
+		} spec;
+	} u;
+	logpkt_ctx_t state;
+} log_content_pcap_ctx_t;
+
+typedef struct log_content_mirror_ctx {
+	logpkt_ctx_t state;
+} log_content_mirror_ctx_t;
+
+static int content_file_clisock = -1;
+static logger_t *content_file_log = NULL;
+static int content_pcap_clisock = -1;
+static logger_t *content_pcap_log = NULL;
+static logger_t *content_mirror_log = NULL;
+libnet_t *content_pcap_libnet = NULL;
+libnet_t *content_mirror_libnet = NULL;
+static uint8_t content_pcap_src_ether[ETHER_ADDR_LEN] = {
+	0x02, 0x00, 0x00, 0x11, 0x11, 0x11};
+static uint8_t content_pcap_dst_ether[ETHER_ADDR_LEN] = {
+	0x02, 0x00, 0x00, 0x22, 0x22, 0x22};
+static uint8_t content_mirror_src_ether[ETHER_ADDR_LEN];
+static uint8_t content_mirror_dst_ether[ETHER_ADDR_LEN];
+
 
 /*
  * Split a pathname into static LHS (including final slashes) and dynamic RHS.
@@ -565,43 +597,46 @@ log_content_format_pathspec(const char *logspec,
 }
 #undef PATH_BUF_INC
 
+/*
+ * log_content_ctx_t is preallocated by the caller (part of connection ctx).
+ */
 int
-log_content_open(log_content_ctx_t **pctx, opts_t *opts,
+log_content_open(log_content_ctx_t *ctx, opts_t *opts,
                  char *srchost, char *srcport,
                  char *dsthost, char *dstport,
                  char *exec_path, char *user, char *group)
 {
-	log_content_ctx_t *ctx;
+	char timebuf[24];
+	time_t epoch;
+	struct tm *utc;
+	char *dsthost_clean = NULL;
+	char *srchost_clean = NULL;
 
-	if (*pctx)
-		return 0;
-	*pctx = malloc(sizeof(log_content_ctx_t));
-	if (!*pctx)
-		return -1;
-	ctx = *pctx;
+	if (ctx->file || ctx->pcap || ctx->mirror)
+		return 0; /* does this actually happen? */
 
-	if (opts->contentlog_isdir) {
-		/* per-connection-file content log (-S) */
-		char timebuf[24];
-		time_t epoch;
-		struct tm *utc;
-		char *dsthost_clean, *srchost_clean;
+	if (opts->contentlog_isdir || opts->contentlog_isspec ||
+	    opts->pcaplog_isdir    || opts->pcaplog_isspec) {
+		if (opts->contentlog_isdir || opts->pcaplog_isdir) {
+			if (time(&epoch) == -1) {
+				log_err_printf("Failed to get time\n");
+				goto errout;
+			}
+			if ((utc = gmtime(&epoch)) == NULL) {
+				log_err_printf("Failed to convert time:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
+				goto errout;
+			}
+			if (!strftime(timebuf, sizeof(timebuf),
+			              "%Y%m%dT%H%M%SZ", utc)) {
+				log_err_printf("Failed to format time:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
+				goto errout;
+			}
+		}
 
-		if (time(&epoch) == -1) {
-			log_err_printf("Failed to get time\n");
-			goto errout;
-		}
-		if ((utc = gmtime(&epoch)) == NULL) {
-			log_err_printf("Failed to convert time: %s (%i)\n",
-			               strerror(errno), errno);
-			goto errout;
-		}
-		if (!strftime(timebuf, sizeof(timebuf),
-		              "%Y%m%dT%H%M%SZ", utc)) {
-			log_err_printf("Failed to format time: %s (%i)\n",
-			               strerror(errno), errno);
-			goto errout;
-		}
 		srchost_clean = sys_ip46str_sanitize(srchost);
 		if (!srchost_clean) {
 			log_err_printf("Failed to sanitize srchost\n");
@@ -611,103 +646,252 @@ log_content_open(log_content_ctx_t **pctx, opts_t *opts,
 		if (!dsthost_clean) {
 			log_err_printf("Failed to sanitize dsthost\n");
 			free(srchost_clean);
-			goto errout;
-		}
-		if (asprintf(&ctx->u.dir.filename, "%s/%s-%s,%s-%s,%s.log",
-		             opts->contentlog, timebuf,
-		             srchost_clean, srcport,
-		             dsthost_clean, dstport) < 0) {
-			log_err_printf("Failed to format filename: %s (%i)\n",
-			               strerror(errno), errno);
-			free(srchost_clean);
-			free(dsthost_clean);
-			goto errout;
-		}
-		free(srchost_clean);
-		free(dsthost_clean);
-	} else if (opts->contentlog_isspec) {
-		/* per-connection-file content log with logspec (-F) */
-		char *dsthost_clean, *srchost_clean;
-		srchost_clean = sys_ip46str_sanitize(srchost);
-		if (!srchost_clean) {
-			log_err_printf("Failed to sanitize srchost\n");
-			goto errout;
-		}
-		dsthost_clean = sys_ip46str_sanitize(dsthost);
-		if (!dsthost_clean) {
-			log_err_printf("Failed to sanitize dsthost\n");
-			free(srchost_clean);
-			goto errout;
-		}
-		ctx->u.spec.filename = log_content_format_pathspec(
-		                                       opts->contentlog,
-		                                       srchost_clean, srcport,
-		                                       dsthost_clean, dstport,
-		                                       exec_path, user, group);
-		free(srchost_clean);
-		free(dsthost_clean);
-		if (!ctx->u.spec.filename) {
-			goto errout;
-		}
-	} else {
-		/* single-file content log (-L) */
-		if (asprintf(&ctx->u.file.header_req, "[%s]:%s -> [%s]:%s",
-		             srchost, srcport, dsthost, dstport) < 0) {
-			goto errout;
-		}
-		if (asprintf(&ctx->u.file.header_resp, "[%s]:%s -> [%s]:%s",
-		             dsthost, dstport, srchost, srcport) < 0) {
-			free(ctx->u.file.header_req);
 			goto errout;
 		}
 	}
 
-	/* submit an open event */
-	if (logger_open(content_log, ctx) == -1)
-		goto errout;
-	ctx->open = 1;
+	if (opts->contentlog) {
+		ctx->file = malloc(sizeof(log_content_file_ctx_t));
+		if (!ctx->file)
+			goto errout;
+		memset(ctx->file, 0, sizeof(log_content_file_ctx_t));
+
+		if (opts->contentlog_isdir) {
+			/* per-connection-file content log (-S) */
+			if (asprintf(&ctx->file->u.dir.filename,
+			             "%s/%s-%s,%s-%s,%s.log",
+			             opts->contentlog, timebuf,
+			             srchost_clean, srcport,
+			             dsthost_clean, dstport) < 0) {
+				log_err_printf("Failed to format filename:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
+				goto errout;
+			}
+		} else if (opts->contentlog_isspec) {
+			/* per-connection-file content log with logspec (-F) */
+			ctx->file->u.spec.filename =
+				log_content_format_pathspec(opts->contentlog,
+				                            srchost_clean,
+				                            srcport,
+				                            dsthost_clean,
+				                            dstport,
+				                            exec_path,
+				                            user, group);
+			if (!ctx->file->u.spec.filename) {
+				goto errout;
+			}
+		} else {
+			/* single-file content log (-L) */
+			if (asprintf(&ctx->file->u.single.header_req,
+			             "[%s]:%s -> [%s]:%s",
+			             srchost, srcport, dsthost, dstport) < 0) {
+				goto errout;
+			}
+			if (asprintf(&ctx->file->u.single.header_resp,
+			             "[%s]:%s -> [%s]:%s",
+			             dsthost, dstport, srchost, srcport) < 0) {
+				free(ctx->file->u.single.header_req);
+				goto errout;
+			}
+		}
+	}
+
+	if (opts->pcaplog) {
+		ctx->pcap = malloc(sizeof(log_content_pcap_ctx_t));
+		if (!ctx->pcap)
+			goto errout;
+		memset(ctx->pcap, 0, sizeof(log_content_pcap_ctx_t));
+
+		if (logpkt_ctx_init(&ctx->pcap->state,
+		                    content_pcap_libnet,
+		                    content_pcap_src_ether,
+		                    content_pcap_dst_ether,
+		                    srchost, srcport,
+		                    dsthost, dstport) == -1)
+			goto errout;
+
+		if (opts->pcaplog_isdir) {
+			/* per-connection-file pcap log (-Y) */
+			if (asprintf(&ctx->pcap->u.dir.filename,
+			             "%s/%s-%s,%s-%s,%s.pcap",
+			             opts->pcaplog, timebuf,
+			             srchost_clean, srcport,
+			             dsthost_clean, dstport) < 0) {
+				log_err_printf("Failed to format filename:"
+				               " %s (%i)\n",
+				               strerror(errno), errno);
+				goto errout;
+			}
+		} else if (opts->pcaplog_isspec) {
+			/* per-connection-file pcap log with logspec (-y) */
+			ctx->pcap->u.spec.filename =
+				log_content_format_pathspec(opts->pcaplog,
+				                            srchost_clean,
+				                            srcport,
+				                            dsthost_clean,
+				                            dstport,
+				                            exec_path,
+				                            user, group);
+			if (!ctx->pcap->u.spec.filename) {
+				goto errout;
+			}
+		}
+	}
+
+	if (opts->mirrorif) {
+		ctx->mirror = malloc(sizeof(log_content_mirror_ctx_t));
+		if (!ctx->mirror)
+			goto errout;
+		memset(ctx->mirror, 0, sizeof(log_content_mirror_ctx_t));
+
+		if (logpkt_ctx_init(&ctx->mirror->state,
+		                    content_mirror_libnet,
+		                    content_mirror_src_ether,
+		                    content_mirror_dst_ether,
+		                    srchost, srcport,
+		                    dsthost, dstport) == -1)
+			goto errout;
+	}
+
+	/* submit open events */
+	if (ctx->file) {
+		if (logger_open(content_file_log, ctx->file) == -1)
+			goto errout;
+	}
+	if (ctx->pcap) {
+		if (logger_open(content_pcap_log, ctx->pcap) == -1)
+			goto errout;
+	}
+	if (ctx->mirror) {
+		if (logger_open(content_mirror_log, ctx->mirror) == -1)
+			goto errout;
+	}
+
+	if (srchost_clean)
+		free(srchost_clean);
+	if (dsthost_clean)
+		free(dsthost_clean);
 	return 0;
+
 errout:
-	free(ctx);
-	*pctx = NULL;
+	if (srchost_clean)
+		free(srchost_clean);
+	if (dsthost_clean)
+		free(dsthost_clean);
+	if (ctx->file)
+		free(ctx->file);
+	if (ctx->pcap) {
+		free(ctx->pcap);
+	}
+	if (ctx->mirror) {
+		free(ctx->mirror);
+	}
+	memset(ctx, 0, sizeof(log_content_ctx_t));
 	return -1;
 }
 
+/*
+ * On failure, lb is not freed.
+ */
 int
 log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 {
 	unsigned long prepflags = 0;
-
-	if (!ctx->open) {
-		log_err_printf("log_content_submit called on closed ctx\n");
-		return -1;
-	}
+	logbuf_t *lbpcap, *lbmirror;
 
 	if (is_request)
 		prepflags |= PREPFLAG_REQUEST;
-	return logger_submit(content_log, ctx, prepflags, lb);
+
+	lb = logbuf_make_contiguous(lb);
+	if (!lb)
+		return -1;
+
+	lbpcap = lbmirror = lb;
+	if (content_file_log) {
+		if (content_pcap_log) {
+			lbpcap = logbuf_new_deepcopy(lb, 1);
+			if (!lbpcap)
+				goto errout;
+		}
+		if (content_mirror_log) {
+			lbmirror = logbuf_new_deepcopy(lb, 1);
+			if (!lbmirror)
+				goto errout;
+		}
+	} else if (content_pcap_log && content_mirror_log) {
+		lbmirror = logbuf_new_deepcopy(lb, 1);
+		if (!lbmirror)
+			goto errout;
+	}
+
+	if (content_pcap_log) {
+		if (logger_submit(content_pcap_log, ctx->pcap,
+		                  prepflags, lbpcap) == -1) {
+			goto errout;
+		}
+		lbpcap = NULL;
+	}
+	if (content_mirror_log) {
+		if (logger_submit(content_mirror_log, ctx->mirror,
+		                  prepflags, lbmirror) == -1) {
+			goto errout;
+		}
+		lbmirror = NULL;
+	}
+	if (content_file_log) {
+		if (logger_submit(content_file_log, ctx->file,
+		                  prepflags, lb) == -1) {
+			return -1;
+		}
+	}
+	return 0;
+errout:
+	if (lbpcap && lbpcap != lb)
+		logbuf_free(lbpcap);
+	if (lbmirror && lbmirror != lb)
+		logbuf_free(lbmirror);
+	return -1;
 }
 
 int
-log_content_close(log_content_ctx_t **pctx, int by_requestor)
+log_content_close(log_content_ctx_t *ctx, int by_requestor)
 {
-	int rv = 0;
 	unsigned long prepflags = PREPFLAG_EOF;
 
-	if (!(*pctx) || !(*pctx)->open)
-		return -1;
 	if (by_requestor)
 		prepflags |= PREPFLAG_REQUEST;
-	if (logger_submit(content_log, (*pctx), prepflags, NULL) == -1) {
-		rv = -1;
-		goto out;
+	if (content_file_log && ctx->file) {
+		if (logger_submit(content_file_log, ctx->file,
+		                  prepflags, NULL) == -1) {
+			return -1;
+		}
+		if (logger_close(content_file_log, ctx->file) == -1) {
+			return -1;
+		}
+		ctx->file = NULL;
 	}
-	if (logger_close(content_log, *pctx) == -1) {
-		rv = -1;
+	if (content_pcap_log && ctx->pcap) {
+		if (logger_submit(content_pcap_log, ctx->pcap,
+		                  prepflags, NULL) == -1) {
+			return -1;
+		}
+		if (logger_close(content_pcap_log, ctx->pcap) == -1) {
+			return -1;
+		}
+		ctx->pcap = NULL;
 	}
-out:
-	*pctx = NULL;
-	return rv;
+	if (content_mirror_log && ctx->mirror) {
+		if (logger_submit(content_mirror_log, ctx->mirror,
+		                  prepflags, NULL) == -1) {
+			return -1;
+		}
+		if (logger_close(content_mirror_log, ctx->mirror) == -1) {
+			return -1;
+		}
+		ctx->mirror = NULL;
+	}
+	return 0;
 }
 
 /*
@@ -718,24 +902,25 @@ out:
  */
 
 static int
-log_content_dir_opencb(void *fh)
+log_content_file_dir_opencb(void *fh)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
-	if ((ctx->u.dir.fd = privsep_client_openfile(content_clisock,
+	if ((ctx->u.dir.fd = privsep_client_openfile(content_file_clisock,
 	                                             ctx->u.dir.filename,
 	                                             0)) == -1) {
 		log_err_printf("Opening logdir file '%s' failed: %s (%i)\n",
-		               ctx->u.dir.filename, strerror(errno), errno);
+		               ctx->u.dir.filename,
+		               strerror(errno), errno);
 		return -1;
 	}
 	return 0;
 }
 
 static void
-log_content_dir_closecb(void *fh)
+log_content_file_dir_closecb(void *fh)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
 	if (ctx->u.dir.filename)
 		free(ctx->u.dir.filename);
@@ -745,9 +930,10 @@ log_content_dir_closecb(void *fh)
 }
 
 static ssize_t
-log_content_dir_writecb(void *fh, const void *buf, size_t sz)
+log_content_file_dir_writecb(void *fh, UNUSED int ctl,
+                             const void *buf, size_t sz)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
 	if (write(ctx->u.dir.fd, buf, sz) == -1) {
 		log_err_printf("Warning: Failed to write to content log: %s\n",
@@ -758,11 +944,11 @@ log_content_dir_writecb(void *fh, const void *buf, size_t sz)
 }
 
 static int
-log_content_spec_opencb(void *fh)
+log_content_file_spec_opencb(void *fh)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
-	if ((ctx->u.spec.fd = privsep_client_openfile(content_clisock,
+	if ((ctx->u.spec.fd = privsep_client_openfile(content_file_clisock,
 	                                              ctx->u.spec.filename,
 	                                              1)) == -1) {
 		log_err_printf("Opening logspec file '%s' failed: %s (%i)\n",
@@ -773,9 +959,9 @@ log_content_spec_opencb(void *fh)
 }
 
 static void
-log_content_spec_closecb(void *fh)
+log_content_file_spec_closecb(void *fh)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
 	if (ctx->u.spec.filename)
 		free(ctx->u.spec.filename);
@@ -785,9 +971,10 @@ log_content_spec_closecb(void *fh)
 }
 
 static ssize_t
-log_content_spec_writecb(void *fh, const void *buf, size_t sz)
+log_content_file_spec_writecb(void *fh, UNUSED int ctl,
+                              const void *buf, size_t sz)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
 	if (write(ctx->u.spec.fd, buf, sz) == -1) {
 		log_err_printf("Warning: Failed to write to content log: %s\n",
@@ -797,85 +984,78 @@ log_content_spec_writecb(void *fh, const void *buf, size_t sz)
 	return sz;
 }
 
-static int content_file_fd = -1;
-static char *content_file_fn = NULL;
+static int content_file_single_fd = -1;
+static char *content_file_single_fn = NULL;
 
 static int
-log_content_file_preinit(const char *logfile)
+log_content_file_single_preinit(const char *logfile)
 {
-	content_file_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
+	content_file_single_fd = open(logfile, O_WRONLY|O_APPEND|O_CREAT,
 	                       DFLT_FILEMODE);
-	if (content_file_fd == -1) {
+	if (content_file_single_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
 		               logfile, strerror(errno), errno);
 		return -1;
 	}
-	if (!(content_file_fn = realpath(logfile, NULL))) {
+	if (!(content_file_single_fn = realpath(logfile, NULL))) {
 		log_err_printf("Failed to realpath '%s': %s (%i)\n",
 		              logfile, strerror(errno), errno);
-		close(content_file_fd);
-		connect_fd = -1;
+		close(content_file_single_fd);
+		content_file_single_fd = -1;
 		return -1;
 	}
 	return 0;
 }
 
 static void
-log_content_file_fini(void)
+log_content_file_single_fini(void)
 {
-	if (content_file_fn) {
-		free(content_file_fn);
-		content_file_fn = NULL;
+	if (content_file_single_fn) {
+		free(content_file_single_fn);
+		content_file_single_fn = NULL;
 	}
-	if (content_file_fd != -1) {
-		close(content_file_fd);
-		content_file_fd = -1;
+	if (content_file_single_fd != -1) {
+		close(content_file_single_fd);
+		content_file_single_fd = -1;
 	}
 }
 
 static int
-log_content_file_reopencb(void)
+log_content_file_single_reopencb(void)
 {
-	close(content_file_fd);
-	content_file_fd = open(content_file_fn,
-	                       O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
-	if (content_file_fd == -1) {
+	close(content_file_single_fd);
+	content_file_single_fd = open(content_file_single_fn,
+	                              O_WRONLY|O_APPEND|O_CREAT,
+	                              DFLT_FILEMODE);
+	if (content_file_single_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
-		               content_file_fn, strerror(errno), errno);
+		               content_file_single_fn, strerror(errno), errno);
 		return -1;
 	}
 	return 0;
 }
 
-/*
-static int
-log_content_file_opencb(void *fh)
-{
-	return 0;
-}
-*/
-
 static void
-log_content_file_closecb(void *fh)
+log_content_file_single_closecb(void *fh)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 
-	if (ctx->u.file.header_req) {
-		free(ctx->u.file.header_req);
+	if (ctx->u.single.header_req) {
+		free(ctx->u.single.header_req);
 	}
-	if (ctx->u.file.header_resp) {
-		free(ctx->u.file.header_resp);
+	if (ctx->u.single.header_resp) {
+		free(ctx->u.single.header_resp);
 	}
-
 	free(ctx);
 }
 
 static ssize_t
-log_content_file_writecb(void *fh, const void *buf, size_t sz)
+log_content_file_single_writecb(void *fh, UNUSED int ctl,
+                                const void *buf, size_t sz)
 {
-	UNUSED log_content_ctx_t *ctx = fh;
+	UNUSED log_content_file_ctx_t *ctx = fh;
 
-	if (write(content_file_fd, buf, sz) == -1) {
+	if (write(content_file_single_fd, buf, sz) == -1) {
 		log_err_printf("Warning: Failed to write to content log: %s\n",
 		               strerror(errno));
 		return -1;
@@ -884,25 +1064,24 @@ log_content_file_writecb(void *fh, const void *buf, size_t sz)
 }
 
 static logbuf_t *
-log_content_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
+log_content_file_single_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 {
-	log_content_ctx_t *ctx = fh;
+	log_content_file_ctx_t *ctx = fh;
 	int is_request = !!(prepflags & PREPFLAG_REQUEST);
 	logbuf_t *head;
 	time_t epoch;
 	struct tm *utc;
 	char *header;
 
-	if (!(header = is_request ? ctx->u.file.header_req
-	                          : ctx->u.file.header_resp))
+	if (!(header = is_request ? ctx->u.single.header_req
+	                          : ctx->u.single.header_resp))
 		goto out;
 
 	/* prepend size tag or EOF, and newline */
 	if (prepflags & PREPFLAG_EOF) {
-		head = logbuf_new_printf(NULL, NULL, " (EOF)\n");
+		head = logbuf_new_printf(NULL, " (EOF)\n");
 	} else {
-		head = logbuf_new_printf(lb->fh, lb, " (%zu):\n",
-		                         logbuf_size(lb));
+		head = logbuf_new_printf(lb, " (%zu):\n", logbuf_size(lb));
 	}
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
@@ -912,7 +1091,7 @@ log_content_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 	lb = head;
 
 	/* prepend header */
-	head = logbuf_new_copy(header, strlen(header), lb->fh, lb);
+	head = logbuf_new_copy(header, strlen(header), lb);
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
 		logbuf_free(lb);
@@ -921,7 +1100,7 @@ log_content_file_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
 	lb = head;
 
 	/* prepend timestamp */
-	head = logbuf_new_alloc(32, lb->fh, lb);
+	head = logbuf_new_alloc(32, lb);
 	if (!head) {
 		log_err_printf("Failed to allocate memory\n");
 		logbuf_free(lb);
@@ -937,6 +1116,278 @@ out:
 	return lb;
 }
 
+/*
+ * Pcap writer for -X/-Y/-y options.
+ */
+static int content_pcap_fd = -1;
+static char *content_pcap_fn = NULL;
+
+/*
+ * Initialize pcap content logging.  For single-file mode, pcapfile is the
+ * path to the file.  For dir/spec modes, pcapfile is NULL.
+ */
+static int
+log_content_pcap_preinit(const char *pcapfile)
+{
+	char errbuf[LIBNET_ERRBUF_SIZE];
+
+	content_pcap_libnet = libnet_init(LIBNET_LINK, NULL, errbuf);
+	if (content_pcap_libnet == NULL) {
+		log_err_printf("Failed to init pcap libnet: %s", errbuf);
+		return -1;
+	}
+	libnet_seed_prand(content_pcap_libnet);
+
+	if (!pcapfile)
+		return 0;
+
+	/* single file pcap mode */
+
+	content_pcap_fd = open(pcapfile, O_RDWR|O_CREAT, DFLT_FILEMODE);
+	if (content_pcap_fd == -1) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               pcapfile, strerror(errno), errno);
+		return -1;
+	}
+	if (logpkt_pcap_open_fd(content_pcap_fd) == -1) {
+		log_err_printf("Failed to prepare '%s' for PCAP writing"
+		               ": %s (%i)\n",
+		               pcapfile, strerror(errno), errno);
+		close(content_pcap_fd);
+		content_pcap_fd = -1;
+		return -1;
+	}
+
+	if (!(content_pcap_fn = realpath(pcapfile, NULL))) {
+		log_err_printf("Failed to realpath '%s': %s (%i)\n",
+		               pcapfile, strerror(errno), errno);
+		close(content_pcap_fd);
+		content_pcap_fd = -1;
+		return -1;
+	}
+	return 0;
+}
+
+static void
+log_content_pcap_fini(void)
+{
+	if (content_pcap_fn) {
+		free(content_pcap_fn);
+		content_pcap_fn = NULL;
+	}
+	if (content_pcap_fd != -1) {
+		close(content_pcap_fd);
+		content_pcap_fd = -1;
+	}
+	if (content_pcap_libnet) {
+		libnet_destroy(content_pcap_libnet);
+	}
+}
+
+static int
+log_content_pcap_reopencb(void) {
+	close(content_pcap_fd);
+	content_pcap_fd = open(content_pcap_fn, O_RDWR|O_CREAT, DFLT_FILEMODE);
+	if (content_pcap_fd == -1) {
+		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
+		               content_pcap_fn, strerror(errno), errno);
+		return -1;
+	}
+	if (logpkt_pcap_open_fd(content_pcap_fd) == -1) {
+		log_err_printf("Failed to prepare '%s' for PCAP writing"
+		               ": %s (%i)\n",
+		               content_pcap_fn, strerror(errno), errno);
+		close(content_pcap_fd);
+		content_pcap_fd = -1;
+		return -1;
+	}
+	return 0;
+}
+
+static void
+log_content_pcap_closecb_base(void *fh, int fd) {
+	log_content_pcap_ctx_t *ctx = fh;
+	logpkt_write_close(&ctx->state, fd, LOGPKT_REQUEST);
+}
+
+static void
+log_content_pcap_closecb(void *fh) {
+	log_content_pcap_ctx_t *ctx = fh;
+	log_content_pcap_closecb_base(fh, content_pcap_fd);
+	free(ctx);
+}
+
+static ssize_t
+log_content_pcap_writecb_base(void *fh, int ctl, const void *buf, size_t sz,
+                              int fd) {
+	log_content_pcap_ctx_t *ctx = fh;
+	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
+	                                      : LOGPKT_RESPONSE;
+
+	if (logpkt_write_payload(&ctx->state, fd, direction, buf, sz) == -1)
+		goto errout;
+
+	return sz;
+errout:
+	log_err_printf("Warning: Failed to write to pcap log: %s (%i)\n",
+	               strerror(errno), errno);
+	return -1;
+}
+
+static ssize_t
+log_content_pcap_writecb(void *fh, int ctl, const void *buf, size_t sz) {
+	return log_content_pcap_writecb_base(fh, ctl, buf, sz, content_pcap_fd);
+}
+
+static int
+log_content_pcap_dir_opencb(void *fh)
+{
+	log_content_pcap_ctx_t *ctx = fh;
+
+	if ((ctx->u.dir.fd = privsep_client_openfile(content_pcap_clisock,
+	                                             ctx->u.dir.filename,
+	                                             0)) == -1) {
+		log_err_printf("Opening pcapdir file '%s' failed: %s (%i)\n",
+		               ctx->u.dir.filename, strerror(errno), errno);
+		return -1;
+	}
+	return logpkt_pcap_open_fd(ctx->u.dir.fd);
+}
+
+static void
+log_content_pcap_dir_closecb(void *fh)
+{
+	log_content_pcap_ctx_t *ctx = fh;
+	log_content_pcap_closecb_base(fh, ctx->u.dir.fd);
+	if (ctx->u.dir.filename)
+		free(ctx->u.dir.filename);
+	if (ctx->u.dir.fd != -1)
+		close(ctx->u.dir.fd);
+	free(ctx);
+}
+
+static ssize_t
+log_content_pcap_dir_writecb(void *fh, int ctl, const void *buf, size_t sz)
+{
+	log_content_pcap_ctx_t *ctx = fh;
+	return log_content_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.dir.fd);
+}
+
+static int
+log_content_pcap_spec_opencb(void *fh)
+{
+	log_content_pcap_ctx_t *ctx = fh;
+
+	if ((ctx->u.spec.fd = privsep_client_openfile(content_pcap_clisock,
+	                                              ctx->u.spec.filename,
+	                                              1)) == -1) {
+		log_err_printf("Opening pcapspec file '%s' failed: %s (%i)\n",
+		               ctx->u.spec.filename, strerror(errno), errno);
+		return -1;
+	}
+	return logpkt_pcap_open_fd(ctx->u.spec.fd);
+}
+
+static void
+log_content_pcap_spec_closecb(void *fh)
+{
+	log_content_pcap_ctx_t *ctx = fh;
+	log_content_pcap_closecb_base(fh, ctx->u.spec.fd);
+	if (ctx->u.spec.filename)
+		free(ctx->u.spec.filename);
+	if (ctx->u.spec.fd != -1)
+		close(ctx->u.spec.fd);
+	free(ctx);
+}
+
+static ssize_t
+log_content_pcap_spec_writecb(void *fh, int ctl, const void *buf, size_t sz)
+{
+	log_content_pcap_ctx_t *ctx = fh;
+	return log_content_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.spec.fd);
+}
+
+static logbuf_t *
+log_content_pcap_prepcb(UNUSED void *fh, unsigned long prepflags,
+                        logbuf_t *lb) {
+	/* log_content_pcap_ctx_t *ctx = fh; */
+	if (prepflags & PREPFLAG_EOF)
+		return lb;
+	logbuf_ctl_set(lb, (prepflags & PREPFLAG_REQUEST) ? LBFLAG_IS_REQ
+	                                                  : LBFLAG_IS_RESP);
+	return lb;
+}
+
+/*
+ * Mirror writer for -T/-I options.
+ */
+
+static int
+log_content_mirror_preinit(const char *ifname, const char *targetip) {
+	char errbuf[LIBNET_ERRBUF_SIZE];
+
+	/* cast to char* needed on OpenBSD */
+	content_mirror_libnet = libnet_init(LIBNET_LINK, (char *)ifname,
+	                                    errbuf);
+	if (content_mirror_libnet == NULL) {
+		log_err_printf("Failed to init mirror libnet: %s\n", errbuf);
+		return -1;
+	}
+	libnet_seed_prand(content_mirror_libnet);
+
+	if (logpkt_ether_lookup(content_mirror_libnet,
+	                        content_mirror_src_ether,
+	                        content_mirror_dst_ether,
+	                        targetip, ifname) == -1) {
+		log_err_printf("Failed to lookup target ether\n");
+		libnet_destroy(content_mirror_libnet);
+		return -1;
+	}
+
+	return 0;
+}
+
+static void
+log_content_mirror_fini(void)
+{
+	if (content_mirror_libnet) {
+		libnet_destroy(content_mirror_libnet);
+	}
+}
+
+static void
+log_content_mirror_closecb(void *fh) {
+	log_content_mirror_ctx_t *ctx = fh;
+	logpkt_write_close(&ctx->state, -1, LOGPKT_REQUEST);
+	free(ctx);
+}
+
+static ssize_t
+log_content_mirror_writecb(void *fh, int ctl, const void *buf, size_t sz) {
+	log_content_mirror_ctx_t *ctx = fh;
+	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
+	                                      : LOGPKT_RESPONSE;
+
+	if (logpkt_write_payload(&ctx->state, -1, direction, buf, sz) == -1)
+		goto errout;
+	return sz;
+
+errout:
+	log_err_printf("Warning: Failed to write to mirror log: %s (%i)\n",
+	               strerror(errno), errno);
+	return -1;
+}
+
+static logbuf_t *
+log_content_mirror_prepcb(UNUSED void *fh, unsigned long prepflags,
+                          logbuf_t *lb) {
+	/* log_content_mirror_ctx_t *ctx = fh; */
+	if (prepflags & PREPFLAG_EOF)
+		return lb;
+	logbuf_ctl_set(lb, (prepflags & PREPFLAG_REQUEST) ? LBFLAG_IS_REQ
+	                                                  : LBFLAG_IS_RESP);
+	return lb;
+}
 
 /*
  * Certificate writer for -w/-W options.
@@ -955,7 +1406,7 @@ log_cert_submit(const char *fn, X509 *crt)
 		goto errout1;
 	if (!(pem = ssl_x509_to_pem(crt)))
 		goto errout2;
-	if (!(lb = logbuf_new(pem, strlen(pem), NULL, NULL)))
+	if (!(lb = logbuf_new(pem, strlen(pem), NULL)))
 		goto errout3;
 	return logger_submit(cert_log, fh, 0, lb);
 errout3:
@@ -967,7 +1418,7 @@ errout1:
 }
 
 static ssize_t
-log_cert_writecb(void *fh, const void *buf, size_t sz)
+log_cert_writecb(void *fh, UNUSED int ctl, const void *buf, size_t sz)
 {
 	char *fn = fh;
 	int fd;
@@ -1012,29 +1463,77 @@ log_preinit(opts_t *opts)
 	if (opts->contentlog) {
 		if (opts->contentlog_isdir) {
 			reopencb = NULL;
-			opencb = log_content_dir_opencb;
-			closecb = log_content_dir_closecb;
-			writecb = log_content_dir_writecb;
+			opencb = log_content_file_dir_opencb;
+			closecb = log_content_file_dir_closecb;
+			writecb = log_content_file_dir_writecb;
 			prepcb = NULL;
 		} else if (opts->contentlog_isspec) {
 			reopencb = NULL;
-			opencb = log_content_spec_opencb;
-			closecb = log_content_spec_closecb;
-			writecb = log_content_spec_writecb;
+			opencb = log_content_file_spec_opencb;
+			closecb = log_content_file_spec_closecb;
+			writecb = log_content_file_spec_writecb;
 			prepcb = NULL;
 		} else {
-			if (log_content_file_preinit(opts->contentlog) == -1)
+			if (log_content_file_single_preinit(opts->contentlog) == -1)
 				goto out;
-			reopencb = log_content_file_reopencb;
+			reopencb = log_content_file_single_reopencb;
 			opencb = NULL;
-			closecb = log_content_file_closecb;
-			writecb = log_content_file_writecb;
-			prepcb = log_content_file_prepcb;
+			closecb = log_content_file_single_closecb;
+			writecb = log_content_file_single_writecb;
+			prepcb = log_content_file_single_prepcb;
 		}
-		if (!(content_log = logger_new(reopencb, opencb, closecb,
-		                               writecb, prepcb,
-		                               log_exceptcb))) {
-			log_content_file_fini();
+		if (!(content_file_log = logger_new(reopencb, opencb, closecb,
+		                                    writecb, prepcb,
+		                                    log_exceptcb))) {
+			log_content_file_single_fini();
+			goto out;
+		}
+	}
+	if (opts->pcaplog) {
+		if (log_content_pcap_preinit((opts->pcaplog_isdir ||
+		                              opts->pcaplog_isspec) ?
+		                              NULL :
+		                              opts->pcaplog) == -1)
+			goto out;
+		if (opts->pcaplog_isdir) {
+			reopencb = NULL;
+			opencb = log_content_pcap_dir_opencb;
+			closecb = log_content_pcap_dir_closecb;
+			writecb = log_content_pcap_dir_writecb;
+			prepcb = log_content_pcap_prepcb;
+		} else if (opts->pcaplog_isspec) {
+			reopencb = NULL;
+			opencb = log_content_pcap_spec_opencb;
+			closecb = log_content_pcap_spec_closecb;
+			writecb = log_content_pcap_spec_writecb;
+			prepcb = log_content_pcap_prepcb;
+		} else {
+			reopencb = log_content_pcap_reopencb;
+			opencb = NULL;
+			closecb = log_content_pcap_closecb;
+			writecb = log_content_pcap_writecb;
+			prepcb = log_content_pcap_prepcb;
+		}
+		if (!(content_pcap_log = logger_new(reopencb, opencb, closecb,
+		                                    writecb, prepcb,
+		                                    log_exceptcb))) {
+			log_content_pcap_fini();
+			goto out;
+		}
+	}
+	if (opts->mirrorif) {
+		if (log_content_mirror_preinit(opts->mirrorif,
+		                               opts->mirrortarget) == -1)
+			goto out;
+		reopencb = NULL;
+		opencb = NULL;
+		closecb = log_content_mirror_closecb;
+		writecb = log_content_mirror_writecb;
+		prepcb = log_content_mirror_prepcb;
+		if (!(content_mirror_log = logger_new(reopencb, opencb, closecb,
+		                                      writecb, prepcb,
+		                                      log_exceptcb))) {
+			log_content_mirror_fini();
 			goto out;
 		}
 	}
@@ -1071,13 +1570,21 @@ log_preinit(opts_t *opts)
 	return 0;
 
 out:
-	if (content_log) {
-		log_content_file_fini();
-		logger_free(content_log);
-	}
 	if (connect_log) {
 		log_connect_fini();
 		logger_free(connect_log);
+	}
+	if (content_file_log) {
+		log_content_file_single_fini();
+		logger_free(content_file_log);
+	}
+	if (content_pcap_log) {
+		log_content_pcap_fini();
+		logger_free(content_pcap_log);
+	}
+	if (content_mirror_log) {
+		log_content_mirror_fini();
+		logger_free(content_mirror_log);
 	}
 	if (cert_log) {
 		logger_free(cert_log);
@@ -1097,13 +1604,21 @@ out:
 void
 log_preinit_undo(void)
 {
-	if (content_log) {
-		log_content_file_fini();
-		logger_free(content_log);
-	}
 	if (connect_log) {
 		log_connect_fini();
 		logger_free(connect_log);
+	}
+	if (content_file_log) {
+		log_content_file_single_fini();
+		logger_free(content_file_log);
+	}
+	if (content_pcap_log) {
+		log_content_pcap_fini();
+		logger_free(content_pcap_log);
+	}
+	if (content_mirror_log) {
+		log_content_mirror_fini();
+		logger_free(content_mirror_log);
 	}
 	if (masterkey_log) {
 		log_masterkey_fini();
@@ -1116,7 +1631,7 @@ log_preinit_undo(void)
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock1, int clisock2)
+log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock[3])
 {
 	proxy_ctx = ctx;
 	if (err_log)
@@ -1131,19 +1646,30 @@ log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock1, int clisock2)
 	if (connect_log)
 		if (logger_start(connect_log) == -1)
 			return -1;
-	if (content_log) {
-		content_clisock = clisock1;
-		if (logger_start(content_log) == -1)
+	if (content_file_log) {
+		content_file_clisock = clisock[0];
+		if (logger_start(content_file_log) == -1)
 			return -1;
 	} else {
-		privsep_client_close(clisock1);
+		privsep_client_close(clisock[0]);
+	}
+	if (content_pcap_log) {
+		content_pcap_clisock = clisock[1];
+		if (logger_start(content_pcap_log) == -1)
+			return -1;
+	} else {
+		privsep_client_close(clisock[1]);
+	}
+	if (content_mirror_log) {
+		if (logger_start(content_mirror_log) == -1)
+			return -1;
 	}
 	if (cert_log) {
-		cert_clisock = clisock2;
+		cert_clisock = clisock[2];
 		if (logger_start(cert_log) == -1)
 			return -1;
 	} else {
-		privsep_client_close(clisock2);
+		privsep_client_close(clisock[2]);
 	}
 	return 0;
 }
@@ -1163,8 +1689,12 @@ log_fini(void)
 		logger_leave(cert_log);
 	if (masterkey_log)
 		logger_leave(masterkey_log);
-	if (content_log)
-		logger_leave(content_log);
+	if (content_mirror_log)
+		logger_leave(content_mirror_log);
+	if (content_pcap_log)
+		logger_leave(content_pcap_log);
+	if (content_file_log)
+		logger_leave(content_file_log);
 	if (connect_log)
 		logger_leave(connect_log);
 	if (err_log)
@@ -1174,8 +1704,12 @@ log_fini(void)
 		logger_join(cert_log);
 	if (masterkey_log)
 		logger_join(masterkey_log);
-	if (content_log)
-		logger_join(content_log);
+	if (content_mirror_log)
+		logger_join(content_mirror_log);
+	if (content_pcap_log)
+		logger_join(content_pcap_log);
+	if (content_file_log)
+		logger_join(content_file_log);
 	if (connect_log)
 		logger_join(connect_log);
 	if (err_log)
@@ -1185,8 +1719,12 @@ log_fini(void)
 		logger_free(cert_log);
 	if (masterkey_log)
 		logger_free(masterkey_log);
-	if (content_log)
-		logger_free(content_log);
+	if (content_mirror_log)
+		logger_free(content_mirror_log);
+	if (content_pcap_log)
+		logger_free(content_pcap_log);
+	if (content_file_log)
+		logger_free(content_file_log);
 	if (connect_log)
 		logger_free(connect_log);
 	if (err_log)
@@ -1194,15 +1732,21 @@ log_fini(void)
 
 	if (masterkey_log)
 		log_masterkey_fini();
-	if (content_log)
-		log_content_file_fini();
+	if (content_mirror_log)
+		log_content_mirror_fini();
+	if (content_pcap_log)
+		log_content_pcap_fini();
+	if (content_file_log)
+		log_content_file_single_fini();
 	if (connect_log)
 		log_connect_fini();
 
 	if (cert_clisock != -1)
 		privsep_client_close(cert_clisock);
-	if (content_clisock != -1)
-		privsep_client_close(content_clisock);
+	if (content_file_clisock != -1)
+		privsep_client_close(content_file_clisock);
+	if (content_pcap_clisock != -1)
+		privsep_client_close(content_pcap_clisock);
 }
 
 int
@@ -1213,8 +1757,11 @@ log_reopen(void)
 	if (masterkey_log)
 		if (logger_reopen(masterkey_log) == -1)
 			rv = -1;
-	if (content_log)
-		if (logger_reopen(content_log) == -1)
+	if (content_pcap_log)
+		if (logger_reopen(content_pcap_log) == -1)
+			rv = -1;
+	if (content_file_log)
+		if (logger_reopen(content_file_log) == -1)
 			rv = -1;
 	if (connect_log)
 		if (logger_reopen(connect_log) == -1)

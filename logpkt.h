@@ -26,45 +26,48 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LOGBUF_H
-#define LOGBUF_H
+#ifndef LOGPKT_H
+#define LOGPKT_H
 
 #include "attrib.h"
 
-#include <stdlib.h>
-#include <unistd.h>
+#include <stdint.h>
+#include <time.h>
 
-typedef struct logbuf {
-	unsigned char *buf;
-	ssize_t sz;
-	void *fh;
-	unsigned long ctl;
-	struct logbuf *next;
-} logbuf_t;
+#include <libnet.h>
 
-typedef ssize_t (*writefunc_t)(void *, int, const void *, size_t);
+typedef union {
+	uint32_t ip4;
+	struct libnet_in6_addr ip6;
+} logpkt_ip46addr_t;
 
-logbuf_t * logbuf_new(void *, size_t, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_alloc(size_t, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_copy(const void *, size_t, logbuf_t *) MALLOC;
-logbuf_t * logbuf_new_printf(logbuf_t *, const char *, ...) MALLOC PRINTF(2,3);
-logbuf_t * logbuf_new_deepcopy(logbuf_t *, int) MALLOC;
-logbuf_t * logbuf_make_contiguous(logbuf_t *) WUNRES;
-ssize_t logbuf_size(logbuf_t *) NONNULL(1) WUNRES;
-ssize_t logbuf_write_free(logbuf_t *, writefunc_t) NONNULL(1);
-void logbuf_free(logbuf_t *) NONNULL(1);
+typedef struct {
+	libnet_t *libnet;
+	uint8_t src_ether[ETHER_ADDR_LEN];
+	uint8_t dst_ether[ETHER_ADDR_LEN];
+	logpkt_ip46addr_t src_ip;
+	logpkt_ip46addr_t dst_ip;
+	int af;
+	uint16_t src_port;
+	uint16_t dst_port;
+	uint32_t src_seq;
+	uint32_t dst_seq;
+	uint32_t src_ack;
+	uint32_t dst_ack;
+} logpkt_ctx_t;
 
-#define logbuf_ctl_clear(x) (x)->ctl = 0
-#define logbuf_ctl_set(x, y) (x)->ctl |= (y)
-#define logbuf_ctl_unset(x, y) (x)->ctl &= ~(y)
-#define logbuf_ctl_isset(x, y) (!!((x)->ctl & (y)))
+#define LOGPKT_REQUEST  0
+#define LOGPKT_RESPONSE 1
 
-#define LBFLAG_REOPEN   (1 << 0)        /* logger */
-#define LBFLAG_OPEN     (1 << 1)        /* logger */
-#define LBFLAG_CLOSE    (1 << 2)        /* logger */
-#define LBFLAG_IS_REQ   (1 << 3)        /* pcap/mirror content log */
-#define LBFLAG_IS_RESP  (1 << 4)        /* pcap/mirror content log */
+int logpkt_pcap_open_fd(int fd) WUNRES;
+int logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
+                    const uint8_t *, const uint8_t *,
+                    const char *, const char *, const char *, const char *)
+    WUNRES;
+int logpkt_write_payload(logpkt_ctx_t *, int, int,
+                         const unsigned char *, size_t) WUNRES;
+int logpkt_write_close(logpkt_ctx_t *, int, int);
+int logpkt_ether_lookup(libnet_t *, uint8_t *, uint8_t *,
+                        const char *, const char *) WUNRES;
 
-#endif /* !LOGBUF_H */
-
-/* vim: set noet ft=c: */
+#endif /* !LOGPKT_H */

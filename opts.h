@@ -34,9 +34,6 @@
 #include "ssl.h"
 #include "attrib.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-
 typedef struct proxyspec {
 	unsigned int ssl : 1;
 	unsigned int http : 1;
@@ -79,6 +76,8 @@ typedef struct opts {
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlog_isdir : 1;
 	unsigned int contentlog_isspec : 1;
+	unsigned int pcaplog_isdir : 1;
+	unsigned int pcaplog_isspec : 1;
 #ifdef HAVE_LOCAL_PROCINFO
 	unsigned int lprocinfo : 1;
 #endif /* HAVE_LOCAL_PROCINFO */
@@ -96,8 +95,12 @@ typedef struct opts {
 	char *conffile;
 	char *connectlog;
 	char *contentlog;
-	char *contentlog_basedir; /* static part of logspec, for privsep srv */
+	char *contentlog_basedir; /* static part of logspec for privsep srv */
 	char *masterkeylog;
+	char *pcaplog;
+	char *pcaplog_basedir; /* static part of pcap logspec for privsep srv */
+	char *mirrorif;
+	char *mirrortarget;
 	CONST_SSL_METHOD *(*sslmethod)(void);
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	int sslversion;
@@ -173,6 +176,13 @@ void opts_set_contentlogpathspec(opts_t *, const char *, const char *)
 void opts_set_lprocinfo(opts_t *) NONNULL(1);
 #endif /* HAVE_LOCAL_PROCINFO */
 void opts_set_masterkeylog(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_pcaplog(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_pcaplogdir(opts_t *, const char *, const char *)
+     NONNULL(1,2,3);
+void opts_set_pcaplogpathspec(opts_t *, const char *, const char *)
+     NONNULL(1,2,3);
+void opts_set_mirrorif(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_mirrortarget(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_daemon(opts_t *) NONNULL(1);
 void opts_set_debug(opts_t *) NONNULL(1);
 int opts_set_option(opts_t *, const char *, const char *, char **)

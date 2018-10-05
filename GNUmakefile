@@ -7,6 +7,8 @@
 #
 # OPENSSL_BASE	Prefix of OpenSSL library and headers to build against
 # LIBEVENT_BASE	Prefix of libevent library and headers to build against
+# LIBPCAP_BASE	Prefix of libpcap library and headers to build against
+# LIBNET_BASE	Prefix of libnet library and headers to build against
 # CHECK_BASE	Prefix of check library and headers to build against (optional)
 # PKGCONFIG	Name/path of pkg-config program to use for auto-detection
 # PCFLAGS	Additional pkg-config flags
@@ -180,7 +182,10 @@ MANOWNERFLAGS?=
 endif
 
 OPENSSL?=	openssl
-PKGCONFIG?=	pkg-config
+PKGCONFIG?=	$(shell command -v pkg-config||echo false)
+ifeq ($(PKGCONFIG),false)
+$(warning pkg-config not found - guessing paths/flags for dependencies)
+endif
 
 BASENAME?=	basename
 CAT?=		cat
@@ -226,6 +231,9 @@ TOBJS+=		$(filter-out main.o,$(OBJS))
 
 include Mk/buildinfo.mk
 VERSION:=	$(BUILD_VERSION)
+ifdef GITDIR
+CFLAGS+=	$(DEBUG_CFLAGS)
+endif
 
 # Autodetect dependencies known to pkg-config
 PKGS:=		
@@ -241,26 +249,31 @@ PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_openssl \
 PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_pthreads \
 		&& echo libevent_pthreads)
 endif
+ifndef LIBPCAP_BASE
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libpcap \
+		&& echo libpcap)
+endif
 TPKGS:=		
 ifndef CHECK_BASE
 TPKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists check \
 		&& echo check)
 endif
 
+# Function: Generate list of base paths to search when locating packages
+# $1 packagename
+bases=		/usr/local/opt/$(1) \
+		/opt/local \
+		/usr/local \
+		/usr
+
+# Function: Locate base path for a package we depend on
+# $1 packagename, $2 pattern suffix, $3 override path(s)
+locate=		$(subst /$(2),,$(word 1,$(wildcard \
+		$(addsuffix /$(2),$(if $(3),$(3),$(call bases,$(1)))))))
+
 # Autodetect dependencies not known to pkg-config
 ifeq (,$(filter openssl,$(PKGS)))
-OPENSSL_PAT:=	include/openssl/ssl.h
-ifdef OPENSSL_BASE
-OPENSSL_FIND:=	$(wildcard $(OPENSSL_BASE)/$(OPENSSL_PAT))
-else
-OPENSSL_FIND:=	$(wildcard \
-		/usr/local/opt/openssl/$(OPENSSL_PAT) \
-		/opt/local/$(OPENSSL_PAT) \
-		/usr/local/$(OPENSSL_PAT) \
-		/usr/$(OPENSSL_PAT))
-endif
-OPENSSL_AVAIL:=	$(OPENSSL_FIND:/$(OPENSSL_PAT)=)
-OPENSSL_FOUND:=	$(word 1,$(OPENSSL_AVAIL))
+OPENSSL_FOUND:=	$(call locate,openssl,include/openssl/ssl.h,$(OPENSSL_BASE))
 OPENSSL:=	$(OPENSSL_FOUND)/bin/openssl
 ifndef OPENSSL_FOUND
 $(error dependency 'OpenSSL' not found; \
@@ -268,39 +281,37 @@ $(error dependency 'OpenSSL' not found; \
 endif
 endif
 ifeq (,$(filter libevent,$(PKGS)))
-LIBEVENT_PAT:=	include/event2/event.h
-ifdef LIBEVENT_BASE
-LIBEVENT_FIND:=	$(wildcard $(LIBEVENT_BASE)/$(LIBEVENT_PAT))
-else
-LIBEVENT_FIND:=	$(wildcard \
-		/usr/local/opt/libevent/$(LIBEVENT_PAT) \
-		/opt/local/$(LIBEVENT_PAT) \
-		/usr/local/$(LIBEVENT_PAT) \
-		/usr/$(LIBEVENT_PAT))
-endif
-LIBEVENT_AVAIL:=$(LIBEVENT_FIND:/$(LIBEVENT_PAT)=)
-LIBEVENT_FOUND:=$(word 1,$(LIBEVENT_AVAIL))
+LIBEVENT_FOUND:=$(call locate,libevent,include/event2/event.h,$(LIBEVENT_BASE))
 ifndef LIBEVENT_FOUND
 $(error dependency 'libevent 2.x' not found; \
 	install it or point LIBEVENT_BASE to base path)
 endif
 endif
-ifeq (,$(filter check,$(TPKGS)))
-CHECK_PAT:=	include/check.h
-ifdef CHECK_BASE
-CHECK_FIND:=	$(wildcard $(CHECK_BASE)/$(CHECK_PAT))
-else
-CHECK_FIND:=	$(wildcard \
-		/usr/local/opt/check/$(CHECK_PAT) \
-		/opt/local/$(CHECK_PAT) \
-		/usr/local/$(CHECK_PAT) \
-		/usr/$(CHECK_PAT))
+ifeq (,$(filter libpcap,$(PKGS)))
+LIBPCAP_FOUND:=	$(call locate,libpcap,include/pcap.h,$(LIBPCAP_BASE))
+ifndef LIBPCAP_FOUND
+$(error dependency 'libpcap' not found; \
+	install it or point LIBPCAP_BASE to base path)
 endif
-CHECK_AVAIL:=	$(CHECK_FIND:/$(CHECK_PAT)=)
-CHECK_FOUND:=	$(word 1,$(CHECK_AVAIL))
+endif
+ifeq (,$(filter check,$(TPKGS)))
+CHECK_FOUND:=	$(call locate,check,include/check.h,$(CHECK_BASE))
 ifndef CHECK_FOUND
 CHECK_MISSING:=	1
 endif
+endif
+
+# Always search filesystem for libnet because libnet-config is unreliable
+LIBNET_FOUND:=	$(call locate,libnet,include/libnet-1.1/libnet.h,$(LIBNET_BASE))
+ifdef LIBNET_FOUND
+LIBNET_FOUND_INC:=	$(LIBNET_FOUND)/include/libnet-1.1
+else
+LIBNET_FOUND:=	$(call locate,libnet,include/libnet.h,$(LIBNET_BASE))
+LIBNET_FOUND_INC:=	$(LIBNET_FOUND)/include
+endif
+ifndef LIBNET_FOUND
+$(error dependency 'libnet' not found; \
+	install it or point LIBNET_BASE to base path)
 endif
 
 ifdef OPENSSL_FOUND
@@ -318,6 +329,16 @@ PKG_LIBS+=	-levent_openssl
 endif
 ifeq (,$(filter libevent_pthreads,$(PKGS)))
 PKG_LIBS+=	-levent_pthreads
+endif
+ifdef LIBNET_FOUND
+PKG_CPPFLAGS+=	-I$(LIBNET_FOUND_INC)
+PKG_LDFLAGS+=	-L$(LIBNET_FOUND)/lib
+PKG_LIBS+=	-lnet
+endif
+ifdef LIBPCAP_FOUND
+PKG_CPPFLAGS+=	-I$(LIBPCAP_FOUND)/include
+PKG_LDFLAGS+=	-L$(LIBPCAP_FOUND)/lib
+PKG_LIBS+=	-lpcap
 endif
 ifdef CHECK_FOUND
 TPKG_CPPFLAGS+=	-I$(CHECK_FOUND)/include
@@ -357,17 +378,16 @@ TCPPFLAGS+=	$(TPKG_CPPFLAGS)
 LDFLAGS+=	$(PKG_LDFLAGS)
 LIBS+=		$(PKG_LIBS)
 
-ifeq ($(shell uname),Darwin)
-LDFLAGS+=	-Xlinker -fatal_warnings
-else
-LDFLAGS+=	-Xlinker --fatal-warnings
+ifneq ($(shell uname),Darwin)
 CFLAGS+=	-pthread
 LDFLAGS+=	-pthread
 endif
 
 # _FORTIFY_SOURCE requires -O on Linux
+ifeq ($(shell uname),Linux)
 ifeq (,$(findstring -O,$(CFLAGS)))
 CFLAGS+=	-O
+endif
 endif
 
 export VERSION
@@ -392,6 +412,12 @@ $(info OPENSSL_BASE:   $(strip $(OPENSSL_FOUND)))
 endif
 ifdef LIBEVENT_FOUND
 $(info LIBEVENT_BASE:  $(strip $(LIBEVENT_FOUND)))
+endif
+ifdef LIBPCAP_FOUND
+$(info LIBPCAP_BASE:   $(strip $(LIBPCAP_FOUND)))
+endif
+ifdef LIBNET_FOUND
+$(info LIBNET_BASE:    $(strip $(LIBNET_FOUND)))
 endif
 ifdef CHECK_FOUND
 $(info CHECK_BASE:     $(strip $(CHECK_FOUND)))
