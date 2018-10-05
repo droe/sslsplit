@@ -515,19 +515,19 @@ logpkt_ether_lookup(libnet_t *libnet,
 	if (ctx.ip == (uint32_t)-1) {
 		log_err_printf("Error converting dst IP address: %s\n",
 		               libnet_geterror(libnet));
-		goto out2;
+		goto out;
 	}
 	src_ip = libnet_get_ipaddr4(libnet);
 	if (src_ip == (uint32_t)-1) {
 		log_err_printf("Error getting src IP address: %s\n",
 		               libnet_geterror(libnet));
-		goto out2;
+		goto out;
 	}
 	src_ether_addr = libnet_get_hwaddr(libnet);
 	if (src_ether_addr == NULL) {
 		log_err_printf("Error getting src ethernet address: %s\n",
 		               libnet_geterror(libnet));
-		goto out2;
+		goto out;
 	}
 	memcpy(src_ether, src_ether_addr->ether_addr_octet, ETHER_ADDR_LEN);
 
@@ -539,7 +539,7 @@ logpkt_ether_lookup(libnet_t *libnet,
 	                         libnet) == -1) {
 		log_err_printf("Error building arp header: %s\n",
 		               libnet_geterror(libnet));
-		goto out2;
+		goto out;
 	}
 
 	if (libnet_autobuild_ethernet(broadcast_ether,
@@ -547,24 +547,24 @@ logpkt_ether_lookup(libnet_t *libnet,
 	                              libnet) == -1) {
 		log_err_printf("Error building ethernet header: %s",
 		               libnet_geterror(libnet));
-		goto out2;
+		goto out;
 	}
 
 	pcap_t *pcap = pcap_open_live(dst_if_s, 100, 0, 10, errbuf);
 	if (pcap == NULL) {
 		log_err_printf("Error in pcap_open_live(): %s\n", errbuf);
-		goto out2;
+		goto out;
 	}
 
 	if (pcap_compile(pcap, &bp, "arp", 0, -1) == -1) {
 		log_err_printf("Error in pcap_compile(): %s\n",
 		               pcap_geterr(pcap));
-		goto out3;
+		goto out2;
 	}
 	if (pcap_setfilter(pcap, &bp) == -1) {
 		log_err_printf("Error in pcap_setfilter(): %s\n",
 		               pcap_geterr(pcap));
-		goto out4;
+		goto out3;
 	}
 
 	do {
@@ -594,11 +594,11 @@ logpkt_ether_lookup(libnet_t *libnet,
 		               dst_ether[3], dst_ether[4], dst_ether[5]);
 	}
 
-out4:
-	pcap_freecode(&bp);
 out3:
-	pcap_close(pcap);
+	pcap_freecode(&bp);
 out2:
+	pcap_close(pcap);
+out:
 	libnet_clear_packet(libnet);
 	return ctx.result;
 }
