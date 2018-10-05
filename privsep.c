@@ -73,6 +73,15 @@
 #define PRIVSEP_ANS_DENIED	3	/* request denied */
 #define PRIVSEP_ANS_SYS_ERR	4	/* system error; arg=errno */
 
+/* Whether we short-circuit calls to privsep_client_* directly to
+ * privsep_server_* within the client process, bypassing the privilege
+ * separation mechanism; this is a performance optimization for use cases
+ * where the user choses performance over security, especially with options
+ * that require privsep operations for each connection passing through.
+ * In the current implementation, for consistency, we still fork normally, but
+ * will not actually send any privsep requests to the parent process. */
+static int privsep_fastpath;
+
 /* communication with signal handler */
 static volatile sig_atomic_t received_sighup;
 static volatile sig_atomic_t received_sigint;
@@ -88,11 +97,12 @@ privsep_server_signal_handler(int sig)
 {
 	int saved_errno;
 
+	saved_errno = errno;
+
 #ifdef DEBUG_PRIVSEP_SERVER
 	log_dbg_printf("privsep_server_signal_handler\n");
 #endif /* DEBUG_PRIVSEP_SERVER */
 
-	saved_errno = errno;
 	switch (sig) {
 	case SIGHUP:
 		received_sighup = 1;
@@ -136,7 +146,7 @@ privsep_server_signal_handler(int sig)
 }
 
 static int WUNRES
-privsep_server_openfile_verify(opts_t *opts, char *fn, int mkpath)
+privsep_server_openfile_verify(opts_t *opts, const char *fn, int mkpath)
 {
 	if (mkpath && !(opts->contentlog_isspec || opts->pcaplog_isspec))
 		return -1;
@@ -153,7 +163,7 @@ privsep_server_openfile_verify(opts_t *opts, char *fn, int mkpath)
 }
 
 static int WUNRES
-privsep_server_openfile(char *fn, int mkpath)
+privsep_server_openfile(const char *fn, int mkpath)
 {
 	int fd, tmp;
 
@@ -217,7 +227,7 @@ privsep_server_opensock_verify(opts_t *opts, void *arg)
 }
 
 static int WUNRES
-privsep_server_opensock(proxyspec_t *spec)
+privsep_server_opensock(const proxyspec_t *spec)
 {
 	evutil_socket_t fd;
 	int on = 1;
@@ -273,7 +283,7 @@ privsep_server_opensock(proxyspec_t *spec)
 }
 
 static int WUNRES
-privsep_server_certfile_verify(opts_t *opts, char *fn)
+privsep_server_certfile_verify(opts_t *opts, const char *fn)
 {
 	if (!opts->certgendir)
 		return -1;
@@ -283,7 +293,7 @@ privsep_server_certfile_verify(opts_t *opts, char *fn)
 }
 
 static int WUNRES
-privsep_server_certfile(char *fn)
+privsep_server_certfile(const char *fn)
 {
 	int fd;
 
@@ -677,6 +687,9 @@ privsep_client_openfile(int clisock, const char *fn, int mkpath)
 	int fd = -1;
 	ssize_t n;
 
+	if (privsep_fastpath)
+		return privsep_server_openfile(fn, mkpath);
+
 	req[0] = mkpath ? PRIVSEP_REQ_OPENFILE_P : PRIVSEP_REQ_OPENFILE;
 	memcpy(req + 1, fn, sizeof(req) - 1);
 
@@ -724,6 +737,9 @@ privsep_client_opensock(int clisock, const proxyspec_t *spec)
 	int fd = -1;
 	ssize_t n;
 
+	if (privsep_fastpath)
+		return privsep_server_opensock(spec);
+
 	req[0] = PRIVSEP_REQ_OPENSOCK;
 	*((const proxyspec_t **)&req[1]) = spec;
 
@@ -770,6 +786,9 @@ privsep_client_certfile(int clisock, const char *fn)
 	char req[1 + strlen(fn)];
 	int fd = -1;
 	ssize_t n;
+
+	if (privsep_fastpath)
+		return privsep_server_certfile(fn);
 
 	req[0] = PRIVSEP_REQ_CERTFILE;
 	memcpy(req + 1, fn, sizeof(req) - 1);
@@ -840,6 +859,14 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 	int chldpipev[2]; /* el cheapo interprocess sync early after fork */
 	int sockcliv[nclisock][2];
 	pid_t pid;
+
+	if (!opts->dropuser) {
+		log_dbg_printf("Not dropping privileges: "
+		               "privsep fastpath enabled\n");
+		privsep_fastpath = 1;
+	} else {
+		privsep_fastpath = 0;
+	}
 
 	received_sigquit = 0;
 	received_sighup = 0;

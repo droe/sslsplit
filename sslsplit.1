@@ -336,14 +336,17 @@ Mirror connection content as emulated packets to destination address \fIaddr\fP
 on the interface given by \fB-I\fP.  Only IPv4 target addresses are currently
 supported.
 .TP
-.B \-u
+.B \-u \fIuser\fP
 Drop privileges after opening sockets and files by setting the real,
 effective and stored user IDs to \fIuser\fP and loading the appropriate
 primary and ancillary groups.  If \fB-u\fP is not given, SSLsplit will drop
 privileges to the stored UID if EUID != UID (setuid bit scenario), or to
 \fBnobody\fP if running with full \fBroot\fP privileges (EUID == UID == 0).
-The user needs to be allowed to make outbound TCP connections, and in some
-configurations, also to perform DNS resolution.
+User \fIuser\fP needs to be allowed to make outbound TCP connections, and in
+some configurations, to also perform DNS resolution.
+Dropping privileges enables privilege separation, which incurs latency for
+certain options, such as separate per-connection log files.  By using
+\fB-u root\fP, SSLsplit can be run as root without dropping privileges.
 Due to an Apple bug, \fB-u\fP cannot be used with \fBpf\fP proxyspecs on
 Mac OS X.
 .TP
@@ -771,6 +774,18 @@ DNS lookups are performed asynchronously.
 SSLsplit uses SSL session caching on both ends to minimize the amount of full
 SSL handshakes, but even then, the limiting factor in handling SSL connections
 are the actual bignum computations.
+.LP
+For high performance and low latency and when running SSLsplit as root or
+otherwise in a privilege separation mode, avoid using options which require a
+privileged operation to be invoked through privilege separation for each
+connection.  These are currently all per-connection log types:
+content log to per-stream file in dir or filespec (\fB-F\fP, \fB-S\fP),
+content log to per-stream PCAP in dir or filespec (\fB-Y\fP, \fB-y\fP), and
+generated or all certificates to files in directory (\fB-w\fP, \fB-W\fP).
+Instead, use the respective single-file variants where available.
+It is possible, albeit not recommended, to bypass the default privilege
+separation when run as root by using \fB-u root\fP, thereby bypassing
+privilege separation entirely.
 .SH "SEE ALSO"
 sslsplit.conf(5), openssl(1), ciphers(1), speed(1),
 pf(4), ipfw(8), iptables(8), ip6tables(8), ip(8),

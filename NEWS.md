@@ -8,6 +8,9 @@ This release contains work sponsored by HackerOne.
     IP and Ethernet headers and write the result to PCAP files or send it to
     a packet capture host on the local network segment (issue #215, based on
     pull req #149).
+-   Bypass privilege separation overhead for when privileges are not actually
+    dropped; this allows the use of `-u root` to actively prevent privilege
+    separation and remove the associated communication overhead (issue #222).
 -   Suppress Expect-CT header in order to avoid Certificate Transparency log
     lookup failures (issue #205).
 -   Add -x option for activating an OpenSSL engine (issue #204, pull req #206).

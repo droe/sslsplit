@@ -592,11 +592,55 @@ main(int argc, char *argv[])
 		}
 #endif /* __APPLE__ */
 	}
+	if (!geteuid() && !getuid() &&
+	    opts->dropuser && !strcmp(opts->dropuser, "root")) {
+		free(opts->dropuser);
+		opts->dropuser = NULL;
+	}
 
 	/* usage checks after defaults */
 	if (opts->dropgroup && !opts->dropuser) {
 		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
 		exit(EXIT_FAILURE);
+	}
+
+	/* Warn about options that require per-connection privileged operations
+	 * to be executed through privsep, but only if dropuser is set and is
+	 * not root, because privsep will fastpath in that situation, skipping
+	 * the latency-incurring overhead. */
+	int privsep_warn = 0;
+	if (opts->dropuser) {
+		if (opts->contentlog_isdir) {
+			log_dbg_printf("| Warning: -F requires a privileged "
+			               "operation for each connection!\n");
+			privsep_warn = 1;
+		}
+		if (opts->contentlog_isspec) {
+			log_dbg_printf("| Warning: -S requires a privileged "
+			               "operation for each connection!\n");
+			privsep_warn = 1;
+		}
+		if (opts->pcaplog_isdir) {
+			log_dbg_printf("| Warning: -Y requires a privileged "
+			               "operation for each connection!\n");
+			privsep_warn = 1;
+		}
+		if (opts->pcaplog_isspec) {
+			log_dbg_printf("| Warning: -y requires a privileged "
+			               "operation for each connection!\n");
+			privsep_warn = 1;
+		}
+		if (opts->certgendir) {
+			log_dbg_printf("| Warning: -w/-W require a privileged "
+			               "op for each connection!\n");
+			privsep_warn = 1;
+		}
+	}
+	if (privsep_warn) {
+		log_dbg_printf("| Privileged operations require communication "
+		               "between parent and child process\n"
+		               "| and will negatively impact latency and "
+		               "performance on each connection.\n");
 	}
 
 	/* debug log, part 1 */
