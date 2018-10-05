@@ -219,6 +219,8 @@ privsep_server_openfile(const char *fn, int mkpath)
 static int WUNRES
 privsep_server_opensock_verify(opts_t *opts, void *arg)
 {
+	/* This check is safe, because modifications of the spec in the child
+	 * process do not affect the copy of the spec here in the parent. */
 	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 		if (spec == arg)
 			return 0;
