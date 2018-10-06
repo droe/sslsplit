@@ -47,7 +47,9 @@
 #include <errno.h>
 #include <libgen.h>
 #include <fcntl.h>
-
+#ifdef __linux__
+#include <limits.h>
+#endif /* __linux__ */
 
 /*
  * Privilege separation functionality.
