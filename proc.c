@@ -475,17 +475,17 @@ int
 proc_linux_pid_for_addr(pid_t *result, struct sockaddr *src_addr,
                         UNUSED socklen_t src_addrlen)
 {
-	if (src_addr->sa_family == AF_INET) {
-		struct sockaddr_in *src_sai = (struct sockaddr_in *)src_addr;
-		if (pthread_mutex_lock(&proc_clisock_mutex) == 0) {
-			*result = privsep_client_get_pid(proc_clisock, src_sai->sin_addr.s_addr, src_sai->sin_port);
-			pthread_mutex_unlock(&proc_clisock_mutex);
-			return 0;
-		} else {
-			return -1;
-		}
+	if (src_addr->sa_family != AF_INET)
+		return -1;
+
+	if (pthread_mutex_lock(&proc_clisock_mutex) == 0) {
+		*result = privsep_client_linux_get_pid(proc_clisock, src_addr);
+		pthread_mutex_unlock(&proc_clisock_mutex);
+		return 0;
+	} else {
+		return -1;
 	}
-	/* TODO IPv6 */
+
 	return -1;
 }
 
@@ -493,7 +493,7 @@ int
 proc_linux_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid)
 {
 	if (pthread_mutex_lock(&proc_clisock_mutex) == 0) {
-		*path = privsep_client_get_info(proc_clisock, pid, uid, gid);
+		*path = privsep_client_linux_get_info(proc_clisock, pid, uid, gid);
 		pthread_mutex_unlock(&proc_clisock_mutex);
 	} else {
 		*path = NULL;

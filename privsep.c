@@ -73,8 +73,8 @@
 #define PRIVSEP_REQ_OPENSOCK	3	/* open socket and pass fd */
 #define PRIVSEP_REQ_CERTFILE	4	/* open cert file in certgendir */
 #ifdef __linux__
-#define PRIVSEP_REQ_GETPID	5	/* find pid for address */
-#define PRIVSEP_REQ_GETINFO	6	/* get info for pid */
+#define PRIVSEP_REQ_LX_GET_PID	5	/* find pid for address */
+#define PRIVSEP_REQ_LX_GET_INFO	6	/* get info for pid */
 #endif /* __linux__ */
 
 /* response byte */
@@ -345,7 +345,8 @@ hextoi(int c)
 	return c - 48;
 }
 
-pid_t find_pid(ino_t inode)
+static pid_t
+find_pid(ino_t inode)
 {
 	DIR *d = opendir("/proc"), *dfd;
 	struct dirent entry, *res;
@@ -389,9 +390,17 @@ pid_t find_pid(ino_t inode)
 	return -1;
 }
 
+/*
+ * This currently only supports IPv4 sockaddrs.
+ */
 static pid_t WUNRES
-privsep_server_get_pid(uint32_t src_addr, in_port_t src_port)
+privsep_server_linux_get_pid(struct sockaddr *addr)
 {
+	if (addr->sa_family != AF_INET)
+		return -1;
+
+	struct sockaddr_in *sai = (struct sockaddr_in *)addr;
+
 	int fd = open("/proc/net/tcp", O_RDONLY);
 	if (fd != -1) {
 		char bufc[4096], inode[64];
@@ -449,7 +458,7 @@ privsep_server_get_pid(uint32_t src_addr, in_port_t src_port)
 						break;
 					} else if (state == ST_LOCAL_PORT) {
 						if (c == ' ') {
-							if (s_addr == src_addr && htons(sin_port) == src_port) {
+							if (s_addr == sai->sin_addr.s_addr && htons(sin_port) == sai->sin_port) {
 								/* find inode */
 								buf += 72;
 								for (c = *buf, i = 0; c != 0; i++, buf++, c = *buf) {
@@ -486,16 +495,16 @@ privsep_server_get_pid(uint32_t src_addr, in_port_t src_port)
 }
 
 static size_t WUNRES
-privsep_server_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
+privsep_server_linux_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 	struct stat sbuf;
-	char dn[1024], exe[PATH_MAX + 1];
+	char dn[32], exe[PATH_MAX + 1];
 	ssize_t n;
 
-	snprintf(dn, sizeof(dn), "/proc/%ld", (long)pid);
+	snprintf(dn, sizeof(dn), "/proc/%lu", (unsigned long)pid);
 	if (stat(dn, &sbuf) == 0) {
 		*uid = sbuf.st_uid;
 		*gid = sbuf.st_gid;
-		snprintf(dn, sizeof(dn), "/proc/%ld/exe", (long)pid);
+		snprintf(dn, sizeof(dn), "/proc/%lu/exe", (unsigned long)pid);
 		n = readlink(dn, exe, sizeof(exe));
 		if (n != -1) {
 			exe[n < PATH_MAX ? n : PATH_MAX] = 0;
@@ -503,7 +512,7 @@ privsep_server_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 			return n < PATH_MAX ? n : PATH_MAX;
 		}
 	}
-	return -1;
+	return 0;
 }
 #endif /* __linux__ */
 
@@ -540,44 +549,6 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 		/* client indicates EOF through close message */
 		return 1;
 	}
-#ifdef __linux__
-	case PRIVSEP_REQ_GETPID: {
-		ans[0] = PRIVSEP_ANS_SUCCESS;
-		*(pid_t *)(&ans[1]) = privsep_server_get_pid(*(uint32_t *)(&req[1]),
-		                                             *(in_port_t *)(&req[1 + sizeof(uint32_t)]));
-		if (sys_sendmsgfd(srvsock, ans, 1 + sizeof(pid_t), -1) == -1) {
-			log_err_printf("Sending message failed: %s (%i)\n",
-			               strerror(errno), errno);
-			return -1;
-		}
-		return 0;
-	}
-	case PRIVSEP_REQ_GETINFO: {
-		char *path;
-		uid_t uid;
-		gid_t gid;
-		size_t anssz = 1, plen;
-
-		ans[0] = PRIVSEP_ANS_SUCCESS;
-		if ((plen = privsep_server_get_info(*(pid_t *)(&req[1]), &path, &uid, &gid)) != 0) {
-			anssz = 1 + sizeof(size_t) + plen + sizeof(uid_t) + sizeof(gid_t);
-			*(size_t *)(&ans[1]) = plen;
-			memcpy((void *)(ans + 1 + sizeof(size_t)), (void *)path, plen);
-			free(path);
-			*(uid_t *)(&ans[1 + sizeof(size_t) + plen]) = uid;
-			*(gid_t *)(&ans[1 + sizeof(size_t) + plen] + sizeof(gid_t)) = gid;
-		} else {
-			*(size_t *)(&ans[1]) = 0;
-			anssz = 1 + sizeof(size_t);
-		}
-		if (sys_sendmsgfd(srvsock, ans, anssz, -1) == -1) {
-			log_err_printf("Sending message failed: %s (%i)\n",
-			               strerror(errno), errno);
-			return -1;
-		}
-		return 0;
-	}
-#endif /* __linux__ */
 	case PRIVSEP_REQ_OPENFILE_P:
 		mkpath = 1;
 		/* fall through */
@@ -750,6 +721,46 @@ privsep_server_handle_req(opts_t *opts, int srvsock)
 		/* not reached */
 		break;
 	}
+#ifdef __linux__
+	case PRIVSEP_REQ_LX_GET_PID: {
+		ans[0] = PRIVSEP_ANS_SUCCESS;
+		*(pid_t *)(&ans[1]) = privsep_server_linux_get_pid(
+		                (struct sockaddr *)(&req[1]));
+		if (sys_sendmsgfd(srvsock, ans, 1 + sizeof(pid_t), -1) == -1) {
+			log_err_printf("Sending message failed: %s (%i)\n",
+			               strerror(errno), errno);
+			return -1;
+		}
+		return 0;
+	}
+	case PRIVSEP_REQ_LX_GET_INFO: {
+		char *path;
+		uid_t uid;
+		gid_t gid;
+		size_t anssz = 1, plen;
+
+		ans[0] = PRIVSEP_ANS_SUCCESS;
+		if ((plen = privsep_server_linux_get_info(
+		                *(pid_t *)(&req[1]),
+		                &path, &uid, &gid)) != 0) {
+			anssz = 1 + sizeof(size_t) + plen + sizeof(uid_t) + sizeof(gid_t);
+			*(size_t *)(&ans[1]) = plen;
+			memcpy((void *)(ans + 1 + sizeof(size_t)), (void *)path, plen);
+			free(path);
+			*(uid_t *)(&ans[1 + sizeof(size_t) + plen]) = uid;
+			*(gid_t *)(&ans[1 + sizeof(size_t) + plen] + sizeof(gid_t)) = gid;
+		} else {
+			*(size_t *)(&ans[1]) = 0;
+			anssz = 1 + sizeof(size_t);
+		}
+		if (sys_sendmsgfd(srvsock, ans, anssz, -1) == -1) {
+			log_err_printf("Sending message failed: %s (%i)\n",
+			               strerror(errno), errno);
+			return -1;
+		}
+		return 0;
+	}
+#endif /* __linux__ */
 	default:
 		ans[0] = PRIVSEP_ANS_UNK_CMD;
 		if (sys_sendmsgfd(srvsock, ans, 1, -1) == -1) {
@@ -1086,16 +1097,21 @@ privsep_client_close(int clisock)
 
 #ifdef __linux__
 pid_t
-privsep_client_get_pid(int clisock, uint32_t src_addr, in_port_t src_port)
+privsep_client_linux_get_pid(int clisock, struct sockaddr *addr)
 {
-	char req[sizeof(uint32_t) + sizeof(in_port_t) + 1];
+	char req[sizeof(struct sockaddr_storage) + 1];
 	char ans[PRIVSEP_MAX_ANS_SIZE];
 	ssize_t n;
 	int fd = -1;
 
-	req[0] = PRIVSEP_REQ_GETPID;
-	*(uint32_t *)(&req[1]) = src_addr;
-	*(in_port_t *)(&req[1 + sizeof(uint32_t)]) = src_port;
+	req[0] = PRIVSEP_REQ_LX_GET_PID;
+	if (addr->sa_family == AF_INET)
+		memcpy(&req[1], addr, sizeof(struct sockaddr_in));
+	else if (addr->sa_family == AF_INET6)
+		memcpy(&req[1], addr, sizeof(struct sockaddr_in6));
+	else
+		return -1;
+
 	if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
 		return -1;
 	}
@@ -1133,7 +1149,7 @@ privsep_client_get_pid(int clisock, uint32_t src_addr, in_port_t src_port)
 }
 
 char *
-privsep_client_get_info(int clisock, pid_t pid, uid_t *uid, gid_t *gid)
+privsep_client_linux_get_info(int clisock, pid_t pid, uid_t *uid, gid_t *gid)
 {
 	char req[sizeof(pid_t) + 1];
 	char ans[PRIVSEP_MAX_ANS_SIZE];
@@ -1142,7 +1158,7 @@ privsep_client_get_info(int clisock, pid_t pid, uid_t *uid, gid_t *gid)
 	ssize_t n;
 	int fd = -1;
 
-	req[0] = PRIVSEP_REQ_GETINFO;
+	req[0] = PRIVSEP_REQ_LX_GET_INFO;
 	*(pid_t *)(&req[1]) = pid;
 	if (sys_sendmsgfd(clisock, req, sizeof(req), -1) == -1) {
 		return NULL;
