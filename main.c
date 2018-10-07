@@ -481,7 +481,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	proxyspec_parse(&argc, &argv, natengine, &opts->spec);
-	
+
 	/* usage checks before defaults */
 	if (opts->detach && OPTS_DEBUG(opts)) {
 		fprintf(stderr, "%s: -d and -D are mutually exclusive.\n",

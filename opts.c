@@ -257,7 +257,8 @@ opts_proto_dbg_dump(opts_t *opts)
  * Parse proxyspecs using a simple state machine.
  */
 void
-proxyspec_parse(int *argc, char **argv[], const char *natengine, proxyspec_t **opts_spec)
+proxyspec_parse(int *argc, char **argv[], const char *natengine,
+                proxyspec_t **opts_spec)
 {
 	proxyspec_t *spec = NULL;
 	char *addr = NULL;

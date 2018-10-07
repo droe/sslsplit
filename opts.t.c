@@ -82,7 +82,11 @@ static char *argv14[] = {
 	"autossl", "127.0.0.1", "10025", "127.0.0.2", "25"
 };
 
+#ifdef __linux__
+#define NATENGINE "netfilter"
+#else
 #define NATENGINE "pf"
+#endif
 
 START_TEST(proxyspec_parse_01)
 {
