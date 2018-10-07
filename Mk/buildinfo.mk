@@ -3,6 +3,7 @@
 # in: BUILD_INFO (optional)
 # in: OPENSSL (optional)
 # in: OPENSSL_FOUND (optional)
+# in: SOURCE_DATE_EPOCH (optional)
 
 ifndef PKGNAME
 $(error PKGNAME not defined)

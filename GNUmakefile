@@ -30,6 +30,7 @@
 # CPPFLAGS	Additional pre-processor flags
 # LDFLAGS	Additional linker flags
 # LIBS		Additional libraries to link against
+# SOURCE_DATE_EPOCH	Set to epoch time to make the build reproducible
 #
 # On macOS, the following build environment variables are respected:
 #
