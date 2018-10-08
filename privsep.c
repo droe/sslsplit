@@ -1104,6 +1104,9 @@ privsep_client_linux_get_pid(int clisock, struct sockaddr *addr)
 	ssize_t n;
 	int fd = -1;
 
+	if (privsep_fastpath)
+		return privsep_server_linux_get_pid(addr);
+
 	req[0] = PRIVSEP_REQ_LX_GET_PID;
 	if (addr->sa_family == AF_INET)
 		memcpy(&req[1], addr, sizeof(struct sockaddr_in));
@@ -1157,6 +1160,11 @@ privsep_client_linux_get_info(int clisock, pid_t pid, uid_t *uid, gid_t *gid)
 	char *exe;
 	ssize_t n;
 	int fd = -1;
+
+	if (privsep_fastpath) {
+		plen = privsep_server_linux_get_info(pid, &exe, uid, gid);
+		return exe;
+	}
 
 	req[0] = PRIVSEP_REQ_LX_GET_INFO;
 	*(pid_t *)(&req[1]) = pid;
