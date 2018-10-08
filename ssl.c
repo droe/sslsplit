@@ -484,7 +484,8 @@ ssl_fini(void)
 	ERR_remove_state(0); /* current thread */
 #endif
 
-#if defined(OPENSSL_THREADS) && ((OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER))
+#if defined(OPENSSL_THREADS) && \
+    ((OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER))
 	CRYPTO_set_locking_callback(NULL);
 	CRYPTO_set_dynlock_create_callback(NULL);
 	CRYPTO_set_dynlock_lock_callback(NULL);
@@ -500,7 +501,8 @@ ssl_fini(void)
 	free(ssl_mutex);
 #endif
 
-#if !defined(OPENSSL_NO_ENGINE) && ((OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER))
+#if !defined(OPENSSL_NO_ENGINE) && \
+    ((OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER))
 	ENGINE_cleanup();
 #endif /* !OPENSSL_NO_ENGINE && OPENSSL_VERSION_NUMBER < 0x10100000L */
 	CONF_modules_finish();
@@ -510,6 +512,8 @@ ssl_fini(void)
 	EVP_cleanup();
 	ERR_free_strings();
 	CRYPTO_cleanup_all_ex_data();
+
+	ssl_initialized = 0;
 }
 
 /*
