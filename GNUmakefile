@@ -208,6 +208,7 @@ CPPCHECK?=	cppcheck
 GPG?=		gpg
 GIT?=		git
 WGET?=		wget
+DOCKER?=	docker
 
 BZIP2?=		bzip2
 COL?=		col
@@ -553,8 +554,14 @@ realclean: distclean manclean clean
 	$(MAKE) -C extra/pki clean
 endif
 
+docker:
+	$(DOCKER) build -f docker/sslsplit/Dockerfile --target builder -t sslsplit-builder:$(VERSION) .
+	$(DOCKER) build -f docker/sslsplit/Dockerfile --target production -t sslsplit:$(VERSION) .
+	$(DOCKER) run sslsplit:$(VERSION)
+
 FORCE:
 
 .PHONY: all config clean test travis lint install deinstall copyright manlint \
-        mantest man manclean fetchdeps dist disttest distclean realclean
+        mantest man manclean fetchdeps dist disttest distclean realclean \
+        docker
 

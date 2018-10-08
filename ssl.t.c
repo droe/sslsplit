@@ -881,7 +881,7 @@ ssl_suite(void)
 	tcase_add_test(tc, ssl_engine_01);
 	suite_add_tcase(s, tc);
 #else /* OPENSSL_NO_ENGINE */
-	fprintf(stderr, "1 test omitted because OpenSSL has no "
+	fprintf(stderr, "ssl: 1 test omitted because OpenSSL has no "
 	                "engine support\n");
 #endif /* OPENSSL_NO_ENGINE */
 
