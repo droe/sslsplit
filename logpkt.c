@@ -497,8 +497,7 @@ logpkt_ether_lookup(libnet_t *libnet,
                     uint8_t *src_ether, uint8_t *dst_ether,
                     const char *dst_ip_s, const char *dst_if_s)
 {
-	char errbuf[LIBNET_ERRBUF_SIZE > PCAP_ERRBUF_SIZE ?
-	            LIBNET_ERRBUF_SIZE : PCAP_ERRBUF_SIZE];
+	char errbuf[PCAP_ERRBUF_SIZE];
 	uint8_t broadcast_ether[ETHER_ADDR_LEN] = {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 	uint8_t zero_ether[ETHER_ADDR_LEN] = {
