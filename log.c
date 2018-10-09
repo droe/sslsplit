@@ -1131,7 +1131,7 @@ log_content_pcap_preinit(const char *pcapfile)
 {
 	char errbuf[LIBNET_ERRBUF_SIZE];
 
-	content_pcap_libnet = libnet_init(LIBNET_LINK, NULL, errbuf);
+	content_pcap_libnet = libnet_init(LIBNET_NONE, NULL, errbuf);
 	if (content_pcap_libnet == NULL) {
 		log_err_printf("Failed to init pcap libnet: %s\n", errbuf);
 		return -1;
