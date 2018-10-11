@@ -182,7 +182,7 @@ logpkt_write_global_pcap_hdr(int fd)
 	hdr.magic_number = PCAP_MAGIC;
 	hdr.version_major = 2;
 	hdr.version_minor = 4;
-	hdr.snaplen = MTU;
+	hdr.snaplen = MTU + sizeof(ether_hdr_t);
 	hdr.network = 1;
 	return write(fd, &hdr, sizeof(hdr)) != sizeof(hdr) ? -1 : 0;
 }
