@@ -511,6 +511,9 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			return -1;
 		}
 	} else {
+		/* Source and destination ether are determined by the actual
+		 * local MAC address and target MAC address for mirroring the
+		 * packets to; use them as-is for both directions. */
 		if (direction == LOGPKT_REQUEST) {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
