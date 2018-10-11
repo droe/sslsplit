@@ -286,9 +286,7 @@ logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
 	ctx->dst_port = atoi(dst_port);
 
 	ctx->src_seq = 0;
-	ctx->src_ack = 0;
 	ctx->dst_seq = 0;
-	ctx->dst_ack = 0;
 	return 0;
 out:
 	return -1;
@@ -495,7 +493,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			                       &ctx->src_ip, &ctx->dst_ip,
 			                       ctx->src_port, ctx->dst_port,
 			                       flags,
-			                       ctx->src_seq, ctx->src_ack,
+			                       ctx->src_seq, ctx->dst_seq,
 			                       payload, payloadlen);
 		} else {
 			sz = logpkt_pcap_build(buf,
@@ -504,7 +502,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			                       &ctx->dst_ip, &ctx->src_ip,
 			                       ctx->dst_port, ctx->src_port,
 			                       flags,
-			                       ctx->dst_seq, ctx->dst_ack,
+			                       ctx->dst_seq, ctx->src_seq,
 			                       payload, payloadlen);
 		}
 		rv = logpkt_pcap_write(buf, sz, fd);
@@ -520,7 +518,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			                         &ctx->src_ip, &ctx->dst_ip,
 			                         ctx->src_port, ctx->dst_port,
 			                         flags,
-			                         ctx->src_seq, ctx->src_ack,
+			                         ctx->src_seq, ctx->dst_seq,
 			                         payload, payloadlen);
 		} else {
 			rv = logpkt_mirror_build(ctx->libnet,
@@ -529,7 +527,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			                         &ctx->dst_ip, &ctx->src_ip,
 			                         ctx->dst_port, ctx->src_port,
 			                         flags,
-			                         ctx->dst_seq, ctx->dst_ack,
+			                         ctx->dst_seq, ctx->src_seq,
 			                         payload, payloadlen);
 		}
 		if (rv == -1) {
@@ -558,17 +556,15 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 		if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
 		                        TH_SYN, NULL, 0) == -1)
 			return -1;
-		ctx->dst_ack = ctx->src_seq + 1;
+		ctx->src_seq += 1;
 		ctx->dst_seq = libnet_get_prand(LIBNET_PRu32);
 		if (logpkt_write_packet(ctx, fd, LOGPKT_RESPONSE,
 		                        TH_SYN|TH_ACK, NULL, 0) == -1)
 			return -1;
-		ctx->src_ack = ctx->dst_seq + 1;
-		ctx->src_seq += 1;
+		ctx->dst_seq += 1;
 		if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
 		                        TH_ACK, NULL, 0) == -1)
 			return -1;
-		ctx->dst_seq += 1;
 	}
 
 	while (payloadlen > 0) {
@@ -581,10 +577,8 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 		}
 		if (direction == LOGPKT_REQUEST) {
 			ctx->src_seq += n;
-			ctx->dst_ack += n;
 		} else {
 			ctx->dst_seq += n;
-			ctx->src_ack += n;
 		}
 		payload += n;
 		payloadlen -= n;
@@ -613,9 +607,9 @@ logpkt_write_close(logpkt_ctx_t *ctx, int fd, int direction) {
 		return -1;
 	}
 	if (direction == LOGPKT_REQUEST) {
-		ctx->dst_ack += 1;
+		ctx->src_seq += 1;
 	} else {
-		ctx->src_ack += 1;
+		ctx->dst_seq += 1;
 	}
 
 	if (logpkt_write_packet(ctx, fd, other_direction,
@@ -623,8 +617,11 @@ logpkt_write_close(logpkt_ctx_t *ctx, int fd, int direction) {
 		log_err_printf("Warning: Failed to write packet\n");
 		return -1;
 	}
-	ctx->src_seq += 1;
-	ctx->src_ack += 1;
+	if (other_direction == LOGPKT_REQUEST) {
+		ctx->src_seq += 1;
+	} else {
+		ctx->dst_seq += 1;
+	}
 
 	if (logpkt_write_packet(ctx, fd, direction,
 	                        TH_ACK, NULL, 0) == -1) {

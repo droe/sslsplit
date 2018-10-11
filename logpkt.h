@@ -52,8 +52,6 @@ typedef struct {
 	uint16_t dst_port;
 	uint32_t src_seq;
 	uint32_t dst_seq;
-	uint32_t src_ack;
-	uint32_t dst_ack;
 } logpkt_ctx_t;
 
 #define LOGPKT_REQUEST  0
