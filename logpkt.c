@@ -580,11 +580,11 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 			return -1;
 		}
 		if (direction == LOGPKT_REQUEST) {
-			ctx->src_seq += payloadlen;
-			ctx->dst_ack += payloadlen;
+			ctx->src_seq += n;
+			ctx->dst_ack += n;
 		} else {
-			ctx->dst_seq += payloadlen;
-			ctx->src_ack += payloadlen;
+			ctx->dst_seq += n;
+			ctx->src_ack += n;
 		}
 		payload += n;
 		payloadlen -= n;
