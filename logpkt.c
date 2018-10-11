@@ -623,13 +623,8 @@ logpkt_write_close(logpkt_ctx_t *ctx, int fd, int direction) {
 		log_err_printf("Warning: Failed to write packet\n");
 		return -1;
 	}
-	if (direction == LOGPKT_REQUEST) {
-		ctx->src_seq += 1;
-		ctx->src_ack += 1;
-	} else {
-		ctx->src_seq += 1;
-		ctx->src_ack += 1;
-	}
+	ctx->src_seq += 1;
+	ctx->src_ack += 1;
 
 	if (logpkt_write_packet(ctx, fd, direction,
 	                        TH_ACK, NULL, 0) == -1) {
