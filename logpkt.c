@@ -128,9 +128,17 @@ typedef struct __attribute__((packed)) {
 #define TH_ACK  0x10
 #endif
 
-#define MSS_VAL 1420
-#define MAX_PKTSZ sizeof(ether_hdr_t) + sizeof(ip6_hdr_t) + \
-                  sizeof(tcp_hdr_t) + MSS_VAL
+/*
+ * Largest possible MSS for an MTU of 1500 are used for PCAP files, where we
+ * have no interface limitations.  To be on the safe side, an MSS of 1416 is
+ * used for mirroring; this is smaller than most setups will need, but allows
+ * for worst-case scenarios such as LLC/SNAP + GRE + IPv6.
+ * TODO - calculate MSS from the actual target interface MTU when mirroring.
+ */
+#define MTU     1500
+#define MSS_IP4 (MTU - sizeof(ip4_hdr_t) - sizeof(tcp_hdr_t))
+#define MSS_IP6 (MTU - sizeof(ip6_hdr_t) - sizeof(tcp_hdr_t))
+#define MSS_PHY 1400
 
 /*
  * IP/TCP checksumming operating on uint32_t intermediate state variable C.
@@ -174,7 +182,7 @@ logpkt_write_global_pcap_hdr(int fd)
 	hdr.magic_number = PCAP_MAGIC;
 	hdr.version_major = 2;
 	hdr.version_minor = 4;
-	hdr.snaplen = 1500;
+	hdr.snaplen = MTU;
 	hdr.network = 1;
 	return write(fd, &hdr, sizeof(hdr)) != sizeof(hdr) ? -1 : 0;
 }
@@ -287,6 +295,13 @@ logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
 
 	ctx->src_seq = 0;
 	ctx->dst_seq = 0;
+
+	if (ctx->libnet) {
+		ctx->mss = MSS_PHY;
+	} else {
+		ctx->mss = (ctx->af == AF_INET) ? MSS_IP4 : MSS_IP6;
+	}
+
 	return 0;
 out:
 	return -1;
@@ -484,7 +499,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 	int rv;
 
 	if (fd != -1) {
-		uint8_t buf[MAX_PKTSZ];
+		uint8_t buf[MTU];
 		size_t sz;
 		if (direction == LOGPKT_REQUEST) {
 			sz = logpkt_pcap_build(buf,
@@ -571,7 +586,7 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 	}
 
 	while (payloadlen > 0) {
-		size_t n = payloadlen > MSS_VAL ? MSS_VAL : payloadlen;
+		size_t n = payloadlen > ctx->mss ? ctx->mss : payloadlen;
 		if (logpkt_write_packet(ctx, fd, direction,
 		                        TH_PUSH|TH_ACK, payload, n) == -1) {
 			log_err_printf("Warning: Failed to write to pcap log"

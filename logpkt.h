@@ -48,6 +48,7 @@ typedef struct {
 	logpkt_ip46addr_t src_ip;
 	logpkt_ip46addr_t dst_ip;
 	int af;
+	size_t mss;
 	uint16_t src_port;
 	uint16_t dst_port;
 	uint32_t src_seq;
