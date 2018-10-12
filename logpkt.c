@@ -135,10 +135,11 @@ typedef struct __attribute__((packed)) {
  * for worst-case scenarios such as LLC/SNAP + GRE + IPv6.
  * TODO - calculate MSS from the actual target interface MTU when mirroring.
  */
-#define MTU     1500
-#define MSS_IP4 (MTU - sizeof(ip4_hdr_t) - sizeof(tcp_hdr_t))
-#define MSS_IP6 (MTU - sizeof(ip6_hdr_t) - sizeof(tcp_hdr_t))
-#define MSS_PHY 1400
+#define MTU             1500
+#define MAX_PKTSZ       (MTU + sizeof(ether_hdr_t))
+#define MSS_IP4         (MTU - sizeof(ip4_hdr_t) - sizeof(tcp_hdr_t))
+#define MSS_IP6         (MTU - sizeof(ip6_hdr_t) - sizeof(tcp_hdr_t))
+#define MSS_PHY         1400
 
 /*
  * IP/TCP checksumming operating on uint32_t intermediate state variable C.
@@ -185,7 +186,7 @@ logpkt_write_global_pcap_hdr(int fd)
 	hdr.magic_number = PCAP_MAGIC;
 	hdr.version_major = 2;
 	hdr.version_minor = 4;
-	hdr.snaplen = MTU + sizeof(ether_hdr_t);
+	hdr.snaplen = MAX_PKTSZ;
 	hdr.network = 1;
 	return write(fd, &hdr, sizeof(hdr)) != sizeof(hdr) ? -1 : 0;
 }
@@ -448,7 +449,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 	int rv;
 
 	if (fd != -1) {
-		uint8_t buf[MTU];
+		uint8_t buf[MAX_PKTSZ];
 		size_t sz;
 		if (direction == LOGPKT_REQUEST) {
 			sz = logpkt_pcap_build(buf,
