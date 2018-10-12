@@ -2237,7 +2237,8 @@ leave:
 	if (OPTS_DEBUG(ctx->opts)) {
 		log_dbg_printf("%s disconnected to [%s]:%s\n",
 		               this->ssl ? "SSL" : "TCP",
-		               ctx->dsthost_str, ctx->dstport_str);
+		               STRORDASH(ctx->dsthost_str),
+		               STRORDASH(ctx->dstport_str));
 		log_dbg_printf("%s disconnected from [%s]:%s\n",
 		               this->ssl ? "SSL" : "TCP",
 		               ctx->srchost_str, ctx->srcport_str);
