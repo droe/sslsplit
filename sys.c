@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/un.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fcntl.h>
@@ -876,6 +877,34 @@ sys_dump_fds(void)
 		}
 		printf("\n");
 	}
+}
+
+static int sys_rand_seeded = 0;
+
+static void
+sys_rand_seed(void) {
+	struct timeval seed;
+
+	if (gettimeofday(&seed, NULL) == -1) {
+		srandom((unsigned)time(NULL));
+	} else {
+		srandom((unsigned)(seed.tv_sec ^ seed.tv_usec));
+	}
+	sys_rand_seeded = 1;
+}
+
+uint16_t
+sys_rand16(void) {
+	if (!sys_rand_seeded)
+		sys_rand_seed();
+	return random();
+}
+
+uint32_t
+sys_rand32(void) {
+	if (!sys_rand_seeded)
+		sys_rand_seed();
+	return random();
 }
 
 /* vim: set noet ft=c: */

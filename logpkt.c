@@ -300,7 +300,7 @@ logpkt_pcap_build(uint8_t *pkt,
 		ip4_hdr->dscp_ecn = 0;
 		ip4_hdr->len = htons(sizeof(ip4_hdr_t) +
 		                     sizeof(tcp_hdr_t) + payloadlen);
-		ip4_hdr->id = (uint16_t)libnet_get_prand(LIBNET_PRu16),
+		ip4_hdr->id = sys_rand16(),
 		ip4_hdr->frag = 0;
 		ip4_hdr->ttl = 64;
 		ip4_hdr->proto = IPPROTO_TCP;
@@ -398,7 +398,7 @@ logpkt_mirror_build(libnet_t *libnet,
 		                         payloadlen,
 		                         0,             /* TOS */
 		                         (uint16_t)
-		                         libnet_get_prand(LIBNET_PRu16), /*id*/
+		                         sys_rand16(),  /* id */
 		                         0x4000,        /* frag */
 		                         64,            /* TTL */
 		                         IPPROTO_TCP,   /* protocol */
@@ -511,12 +511,12 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 	                                                    : LOGPKT_REQUEST;
 
 	if (ctx->src_seq == 0) {
-		ctx->src_seq = libnet_get_prand(LIBNET_PRu32);
+		ctx->src_seq = sys_rand32();
 		if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
 		                        TH_SYN, NULL, 0) == -1)
 			return -1;
 		ctx->src_seq += 1;
-		ctx->dst_seq = libnet_get_prand(LIBNET_PRu32);
+		ctx->dst_seq = sys_rand32();
 		if (logpkt_write_packet(ctx, fd, LOGPKT_RESPONSE,
 		                        TH_SYN|TH_ACK, NULL, 0) == -1)
 			return -1;
