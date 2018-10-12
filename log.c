@@ -375,7 +375,8 @@ static logger_t *content_file_log = NULL;
 static int content_pcap_clisock = -1;
 static logger_t *content_pcap_log = NULL;
 static logger_t *content_mirror_log = NULL;
-libnet_t *content_mirror_libnet = NULL;
+static libnet_t *content_mirror_libnet = NULL;
+static size_t content_mirror_mtu = 0;
 static uint8_t content_pcap_src_ether[ETHER_ADDR_LEN] = {
 	0x02, 0x00, 0x00, 0x11, 0x11, 0x11};
 static uint8_t content_pcap_dst_ether[ETHER_ADDR_LEN] = {
@@ -705,7 +706,7 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->pcap, 0, sizeof(log_content_pcap_ctx_t));
 
-		logpkt_ctx_init(&ctx->pcap->state, NULL,
+		logpkt_ctx_init(&ctx->pcap->state, NULL, 0,
 		                content_pcap_src_ether, content_pcap_dst_ether,
 		                srcaddr, dstaddr);
 
@@ -743,7 +744,9 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->mirror, 0, sizeof(log_content_mirror_ctx_t));
 
-		logpkt_ctx_init(&ctx->mirror->state, content_mirror_libnet,
+		logpkt_ctx_init(&ctx->mirror->state,
+		                content_mirror_libnet,
+		                content_mirror_mtu,
 		                content_mirror_src_ether,
 		                content_mirror_dst_ether,
 		                srcaddr, dstaddr);
@@ -1335,6 +1338,13 @@ log_content_mirror_preinit(const char *ifname, const char *targetip) {
 		return -1;
 	}
 	libnet_seed_prand(content_mirror_libnet);
+
+	content_mirror_mtu = sys_get_mtu(ifname);
+	if (content_mirror_mtu == 0) {
+		log_err_printf("Failed to lookup MTU of interface %s\n",
+		               ifname);
+		return -1;
+	}
 
 	if (logpkt_ether_lookup(content_mirror_libnet,
 	                        content_mirror_src_ether,

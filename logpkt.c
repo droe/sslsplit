@@ -129,17 +129,15 @@ typedef struct __attribute__((packed)) {
 #endif
 
 /*
- * Largest possible MSS for an MTU of 1500 are used for PCAP files, where we
- * have no interface limitations.  To be on the safe side, an MSS of 1416 is
- * used for mirroring; this is smaller than most setups will need, but allows
- * for worst-case scenarios such as LLC/SNAP + GRE + IPv6.
- * TODO - calculate MSS from the actual target interface MTU when mirroring.
+ * These constants are only used for PCAP writing.  Largest possible MSS for an
+ * MTU of 1500 are used for PCAP files, where we have no interface limitations.
+ * For mirroring, we calculate the actual MSS based on the MTU of the target
+ * interface.
  */
 #define MTU             1500
 #define MAX_PKTSZ       (MTU + sizeof(ether_hdr_t))
 #define MSS_IP4         (MTU - sizeof(ip4_hdr_t) - sizeof(tcp_hdr_t))
 #define MSS_IP6         (MTU - sizeof(ip6_hdr_t) - sizeof(tcp_hdr_t))
-#define MSS_PHY         1400
 
 /*
  * IP/TCP checksumming operating on uint32_t intermediate state variable C.
@@ -230,7 +228,7 @@ logpkt_pcap_open_fd(int fd) {
 }
 
 void
-logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
+logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet, size_t mtu,
                 const uint8_t *src_ether, const uint8_t *dst_ether,
                 const struct sockaddr *src_addr,
                 const struct sockaddr *dst_addr)
@@ -242,8 +240,11 @@ logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
 	ctx->dst_addr = dst_addr;
 	ctx->src_seq = 0;
 	ctx->dst_seq = 0;
-	if (ctx->libnet) {
-		ctx->mss = MSS_PHY;
+	if (mtu) {
+		ctx->mss = mtu - sizeof(tcp_hdr_t)
+		               - (dst_addr->sa_family == AF_INET
+		                  ? sizeof(ip4_hdr_t)
+		                  : sizeof(ip6_hdr_t));
 	} else {
 		ctx->mss = dst_addr->sa_family == AF_INET ? MSS_IP4 : MSS_IP6;
 	}

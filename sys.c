@@ -33,11 +33,13 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/un.h>
 #include <sys/time.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fcntl.h>
@@ -473,6 +475,33 @@ sys_ip46str_sanitize(const char *s)
 	}
 
 	return copy;
+}
+
+/*
+ * Returns the MTU of the interface with name *ifname* or 0 on errors.
+ */
+size_t
+sys_get_mtu(const char *ifname)
+{
+	struct ifreq ifr;
+	size_t ifnamelen;
+	int s;
+
+	ifnamelen = strlen(ifname);
+	if (ifnamelen > sizeof(ifr.ifr_name) + 1)
+		return 0;
+	memcpy(ifr.ifr_name, ifname, ifnamelen);
+	ifr.ifr_name[ifnamelen] = '\0';
+
+	s = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (s == -1)
+		return 0;
+	if (ioctl(s, SIOCGIFMTU, &ifr) == -1) {
+		close(s);
+		return 0;
+	}
+	close(s);
+	return ifr.ifr_mtu;
 }
 
 /*

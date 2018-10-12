@@ -51,7 +51,7 @@ typedef struct {
 #define LOGPKT_RESPONSE 1
 
 int logpkt_pcap_open_fd(int fd) WUNRES;
-void logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
+void logpkt_ctx_init(logpkt_ctx_t *, libnet_t *, size_t,
                      const uint8_t *, const uint8_t *,
                      const struct sockaddr *, const struct sockaddr *);
 int logpkt_write_payload(logpkt_ctx_t *, int, int,
