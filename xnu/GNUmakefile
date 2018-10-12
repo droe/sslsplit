@@ -75,6 +75,9 @@ XNU_RELS+=	4570.1.46	# 10.13
 XNU_RELS+=	4570.20.62	# 10.13.1
 XNU_RELS+=	4570.31.3	# 10.13.2
 XNU_RELS+=	4570.41.2	# 10.13.3
+XNU_RELS+=	4570.51.1	# 10.13.4
+XNU_RELS+=	4570.61.1	# 10.13.5
+XNU_RELS+=	4570.71.2	# 10.13.6
 
 # defaults
 XNURL?=		https://opensource.apple.com/source/xnu/
