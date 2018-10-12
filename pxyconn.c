@@ -97,9 +97,6 @@ typedef struct pxy_conn_desc {
 #ifdef HAVE_LOCAL_PROCINFO
 /* local process data - filled in iff pid != -1 */
 typedef struct pxy_conn_lproc_desc {
-	struct sockaddr_storage srcaddr;
-	socklen_t srcaddrlen;
-
 	pid_t pid;
 	uid_t uid;
 	gid_t gid;
@@ -172,7 +169,9 @@ typedef struct pxy_conn_ctx {
 	evutil_socket_t fd;
 	struct event *ev;
 
-	/* original destination address, family and certificate */
+	/* original source and destination address, family and certificate */
+	struct sockaddr_storage srcaddr;
+	socklen_t srcaddrlen;
 	struct sockaddr_storage dstaddr;
 	socklen_t dstaddrlen;
 	int af;
@@ -1963,8 +1962,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			if (ctx->opts->lprocinfo) {
 				/* fetch process info */
 				if (proc_pid_for_addr(&ctx->lproc.pid,
-				        (struct sockaddr*)&ctx->lproc.srcaddr,
-				        ctx->lproc.srcaddrlen) == 0 &&
+				        (struct sockaddr*)&ctx->srcaddr,
+				        ctx->srcaddrlen) == 0 &&
 				    ctx->lproc.pid != -1 &&
 				    proc_get_info(ctx->lproc.pid,
 				                  &ctx->lproc.exec_path,
@@ -1987,6 +1986,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		}
 		if (WANT_CONTENT_LOG(ctx)) {
 			if (log_content_open(&ctx->logctx, ctx->opts,
+			                     (struct sockaddr *)&ctx->srcaddr,
+			                     (struct sockaddr *)&ctx->dstaddr,
 			                     ctx->srchost_str, ctx->srcport_str,
 			                     ctx->dsthost_str, ctx->dstport_str,
 #ifdef HAVE_LOCAL_PROCINFO
@@ -2491,17 +2492,19 @@ pxy_conn_setup(evutil_socket_t fd,
 	}
 
 	/* prepare logging, part 1 */
+	if (opts->pcaplog || opts->mirrorif
+#ifdef HAVE_LOCAL_PROCINFO
+	    || opts->lprocinfo
+#endif /* HAVE_LOCAL_PROCINFO */
+	    ) {
+		ctx->srcaddrlen = peeraddrlen;
+		memcpy(&ctx->srcaddr, peeraddr, ctx->srcaddrlen);
+	}
 	if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
 		if (sys_sockaddr_str(peeraddr, peeraddrlen,
 		                     &ctx->srchost_str,
 		                     &ctx->srcport_str) != 0)
 			goto memout;
-#ifdef HAVE_LOCAL_PROCINFO
-		if (ctx->opts->lprocinfo) {
-			memcpy(&ctx->lproc.srcaddr, peeraddr, peeraddrlen);
-			ctx->lproc.srcaddrlen = peeraddrlen;
-		}
-#endif /* HAVE_LOCAL_PROCINFO */
 	}
 
 	/* for SSL, defer dst connection setup to initial_readcb */

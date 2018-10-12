@@ -601,6 +601,8 @@ log_content_format_pathspec(const char *logspec,
  */
 int
 log_content_open(log_content_ctx_t *ctx, opts_t *opts,
+                 const struct sockaddr *srcaddr,
+                 const struct sockaddr *dstaddr,
                  char *srchost, char *srcport,
                  char *dsthost, char *dstport,
                  char *exec_path, char *user, char *group)
@@ -702,13 +704,9 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->pcap, 0, sizeof(log_content_pcap_ctx_t));
 
-		if (logpkt_ctx_init(&ctx->pcap->state,
-		                    NULL,
-		                    content_pcap_src_ether,
-		                    content_pcap_dst_ether,
-		                    srchost, srcport,
-		                    dsthost, dstport) == -1)
-			goto errout;
+		logpkt_ctx_init(&ctx->pcap->state, NULL,
+		                content_pcap_src_ether, content_pcap_dst_ether,
+		                srcaddr, dstaddr);
 
 		if (opts->pcaplog_isdir) {
 			/* per-connection-file pcap log (-Y) */
@@ -744,13 +742,10 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 			goto errout;
 		memset(ctx->mirror, 0, sizeof(log_content_mirror_ctx_t));
 
-		if (logpkt_ctx_init(&ctx->mirror->state,
-		                    content_mirror_libnet,
-		                    content_mirror_src_ether,
-		                    content_mirror_dst_ether,
-		                    srchost, srcport,
-		                    dsthost, dstport) == -1)
-			goto errout;
+		logpkt_ctx_init(&ctx->mirror->state, content_mirror_libnet,
+		                content_mirror_src_ether,
+		                content_mirror_dst_ether,
+		                srcaddr, dstaddr);
 	}
 
 	/* submit open events */

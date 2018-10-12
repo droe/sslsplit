@@ -79,8 +79,10 @@ struct log_content_ctx {
 	struct log_content_pcap_ctx *pcap;
 	struct log_content_mirror_ctx *mirror;
 };
-int log_content_open(log_content_ctx_t *, opts_t *, char *, char *, char *,
-                     char *, char *, char *, char *) NONNULL(1,2,3) WUNRES;
+int log_content_open(log_content_ctx_t *, opts_t *,
+                     const struct sockaddr *, const struct sockaddr *,
+                     char *, char *, char *, char *,
+                     char *, char *, char *) NONNULL(1,2,3) WUNRES;
 int log_content_submit(log_content_ctx_t *, logbuf_t *, int)
                        NONNULL(1,2) WUNRES;
 int log_content_close(log_content_ctx_t *, int) NONNULL(1) WUNRES;

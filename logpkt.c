@@ -173,6 +173,9 @@ typedef struct __attribute__((packed)) {
 		(C) = ~(C); \
 	}
 
+#define CSIN(X)         ((const struct sockaddr_in *)(X))
+#define CSIN6(X)        ((const struct sockaddr_in6 *)(X))
+
 static int
 logpkt_write_global_pcap_hdr(int fd)
 {
@@ -225,86 +228,24 @@ logpkt_pcap_open_fd(int fd) {
 	return logpkt_write_global_pcap_hdr(fd);
 }
 
-/*
- * Returns 1 if addr is equal to ip6 error addr, 0 otherwise.
- */
-static int
-logpkt_ip6addr_is_error(struct libnet_in6_addr *addr)
-{
-	if (memcmp(&addr->__u6_addr, &in6addr_error.__u6_addr, 16) == 0)
-		return 1;
-	return 0;
-}
-
-static int
-logpkt_str2ip46addr(libnet_t *libnet, const char *addr, int af,
-                    logpkt_ip46addr_t *ip46)
-{
-	if (af == AF_INET) {
-		ip46->ip4 = inet_addr(addr);
-		if (ip46->ip4 == 0) {
-			log_err_printf("Error converting IPv4 address: %s\n",
-			               addr);
-			goto out;
-		}
-	} else {
-		ip46->ip6 = libnet_name2addr6(libnet, (char *)addr,
-		                              LIBNET_DONT_RESOLVE);
-		if (logpkt_ip6addr_is_error(&ip46->ip6)) {
-			log_err_printf("Error converting IPv6 address: %s\n",
-			               addr);
-			goto out;
-		}
-	}
-	return 0;
-out:
-	return -1;
-}
-
-int
+void
 logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet,
                 const uint8_t *src_ether, const uint8_t *dst_ether,
-                const char *src_addr, const char *src_port,
-                const char *dst_addr, const char *dst_port)
+                const struct sockaddr *src_addr,
+                const struct sockaddr *dst_addr)
 {
 	ctx->libnet = libnet;
-
 	memcpy(ctx->src_ether, src_ether, ETHER_ADDR_LEN);
 	memcpy(ctx->dst_ether, dst_ether, ETHER_ADDR_LEN);
-
-	ctx->af = sys_get_af(src_addr);
-	if (ctx->af == AF_UNSPEC) {
-		log_err_printf("Unspec address family: %s\n", src_addr);
-		goto out;
-	}
-	if (sys_get_af(dst_addr) != ctx->af) {
-		log_err_printf("Src and dst address families do not match"
-		               ": %s, %s\n", src_addr, dst_addr);
-		goto out;
-	}
-
-	if (logpkt_str2ip46addr(libnet, src_addr, ctx->af,
-	                        &ctx->src_ip) == -1)
-		goto out;
-	ctx->src_port = atoi(src_port);
-
-	if (logpkt_str2ip46addr(libnet, dst_addr, ctx->af,
-	                        &ctx->dst_ip) == -1)
-		goto out;
-	ctx->dst_port = atoi(dst_port);
-
+	ctx->src_addr = src_addr;
+	ctx->dst_addr = dst_addr;
 	ctx->src_seq = 0;
 	ctx->dst_seq = 0;
-
 	if (ctx->libnet) {
 		ctx->mss = MSS_PHY;
 	} else {
-		ctx->mss = (ctx->af == AF_INET) ? MSS_IP4 : MSS_IP6;
+		ctx->mss = dst_addr->sa_family == AF_INET ? MSS_IP4 : MSS_IP6;
 	}
-
-	return 0;
-out:
-	return -1;
 }
 
 static int
@@ -333,9 +274,9 @@ logpkt_pcap_write(const uint8_t *pkt, size_t pktsz, int fd)
 
 static size_t
 logpkt_pcap_build(uint8_t *pkt,
-                  uint8_t *src_ether, uint8_t *dst_ether, int af,
-                  logpkt_ip46addr_t *src_ip, logpkt_ip46addr_t *dst_ip,
-                  uint16_t src_port, uint16_t dst_port,
+                  uint8_t *src_ether, uint8_t *dst_ether,
+                  const struct sockaddr *src_addr,
+                  const struct sockaddr *dst_addr,
                   char flags, uint32_t seq, uint32_t ack,
                   const uint8_t *payload, size_t payloadlen)
 {
@@ -351,7 +292,7 @@ logpkt_pcap_build(uint8_t *pkt,
 	memcpy(ether_hdr->dst_mac, dst_ether, sizeof(ether_hdr->dst_mac));
 	sz = sizeof(ether_hdr_t);
 
-	if (af == AF_INET) {
+	if (dst_addr->sa_family == AF_INET) {
 		ether_hdr->ethertype = htons(ETHERTYPE_IP);
 		ip4_hdr = (ip4_hdr_t *)(((uint8_t *)ether_hdr) +
 		                        sizeof(ether_hdr_t));
@@ -363,8 +304,8 @@ logpkt_pcap_build(uint8_t *pkt,
 		ip4_hdr->frag = 0;
 		ip4_hdr->ttl = 64;
 		ip4_hdr->proto = IPPROTO_TCP;
-		ip4_hdr->src_addr = src_ip->ip4;
-		ip4_hdr->dst_addr = dst_ip->ip4;
+		ip4_hdr->src_addr = CSIN(src_addr)->sin_addr.s_addr;
+		ip4_hdr->dst_addr = CSIN(dst_addr)->sin_addr.s_addr;
 		ip4_hdr->chksum = 0;
 		CHKSUM_INIT(sum);
 		CHKSUM_ADD_RANGE(sum, ip4_hdr, sizeof(ip4_hdr_t));
@@ -373,6 +314,8 @@ logpkt_pcap_build(uint8_t *pkt,
 		sz += sizeof(ip4_hdr_t);
 		tcp_hdr = (tcp_hdr_t *)(((uint8_t *)ip4_hdr) +
 		                        sizeof(ip4_hdr_t));
+		tcp_hdr->src_port = CSIN(src_addr)->sin_port;
+		tcp_hdr->dst_port = CSIN(dst_addr)->sin_port;
 		/* pseudo header */
 		CHKSUM_INIT(sum);
 		CHKSUM_ADD_UINT32(sum, ip4_hdr->src_addr);
@@ -387,13 +330,15 @@ logpkt_pcap_build(uint8_t *pkt,
 		ip6_hdr->len = htons(sizeof(tcp_hdr_t) + payloadlen);
 		ip6_hdr->next_hdr = IPPROTO_TCP;
 		ip6_hdr->hop_limit = 255;
-		memcpy(ip6_hdr->src_addr, src_ip->ip6.__u6_addr.__u6_addr8,
+		memcpy(ip6_hdr->src_addr, CSIN6(src_addr)->sin6_addr.s6_addr,
 		       sizeof(ip6_hdr->src_addr));
-		memcpy(ip6_hdr->dst_addr, dst_ip->ip6.__u6_addr.__u6_addr8,
+		memcpy(ip6_hdr->dst_addr, CSIN6(dst_addr)->sin6_addr.s6_addr,
 		       sizeof(ip6_hdr->dst_addr));
 		sz += sizeof(ip6_hdr_t);
 		tcp_hdr = (tcp_hdr_t *)(((uint8_t *)ip6_hdr) +
 		                        sizeof(ip6_hdr_t));
+		tcp_hdr->src_port = CSIN6(src_addr)->sin6_port;
+		tcp_hdr->dst_port = CSIN6(dst_addr)->sin6_port;
 		/* pseudo header */
 		CHKSUM_INIT(sum);
 		CHKSUM_ADD_RANGE(sum, ip6_hdr->src_addr,
@@ -403,8 +348,6 @@ logpkt_pcap_build(uint8_t *pkt,
 		CHKSUM_ADD_UINT32(sum, ip6_hdr->len);
 		CHKSUM_ADD_UINT16(sum, htons(IPPROTO_TCP));
 	}
-	tcp_hdr->src_port = htons(src_port);
-	tcp_hdr->dst_port = htons(dst_port);
 	tcp_hdr->seq = htonl(seq);
 	tcp_hdr->ack = htonl(ack);
 	tcp_hdr->flags = htons(0x5000|flags);
@@ -421,16 +364,20 @@ logpkt_pcap_build(uint8_t *pkt,
 
 static int
 logpkt_mirror_build(libnet_t *libnet,
-                    uint8_t *src_ether, uint8_t *dst_ether, int af,
-                    logpkt_ip46addr_t *src_ip, logpkt_ip46addr_t *dst_ip,
-                    uint16_t src_port, uint16_t dst_port,
+                    uint8_t *src_ether, uint8_t *dst_ether,
+                    const struct sockaddr *src_addr,
+                    const struct sockaddr *dst_addr,
                     char flags, uint32_t seq, uint32_t ack,
                     const uint8_t *payload, size_t payloadlen)
 {
 	libnet_ptag_t ptag;
 
-	ptag = libnet_build_tcp(src_port,
-	                        dst_port,
+	ptag = libnet_build_tcp(src_addr->sa_family == AF_INET
+	                        ? CSIN(src_addr)->sin_port
+	                        : CSIN6(src_addr)->sin6_port,
+	                        dst_addr->sa_family == AF_INET
+	                        ? CSIN(dst_addr)->sin_port
+	                        : CSIN6(dst_addr)->sin6_port,
 	                        seq,
 	                        ack,
 	                        flags,
@@ -446,7 +393,7 @@ logpkt_mirror_build(libnet_t *libnet,
 		return -1;
 	}
 
-	if (af == AF_INET) {
+	if (dst_addr->sa_family == AF_INET) {
 		ptag = libnet_build_ipv4(LIBNET_IPV4_H + LIBNET_TCP_H +
 		                         payloadlen,
 		                         0,             /* TOS */
@@ -456,8 +403,8 @@ logpkt_mirror_build(libnet_t *libnet,
 		                         64,            /* TTL */
 		                         IPPROTO_TCP,   /* protocol */
 		                         0,             /* checksum */
-		                         src_ip->ip4,
-		                         dst_ip->ip4,
+		                         CSIN(src_addr)->sin_addr.s_addr,
+		                         CSIN(dst_addr)->sin_addr.s_addr,
 		                         NULL, 0,
 		                         libnet, 0);
 	} else {
@@ -467,8 +414,10 @@ logpkt_mirror_build(libnet_t *libnet,
 		                         payloadlen,
 		                         IPPROTO_TCP,
 		                         255,           /* hop limit */
-		                         src_ip->ip6,
-		                         dst_ip->ip6,
+		                         *(struct libnet_in6_addr *)
+		                         &CSIN6(src_addr)->sin6_addr,
+		                         *(struct libnet_in6_addr *)
+		                         &CSIN6(dst_addr)->sin6_addr,
 		                         NULL, 0,
 		                         libnet, 0);
 	}
@@ -480,8 +429,8 @@ logpkt_mirror_build(libnet_t *libnet,
 
 	ptag = libnet_build_ethernet(dst_ether,
 	                             src_ether,
-	                             af == AF_INET ? ETHERTYPE_IP
-	                                           : ETHERTYPE_IPV6,
+	                             dst_addr->sa_family == AF_INET
+	                                     ? ETHERTYPE_IP : ETHERTYPE_IPV6,
 	                             NULL, 0,
 	                             libnet, 0);
 	if (ptag == -1) {
@@ -504,18 +453,14 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		if (direction == LOGPKT_REQUEST) {
 			sz = logpkt_pcap_build(buf,
 			                       ctx->src_ether, ctx->dst_ether,
-			                       ctx->af,
-			                       &ctx->src_ip, &ctx->dst_ip,
-			                       ctx->src_port, ctx->dst_port,
+			                       ctx->src_addr, ctx->dst_addr,
 			                       flags,
 			                       ctx->src_seq, ctx->dst_seq,
 			                       payload, payloadlen);
 		} else {
 			sz = logpkt_pcap_build(buf,
 			                       ctx->dst_ether, ctx->src_ether,
-			                       ctx->af,
-			                       &ctx->dst_ip, &ctx->src_ip,
-			                       ctx->dst_port, ctx->src_port,
+			                       ctx->dst_addr, ctx->src_addr,
 			                       flags,
 			                       ctx->dst_seq, ctx->src_seq,
 			                       payload, payloadlen);
@@ -532,18 +477,14 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		if (direction == LOGPKT_REQUEST) {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
-			                         ctx->af,
-			                         &ctx->src_ip, &ctx->dst_ip,
-			                         ctx->src_port, ctx->dst_port,
+			                         ctx->src_addr, ctx->dst_addr,
 			                         flags,
 			                         ctx->src_seq, ctx->dst_seq,
 			                         payload, payloadlen);
 		} else {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
-			                         ctx->af,
-			                         &ctx->dst_ip, &ctx->src_ip,
-			                         ctx->dst_port, ctx->src_port,
+			                         ctx->dst_addr, ctx->src_addr,
 			                         flags,
 			                         ctx->dst_seq, ctx->src_seq,
 			                         payload, payloadlen);

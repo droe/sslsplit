@@ -36,33 +36,24 @@
 
 #include <libnet.h>
 
-typedef union {
-	uint32_t ip4;
-	struct libnet_in6_addr ip6;
-} logpkt_ip46addr_t;
-
 typedef struct {
 	libnet_t *libnet;
 	uint8_t src_ether[ETHER_ADDR_LEN];
 	uint8_t dst_ether[ETHER_ADDR_LEN];
-	logpkt_ip46addr_t src_ip;
-	logpkt_ip46addr_t dst_ip;
-	int af;
-	size_t mss;
-	uint16_t src_port;
-	uint16_t dst_port;
+	const struct sockaddr *src_addr;
+	const struct sockaddr *dst_addr;
 	uint32_t src_seq;
 	uint32_t dst_seq;
+	size_t mss;
 } logpkt_ctx_t;
 
 #define LOGPKT_REQUEST  0
 #define LOGPKT_RESPONSE 1
 
 int logpkt_pcap_open_fd(int fd) WUNRES;
-int logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
-                    const uint8_t *, const uint8_t *,
-                    const char *, const char *, const char *, const char *)
-    WUNRES;
+void logpkt_ctx_init(logpkt_ctx_t *, libnet_t *,
+                     const uint8_t *, const uint8_t *,
+                     const struct sockaddr *, const struct sockaddr *);
 int logpkt_write_payload(logpkt_ctx_t *, int, int,
                          const unsigned char *, size_t) WUNRES;
 int logpkt_write_close(logpkt_ctx_t *, int, int);
