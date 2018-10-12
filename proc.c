@@ -268,7 +268,7 @@ proc_freebsd_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 	static struct kinfo_proc proc;
 	size_t len;
 	int mib[4];
-	char buf[PATH_MAX + 1];
+	char buf[PATH_MAX];
 
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_PROC;
