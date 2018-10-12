@@ -173,8 +173,8 @@ typedef struct pxy_conn_ctx {
 	struct event *ev;
 
 	/* original destination address, family and certificate */
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
+	struct sockaddr_storage dstaddr;
+	socklen_t dstaddrlen;
 	int af;
 	X509 *origcrt;
 
@@ -952,8 +952,8 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 {
 	cert_t *cert;
 
-	cachemgr_dsess_set((struct sockaddr*)&ctx->addr,
-	                   ctx->addrlen, ctx->sni,
+	cachemgr_dsess_set((struct sockaddr*)&ctx->dstaddr,
+	                   ctx->dstaddrlen, ctx->sni,
 	                   SSL_get0_session(origssl));
 
 	ctx->origcrt = SSL_get_peer_certificate(origssl);
@@ -1181,8 +1181,8 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 #endif /* SSL_MODE_RELEASE_BUFFERS */
 
 	/* session resuming based on remote endpoint address and port */
-	sess = cachemgr_dsess_get((struct sockaddr *)&ctx->addr,
-	                          ctx->addrlen, ctx->sni); /* new sess inst */
+	sess = cachemgr_dsess_get((struct sockaddr *)&ctx->dstaddr,
+	                          ctx->dstaddrlen, ctx->sni);
 	if (sess) {
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("Attempt reuse dst SSL session\n");
@@ -1951,7 +1951,7 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		/* prepare logging, part 2 */
 		if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
 			if (sys_sockaddr_str((struct sockaddr *)
-			                     &ctx->addr, ctx->addrlen,
+			                     &ctx->dstaddr, ctx->dstaddrlen,
 			                     &ctx->dsthost_str,
 			                     &ctx->dstport_str) != 0) {
 				ctx->enomem = 1;
@@ -2257,7 +2257,7 @@ leave:
 static void
 pxy_conn_connect(pxy_conn_ctx_t *ctx)
 {
-	if (!ctx->addrlen) {
+	if (!ctx->dstaddrlen) {
 		log_err_printf("No target address; aborting connection\n");
 		evutil_closesocket(ctx->fd);
 		pxy_conn_ctx_free(ctx, 1);
@@ -2287,8 +2287,8 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 
 	if (OPTS_DEBUG(ctx->opts)) {
 		char *host, *port;
-		if (sys_sockaddr_str((struct sockaddr *)&ctx->addr,
-		                     ctx->addrlen, &host, &port) != 0) {
+		if (sys_sockaddr_str((struct sockaddr *)&ctx->dstaddr,
+		                     ctx->dstaddrlen, &host, &port) != 0) {
 			log_dbg_printf("Connecting to [?]:?\n");
 		} else {
 			log_dbg_printf("Connecting to [%s]:%s\n", host, port);
@@ -2299,8 +2299,8 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 
 	/* initiate connection */
 	bufferevent_socket_connect(ctx->dst.bev,
-	                           (struct sockaddr *)&ctx->addr,
-	                           ctx->addrlen);
+	                           (struct sockaddr *)&ctx->dstaddr,
+	                           ctx->dstaddrlen);
 }
 
 #ifndef OPENSSL_NO_TLSEXT
@@ -2321,8 +2321,8 @@ pxy_sni_resolve_cb(int errcode, struct evutil_addrinfo *ai, void *arg)
 		return;
 	}
 
-	memcpy(&ctx->addr, ai->ai_addr, ai->ai_addrlen);
-	ctx->addrlen = ai->ai_addrlen;
+	memcpy(&ctx->dstaddr, ai->ai_addr, ai->ai_addrlen);
+	ctx->dstaddrlen = ai->ai_addrlen;
 	evutil_freeaddrinfo(ai);
 	pxy_conn_connect(ctx);
 }
@@ -2412,7 +2412,7 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 		ctx->ev = NULL;
 	}
 
-	if (ctx->sni && !ctx->addrlen && ctx->spec->sni_port) {
+	if (ctx->sni && !ctx->dstaddrlen && ctx->spec->sni_port) {
 		char sniport[6];
 		struct evutil_addrinfo hints;
 
@@ -2464,8 +2464,9 @@ pxy_conn_setup(evutil_socket_t fd,
 	/* determine original destination of connection */
 	if (spec->natlookup) {
 		/* NAT engine lookup */
-		ctx->addrlen = sizeof(struct sockaddr_storage);
-		if (spec->natlookup((struct sockaddr *)&ctx->addr, &ctx->addrlen,
+		ctx->dstaddrlen = sizeof(struct sockaddr_storage);
+		if (spec->natlookup((struct sockaddr *)&ctx->dstaddr,
+		                    &ctx->dstaddrlen,
 		                    fd, peeraddr, peeraddrlen) == -1) {
 			log_err_printf("Connection not found in NAT "
 			               "state table, aborting connection\n");
@@ -2475,8 +2476,8 @@ pxy_conn_setup(evutil_socket_t fd,
 		}
 	} else if (spec->connect_addrlen > 0) {
 		/* static forwarding */
-		ctx->addrlen = spec->connect_addrlen;
-		memcpy(&ctx->addr, &spec->connect_addr, ctx->addrlen);
+		ctx->dstaddrlen = spec->connect_addrlen;
+		memcpy(&ctx->dstaddr, &spec->connect_addr, ctx->dstaddrlen);
 	} else {
 		/* SNI mode */
 		if (!ctx->spec->ssl) {
