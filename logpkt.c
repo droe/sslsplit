@@ -504,6 +504,25 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 	return rv;
 }
 
+static int
+logpkt_write_syn_handshake(logpkt_ctx_t *ctx, int fd)
+{
+	ctx->src_seq = sys_rand32();
+	if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
+	                        TH_SYN, NULL, 0) == -1)
+		return -1;
+	ctx->src_seq += 1;
+	ctx->dst_seq = sys_rand32();
+	if (logpkt_write_packet(ctx, fd, LOGPKT_RESPONSE,
+	                        TH_SYN|TH_ACK, NULL, 0) == -1)
+		return -1;
+	ctx->dst_seq += 1;
+	if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
+	                        TH_ACK, NULL, 0) == -1)
+		return -1;
+	return 0;
+}
+
 int
 logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
                      const uint8_t *payload, size_t payloadlen)
@@ -512,18 +531,7 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 	                                                    : LOGPKT_REQUEST;
 
 	if (ctx->src_seq == 0) {
-		ctx->src_seq = sys_rand32();
-		if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
-		                        TH_SYN, NULL, 0) == -1)
-			return -1;
-		ctx->src_seq += 1;
-		ctx->dst_seq = sys_rand32();
-		if (logpkt_write_packet(ctx, fd, LOGPKT_RESPONSE,
-		                        TH_SYN|TH_ACK, NULL, 0) == -1)
-			return -1;
-		ctx->dst_seq += 1;
-		if (logpkt_write_packet(ctx, fd, LOGPKT_REQUEST,
-		                        TH_ACK, NULL, 0) == -1)
+		if (logpkt_write_syn_handshake(ctx, fd) == -1)
 			return -1;
 	}
 
@@ -558,8 +566,10 @@ logpkt_write_close(logpkt_ctx_t *ctx, int fd, int direction) {
 	int other_direction = (direction == LOGPKT_REQUEST) ? LOGPKT_RESPONSE
 	                                                    : LOGPKT_REQUEST;
 
-	if (ctx->src_seq == 0)
-		return 0;
+	if (ctx->src_seq == 0) {
+		if (logpkt_write_syn_handshake(ctx, fd) == -1)
+			return -1;
+	}
 
 	if (logpkt_write_packet(ctx, fd, direction,
 	                        TH_FIN|TH_ACK, NULL, 0) == -1) {
