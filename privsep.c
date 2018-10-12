@@ -497,7 +497,7 @@ privsep_server_linux_get_pid(struct sockaddr *addr)
 static size_t WUNRES
 privsep_server_linux_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 	struct stat sbuf;
-	char dn[32], exe[PATH_MAX + 1];
+	char dn[32], exe[PATH_MAX];
 	ssize_t n;
 
 	snprintf(dn, sizeof(dn), "/proc/%lu", (unsigned long)pid);
@@ -505,11 +505,11 @@ privsep_server_linux_get_info(pid_t pid, char **path, uid_t *uid, gid_t *gid) {
 		*uid = sbuf.st_uid;
 		*gid = sbuf.st_gid;
 		snprintf(dn, sizeof(dn), "/proc/%lu/exe", (unsigned long)pid);
-		n = readlink(dn, exe, sizeof(exe));
+		n = readlink(dn, exe, sizeof(exe) - 1);
 		if (n != -1) {
-			exe[n < PATH_MAX ? n : PATH_MAX] = 0;
+			exe[n] = 0;
 			*path = strdup(exe);
-			return n < PATH_MAX ? n : PATH_MAX;
+			return n;
 		}
 	}
 	return 0;
