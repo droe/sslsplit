@@ -42,7 +42,7 @@ typedef struct logbuf {
 	struct logbuf *next;
 } logbuf_t;
 
-typedef ssize_t (*writefunc_t)(void *, int, const void *, size_t);
+typedef ssize_t (*writefunc_t)(void *, unsigned long, const void *, size_t);
 
 logbuf_t * logbuf_new(void *, size_t, logbuf_t *) MALLOC;
 logbuf_t * logbuf_new_alloc(size_t, logbuf_t *) MALLOC;

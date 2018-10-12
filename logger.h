@@ -37,8 +37,9 @@
 
 typedef int (*logger_reopen_func_t)(void);
 typedef int (*logger_open_func_t)(void *);
-typedef void (*logger_close_func_t)(void *);
-typedef ssize_t (*logger_write_func_t)(void *, int, const void *, size_t);
+typedef void (*logger_close_func_t)(void *, unsigned long);
+typedef ssize_t (*logger_write_func_t)(void *, unsigned long,
+                                       const void *, size_t);
 typedef logbuf_t * (*logger_prep_func_t)(void *, unsigned long, logbuf_t *);
 typedef void (*logger_except_func_t)(void);
 typedef struct logger logger_t;
@@ -54,7 +55,7 @@ int logger_join(logger_t *) NONNULL(1);
 int logger_stop(logger_t *) NONNULL(1) WUNRES;
 int logger_reopen(logger_t *) NONNULL(1) WUNRES;
 int logger_open(logger_t *, void *) NONNULL(1,2) WUNRES;
-int logger_close(logger_t *, void *) NONNULL(1,2) WUNRES;
+int logger_close(logger_t *, void *, unsigned long) NONNULL(1,2) WUNRES;
 int logger_submit(logger_t *, void *, unsigned long,
                   logbuf_t *) NONNULL(1) WUNRES;
 int logger_printf(logger_t *, void *, unsigned long,

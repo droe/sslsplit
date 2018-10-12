@@ -125,6 +125,8 @@ logger_submit(logger_t *logger, void *fh, unsigned long prepflags,
 	}
 	if (logger->prep)
 		lb = logger->prep(fh, prepflags, lb);
+	/* If we got passed lb == NULL and prep callback did not replace it
+	 * with an actual log buffer, stop here. */
 	if (!lb)
 		return 0;
 	if (thrqueue_enqueue(logger->queue, lb)) {
@@ -179,7 +181,7 @@ logger_open(logger_t *logger, void *fh)
  * Returns 0 on success, -1 on failure.
  */
 int
-logger_close(logger_t *logger, void *fh)
+logger_close(logger_t *logger, void *fh, unsigned long ctl)
 {
 	logbuf_t *lb;
 
@@ -189,6 +191,7 @@ logger_close(logger_t *logger, void *fh)
 	if (!(lb = logbuf_new(NULL, 0, NULL)))
 		return -1;
 	lb->fh = fh;
+	lb->ctl = ctl;
 	logbuf_ctl_set(lb, LBFLAG_CLOSE);
 	return thrqueue_enqueue(logger->queue, lb) ? 0 : -1;
 }
@@ -211,7 +214,7 @@ logger_thread(void *arg)
 			if (logger->open(lb->fh) != 0)
 				e = 1;
 		} else if (logbuf_ctl_isset(lb, LBFLAG_CLOSE)) {
-			logger->close(lb->fh);
+			logger->close(lb->fh, lb->ctl);
 		} else {
 			if (logbuf_write_free(lb, logger->write) < 0)
 				e = 1;

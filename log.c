@@ -79,7 +79,8 @@ static int err_shortcut_logger = 0;
 static int err_mode = LOG_ERR_MODE_STDERR;
 
 static ssize_t
-log_err_writecb(UNUSED void *fh, UNUSED int ctl, const void *buf, size_t sz)
+log_err_writecb(UNUSED void *fh, UNUSED unsigned long ctl,
+                const void *buf, size_t sz)
 {
 	switch (err_mode) {
 		case LOG_ERR_MODE_STDERR:
@@ -222,7 +223,7 @@ log_masterkey_reopencb(void)
  * Do the actual write to the open master key log file descriptor.
  */
 static ssize_t
-log_masterkey_writecb(UNUSED void *fh, UNUSED int ctl,
+log_masterkey_writecb(UNUSED void *fh, UNUSED unsigned long ctl,
                       const void *buf, size_t sz)
 {
 	if (write(masterkey_fd, buf, sz) == -1) {
@@ -290,7 +291,7 @@ log_connect_reopencb(void)
  * resolution that should not make any difference.
  */
 static ssize_t
-log_connect_writecb(UNUSED void *fh, UNUSED int ctl,
+log_connect_writecb(UNUSED void *fh, UNUSED unsigned long ctl,
                     const void *buf, size_t sz)
 {
 	char timebuf[32];
@@ -852,15 +853,26 @@ int
 log_content_close(log_content_ctx_t *ctx, int by_requestor)
 {
 	unsigned long prepflags = PREPFLAG_EOF;
+	unsigned long ctl;
 
-	if (by_requestor)
+	if (by_requestor) {
 		prepflags |= PREPFLAG_REQUEST;
+		ctl = LBFLAG_IS_REQ;
+	} else {
+		ctl = LBFLAG_IS_RESP;
+	}
+
+	/* We call submit an empty log buffer in order to give the content log
+	 * a chance to insert an EOF footer to be logged before actually
+	 * closing the file.  The logger_close() call will actually close the
+	 * log.  Some logs prefer to use the close callback for logging the
+	 * close event to the log. */
 	if (content_file_log && ctx->file) {
 		if (logger_submit(content_file_log, ctx->file,
 		                  prepflags, NULL) == -1) {
 			return -1;
 		}
-		if (logger_close(content_file_log, ctx->file) == -1) {
+		if (logger_close(content_file_log, ctx->file, ctl) == -1) {
 			return -1;
 		}
 		ctx->file = NULL;
@@ -870,7 +882,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 		                  prepflags, NULL) == -1) {
 			return -1;
 		}
-		if (logger_close(content_pcap_log, ctx->pcap) == -1) {
+		if (logger_close(content_pcap_log, ctx->pcap, ctl) == -1) {
 			return -1;
 		}
 		ctx->pcap = NULL;
@@ -880,7 +892,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 		                  prepflags, NULL) == -1) {
 			return -1;
 		}
-		if (logger_close(content_mirror_log, ctx->mirror) == -1) {
+		if (logger_close(content_mirror_log, ctx->mirror, ctl) == -1) {
 			return -1;
 		}
 		ctx->mirror = NULL;
@@ -912,7 +924,7 @@ log_content_file_dir_opencb(void *fh)
 }
 
 static void
-log_content_file_dir_closecb(void *fh)
+log_content_file_dir_closecb(void *fh, UNUSED unsigned long ctl)
 {
 	log_content_file_ctx_t *ctx = fh;
 
@@ -924,7 +936,7 @@ log_content_file_dir_closecb(void *fh)
 }
 
 static ssize_t
-log_content_file_dir_writecb(void *fh, UNUSED int ctl,
+log_content_file_dir_writecb(void *fh, UNUSED unsigned long ctl,
                              const void *buf, size_t sz)
 {
 	log_content_file_ctx_t *ctx = fh;
@@ -953,7 +965,7 @@ log_content_file_spec_opencb(void *fh)
 }
 
 static void
-log_content_file_spec_closecb(void *fh)
+log_content_file_spec_closecb(void *fh, UNUSED unsigned long ctl)
 {
 	log_content_file_ctx_t *ctx = fh;
 
@@ -965,7 +977,7 @@ log_content_file_spec_closecb(void *fh)
 }
 
 static ssize_t
-log_content_file_spec_writecb(void *fh, UNUSED int ctl,
+log_content_file_spec_writecb(void *fh, UNUSED unsigned long ctl,
                               const void *buf, size_t sz)
 {
 	log_content_file_ctx_t *ctx = fh;
@@ -1030,7 +1042,7 @@ log_content_file_single_reopencb(void)
 }
 
 static void
-log_content_file_single_closecb(void *fh)
+log_content_file_single_closecb(void *fh, UNUSED unsigned long ctl)
 {
 	log_content_file_ctx_t *ctx = fh;
 
@@ -1044,7 +1056,7 @@ log_content_file_single_closecb(void *fh)
 }
 
 static ssize_t
-log_content_file_single_writecb(void *fh, UNUSED int ctl,
+log_content_file_single_writecb(void *fh, UNUSED unsigned long ctl,
                                 const void *buf, size_t sz)
 {
 	UNUSED log_content_file_ctx_t *ctx = fh;
@@ -1058,7 +1070,8 @@ log_content_file_single_writecb(void *fh, UNUSED int ctl,
 }
 
 static logbuf_t *
-log_content_file_single_prepcb(void *fh, unsigned long prepflags, logbuf_t *lb)
+log_content_file_single_prepcb(void *fh, unsigned long prepflags,
+                               logbuf_t *lb)
 {
 	log_content_file_ctx_t *ctx = fh;
 	int is_request = !!(prepflags & PREPFLAG_REQUEST);
@@ -1187,21 +1200,24 @@ log_content_pcap_reopencb(void) {
 }
 
 static void
-log_content_pcap_closecb_base(void *fh, int fd) {
+log_content_pcap_closecb_base(void *fh, unsigned long ctl, int fd) {
 	log_content_pcap_ctx_t *ctx = fh;
-	logpkt_write_close(&ctx->state, fd, LOGPKT_REQUEST);
+	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
+	                                      : LOGPKT_RESPONSE;
+
+	logpkt_write_close(&ctx->state, fd, direction);
 }
 
 static void
-log_content_pcap_closecb(void *fh) {
+log_content_pcap_closecb(void *fh, unsigned long ctl) {
 	log_content_pcap_ctx_t *ctx = fh;
-	log_content_pcap_closecb_base(fh, content_pcap_fd);
+	log_content_pcap_closecb_base(fh, ctl, content_pcap_fd);
 	free(ctx);
 }
 
 static ssize_t
-log_content_pcap_writecb_base(void *fh, int ctl, const void *buf, size_t sz,
-                              int fd) {
+log_content_pcap_writecb_base(void *fh, unsigned long ctl,
+                              const void *buf, size_t sz, int fd) {
 	log_content_pcap_ctx_t *ctx = fh;
 	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
 	                                      : LOGPKT_RESPONSE;
@@ -1217,7 +1233,8 @@ errout:
 }
 
 static ssize_t
-log_content_pcap_writecb(void *fh, int ctl, const void *buf, size_t sz) {
+log_content_pcap_writecb(void *fh, unsigned long ctl,
+                         const void *buf, size_t sz) {
 	return log_content_pcap_writecb_base(fh, ctl, buf, sz, content_pcap_fd);
 }
 
@@ -1237,10 +1254,10 @@ log_content_pcap_dir_opencb(void *fh)
 }
 
 static void
-log_content_pcap_dir_closecb(void *fh)
+log_content_pcap_dir_closecb(void *fh, unsigned long ctl)
 {
 	log_content_pcap_ctx_t *ctx = fh;
-	log_content_pcap_closecb_base(fh, ctx->u.dir.fd);
+	log_content_pcap_closecb_base(fh, ctl, ctx->u.dir.fd);
 	if (ctx->u.dir.filename)
 		free(ctx->u.dir.filename);
 	if (ctx->u.dir.fd != -1)
@@ -1249,7 +1266,8 @@ log_content_pcap_dir_closecb(void *fh)
 }
 
 static ssize_t
-log_content_pcap_dir_writecb(void *fh, int ctl, const void *buf, size_t sz)
+log_content_pcap_dir_writecb(void *fh, unsigned long ctl,
+                             const void *buf, size_t sz)
 {
 	log_content_pcap_ctx_t *ctx = fh;
 	return log_content_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.dir.fd);
@@ -1271,10 +1289,10 @@ log_content_pcap_spec_opencb(void *fh)
 }
 
 static void
-log_content_pcap_spec_closecb(void *fh)
+log_content_pcap_spec_closecb(void *fh, unsigned long ctl)
 {
 	log_content_pcap_ctx_t *ctx = fh;
-	log_content_pcap_closecb_base(fh, ctx->u.spec.fd);
+	log_content_pcap_closecb_base(fh, ctl, ctx->u.spec.fd);
 	if (ctx->u.spec.filename)
 		free(ctx->u.spec.filename);
 	if (ctx->u.spec.fd != -1)
@@ -1283,7 +1301,8 @@ log_content_pcap_spec_closecb(void *fh)
 }
 
 static ssize_t
-log_content_pcap_spec_writecb(void *fh, int ctl, const void *buf, size_t sz)
+log_content_pcap_spec_writecb(void *fh, unsigned long ctl,
+                              const void *buf, size_t sz)
 {
 	log_content_pcap_ctx_t *ctx = fh;
 	return log_content_pcap_writecb_base(fh, ctl, buf, sz, ctx->u.spec.fd);
@@ -1338,14 +1357,18 @@ log_content_mirror_fini(void)
 }
 
 static void
-log_content_mirror_closecb(void *fh) {
+log_content_mirror_closecb(void *fh, unsigned long ctl) {
 	log_content_mirror_ctx_t *ctx = fh;
-	logpkt_write_close(&ctx->state, -1, LOGPKT_REQUEST);
+	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
+	                                      : LOGPKT_RESPONSE;
+
+	logpkt_write_close(&ctx->state, -1, direction);
 	free(ctx);
 }
 
 static ssize_t
-log_content_mirror_writecb(void *fh, int ctl, const void *buf, size_t sz) {
+log_content_mirror_writecb(void *fh, unsigned long ctl,
+                           const void *buf, size_t sz) {
 	log_content_mirror_ctx_t *ctx = fh;
 	int direction = (ctl & LBFLAG_IS_REQ) ? LOGPKT_REQUEST
 	                                      : LOGPKT_RESPONSE;
@@ -1400,7 +1423,8 @@ errout1:
 }
 
 static ssize_t
-log_cert_writecb(void *fh, UNUSED int ctl, const void *buf, size_t sz)
+log_cert_writecb(void *fh, UNUSED unsigned long ctl,
+                 const void *buf, size_t sz)
 {
 	char *fn = fh;
 	int fd;
