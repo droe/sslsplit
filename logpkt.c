@@ -172,8 +172,9 @@ typedef struct __attribute__((packed)) {
 		(C) = ~(C); \
 	}
 
-#define CSIN(X)         ((const struct sockaddr_in *)(X))
-#define CSIN6(X)        ((const struct sockaddr_in6 *)(X))
+#define CSA(X)          ((const struct sockaddr *)(&X))
+#define CSIN(X)         ((const struct sockaddr_in *)(&X))
+#define CSIN6(X)        ((const struct sockaddr_in6 *)(&X))
 
 static int
 logpkt_write_global_pcap_hdr(int fd)
@@ -230,14 +231,14 @@ logpkt_pcap_open_fd(int fd) {
 void
 logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet, size_t mtu,
                 const uint8_t *src_ether, const uint8_t *dst_ether,
-                const struct sockaddr *src_addr,
-                const struct sockaddr *dst_addr)
+                const struct sockaddr *src_addr, socklen_t src_addr_len,
+                const struct sockaddr *dst_addr, socklen_t dst_addr_len)
 {
 	ctx->libnet = libnet;
 	memcpy(ctx->src_ether, src_ether, ETHER_ADDR_LEN);
 	memcpy(ctx->dst_ether, dst_ether, ETHER_ADDR_LEN);
-	ctx->src_addr = src_addr;
-	ctx->dst_addr = dst_addr;
+	memcpy(&ctx->src_addr, src_addr, src_addr_len);
+	memcpy(&ctx->dst_addr, dst_addr, dst_addr_len);
 	ctx->src_seq = 0;
 	ctx->dst_seq = 0;
 	if (mtu) {
@@ -455,14 +456,16 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		if (direction == LOGPKT_REQUEST) {
 			sz = logpkt_pcap_build(buf,
 			                       ctx->src_ether, ctx->dst_ether,
-			                       ctx->src_addr, ctx->dst_addr,
+			                       CSA(ctx->src_addr),
+			                       CSA(ctx->dst_addr),
 			                       flags,
 			                       ctx->src_seq, ctx->dst_seq,
 			                       payload, payloadlen);
 		} else {
 			sz = logpkt_pcap_build(buf,
 			                       ctx->dst_ether, ctx->src_ether,
-			                       ctx->dst_addr, ctx->src_addr,
+			                       CSA(ctx->dst_addr),
+			                       CSA(ctx->src_addr),
 			                       flags,
 			                       ctx->dst_seq, ctx->src_seq,
 			                       payload, payloadlen);
@@ -479,14 +482,16 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		if (direction == LOGPKT_REQUEST) {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
-			                         ctx->src_addr, ctx->dst_addr,
+			                         CSA(ctx->src_addr),
+			                         CSA(ctx->dst_addr),
 			                         flags,
 			                         ctx->src_seq, ctx->dst_seq,
 			                         payload, payloadlen);
 		} else {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
-			                         ctx->dst_addr, ctx->src_addr,
+			                         CSA(ctx->dst_addr),
+			                         CSA(ctx->src_addr),
 			                         flags,
 			                         ctx->dst_seq, ctx->src_seq,
 			                         payload, payloadlen);
@@ -497,7 +502,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		}
 		rv = libnet_write(ctx->libnet);
 		if (rv == -1) {
-			log_err_printf("Error writing packet: %s",
+			log_err_printf("Error writing packet: %s\n",
 			               libnet_geterror(ctx->libnet));
 		}
 		libnet_clear_packet(ctx->libnet);

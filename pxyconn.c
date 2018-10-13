@@ -1987,7 +1987,9 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 		if (WANT_CONTENT_LOG(ctx)) {
 			if (log_content_open(&ctx->logctx, ctx->opts,
 			                     (struct sockaddr *)&ctx->srcaddr,
+			                     ctx->srcaddrlen,
 			                     (struct sockaddr *)&ctx->dstaddr,
+			                     ctx->dstaddrlen,
 			                     ctx->srchost_str, ctx->srcport_str,
 			                     ctx->dsthost_str, ctx->dstport_str,
 #ifdef HAVE_LOCAL_PROCINFO

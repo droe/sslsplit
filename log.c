@@ -603,8 +603,8 @@ log_content_format_pathspec(const char *logspec,
  */
 int
 log_content_open(log_content_ctx_t *ctx, opts_t *opts,
-                 const struct sockaddr *srcaddr,
-                 const struct sockaddr *dstaddr,
+                 const struct sockaddr *srcaddr, socklen_t srcaddrlen,
+                 const struct sockaddr *dstaddr, socklen_t dstaddrlen,
                  char *srchost, char *srcport,
                  char *dsthost, char *dstport,
                  char *exec_path, char *user, char *group)
@@ -708,7 +708,7 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 
 		logpkt_ctx_init(&ctx->pcap->state, NULL, 0,
 		                content_pcap_src_ether, content_pcap_dst_ether,
-		                srcaddr, dstaddr);
+		                srcaddr, srcaddrlen, dstaddr, dstaddrlen);
 
 		if (opts->pcaplog_isdir) {
 			/* per-connection-file pcap log (-Y) */
@@ -749,7 +749,7 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		                content_mirror_mtu,
 		                content_mirror_src_ether,
 		                content_mirror_dst_ether,
-		                srcaddr, dstaddr);
+		                srcaddr, srcaddrlen, dstaddr, dstaddrlen);
 	}
 
 	/* submit open events */

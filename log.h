@@ -80,7 +80,8 @@ struct log_content_ctx {
 	struct log_content_mirror_ctx *mirror;
 };
 int log_content_open(log_content_ctx_t *, opts_t *,
-                     const struct sockaddr *, const struct sockaddr *,
+                     const struct sockaddr *, socklen_t,
+                     const struct sockaddr *, socklen_t,
                      char *, char *, char *, char *,
                      char *, char *, char *) NONNULL(1,2,3) WUNRES;
 int log_content_submit(log_content_ctx_t *, logbuf_t *, int)

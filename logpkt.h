@@ -40,8 +40,8 @@ typedef struct {
 	libnet_t *libnet;
 	uint8_t src_ether[ETHER_ADDR_LEN];
 	uint8_t dst_ether[ETHER_ADDR_LEN];
-	const struct sockaddr *src_addr;
-	const struct sockaddr *dst_addr;
+	struct sockaddr_storage src_addr;
+	struct sockaddr_storage dst_addr;
 	uint32_t src_seq;
 	uint32_t dst_seq;
 	size_t mss;
@@ -53,7 +53,8 @@ typedef struct {
 int logpkt_pcap_open_fd(int fd) WUNRES;
 void logpkt_ctx_init(logpkt_ctx_t *, libnet_t *, size_t,
                      const uint8_t *, const uint8_t *,
-                     const struct sockaddr *, const struct sockaddr *);
+                     const struct sockaddr *, socklen_t,
+                     const struct sockaddr *, socklen_t);
 int logpkt_write_payload(logpkt_ctx_t *, int, int,
                          const unsigned char *, size_t) WUNRES;
 int logpkt_write_close(logpkt_ctx_t *, int, int);
