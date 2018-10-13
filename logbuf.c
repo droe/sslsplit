@@ -203,10 +203,14 @@ logbuf_make_contiguous(logbuf_t *lb) {
 		return NULL;
 	lb->buf = p;
 	lbtmp = lb;
+	p += lbtmp->sz;
 	while ((lbtmp = lbtmp->next)) {
 		memcpy(p, lbtmp->buf, lbtmp->sz);
+		lb->sz += lbtmp->sz;
 		p += lbtmp->sz;
 	}
+	logbuf_free(lb->next);
+	lb->next = NULL;
 	return lb;
 }
 

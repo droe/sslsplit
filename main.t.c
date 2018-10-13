@@ -67,6 +67,7 @@ main_suite(void)
 
 Suite * opts_suite(void);
 Suite * dynbuf_suite(void);
+Suite * logbuf_suite(void);
 Suite * cert_suite(void);
 Suite * cachemgr_suite(void);
 Suite * cachefkcrt_suite(void);
@@ -91,6 +92,7 @@ main(UNUSED int argc, UNUSED char *argv[])
 	srunner_add_suite(sr, main_suite());
 	srunner_add_suite(sr, opts_suite());
 	srunner_add_suite(sr, dynbuf_suite());
+	srunner_add_suite(sr, logbuf_suite());
 	srunner_add_suite(sr, cert_suite());
 	srunner_add_suite(sr, cachemgr_suite());
 	srunner_add_suite(sr, cachefkcrt_suite());
