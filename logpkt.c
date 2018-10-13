@@ -172,9 +172,9 @@ typedef struct __attribute__((packed)) {
 		(C) = ~(C); \
 	}
 
-#define CSA(X)          ((const struct sockaddr *)(&X))
-#define CSIN(X)         ((const struct sockaddr_in *)(&X))
-#define CSIN6(X)        ((const struct sockaddr_in6 *)(&X))
+#define CSA(X)          ((const struct sockaddr *)(X))
+#define CSIN(X)         ((const struct sockaddr_in *)(X))
+#define CSIN6(X)        ((const struct sockaddr_in6 *)(X))
 
 static int
 logpkt_write_global_pcap_hdr(int fd)
@@ -456,16 +456,16 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		if (direction == LOGPKT_REQUEST) {
 			sz = logpkt_pcap_build(buf,
 			                       ctx->src_ether, ctx->dst_ether,
-			                       CSA(ctx->src_addr),
-			                       CSA(ctx->dst_addr),
+			                       CSA(&ctx->src_addr),
+			                       CSA(&ctx->dst_addr),
 			                       flags,
 			                       ctx->src_seq, ctx->dst_seq,
 			                       payload, payloadlen);
 		} else {
 			sz = logpkt_pcap_build(buf,
 			                       ctx->dst_ether, ctx->src_ether,
-			                       CSA(ctx->dst_addr),
-			                       CSA(ctx->src_addr),
+			                       CSA(&ctx->dst_addr),
+			                       CSA(&ctx->src_addr),
 			                       flags,
 			                       ctx->dst_seq, ctx->src_seq,
 			                       payload, payloadlen);
@@ -482,16 +482,16 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 		if (direction == LOGPKT_REQUEST) {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
-			                         CSA(ctx->src_addr),
-			                         CSA(ctx->dst_addr),
+			                         CSA(&ctx->src_addr),
+			                         CSA(&ctx->dst_addr),
 			                         flags,
 			                         ctx->src_seq, ctx->dst_seq,
 			                         payload, payloadlen);
 		} else {
 			rv = logpkt_mirror_build(ctx->libnet,
 			                         ctx->src_ether, ctx->dst_ether,
-			                         CSA(ctx->dst_addr),
-			                         CSA(ctx->src_addr),
+			                         CSA(&ctx->dst_addr),
+			                         CSA(&ctx->src_addr),
 			                         flags,
 			                         ctx->dst_seq, ctx->src_seq,
 			                         payload, payloadlen);
