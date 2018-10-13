@@ -258,7 +258,7 @@ logbuf_write_free(logbuf_t *lb, writefunc_t writefunc)
 }
 
 /*
- * Free dynbuf including internal and chained buffers.
+ * Free logbuf including internal and chained buffers.
  */
 void
 logbuf_free(logbuf_t *lb)
