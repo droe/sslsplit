@@ -924,14 +924,14 @@ sys_rand_seed(void) {
 
 uint16_t
 sys_rand16(void) {
-	if (!sys_rand_seeded)
+	if (unlikely(!sys_rand_seeded))
 		sys_rand_seed();
 	return random();
 }
 
 uint32_t
 sys_rand32(void) {
-	if (!sys_rand_seeded)
+	if (unlikely(!sys_rand_seeded))
 		sys_rand_seed();
 	return random();
 }
