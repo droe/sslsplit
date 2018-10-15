@@ -39,6 +39,12 @@ int privsep_client_opensock(int, const proxyspec_t *spec);
 int privsep_client_certfile(int, const char *);
 int privsep_client_close(int);
 
+#ifdef __linux__
+#include <sys/socket.h>
+pid_t privsep_client_linux_get_pid(int, struct sockaddr *);
+char * privsep_client_linux_get_info(int, pid_t, uid_t *, gid_t *);
+#endif /* __linux__ */
+
 #endif /* !PRIVSEP_H */
 
 /* vim: set noet ft=c: */

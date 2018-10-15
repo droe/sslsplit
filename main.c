@@ -814,7 +814,11 @@ main(int argc, char *argv[])
 	 * child process doing the actual work.  We request 4 privsep client
 	 * sockets: three logger threads, and the child process main thread,
 	 * which will become the main proxy thread. */
+#ifdef __linux__
+	int clisock[5];
+#else /* !__linux__ */
 	int clisock[4];
+#endif /* !__linux__ */
 	if (privsep_fork(opts, clisock,
 	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
@@ -852,6 +856,13 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: failed to reinit SSL\n", argv0);
 		goto out_sslreinit_failed;
 	}
+
+#ifdef __linux__
+	if (proc_linux_init(clisock[4]) == -1) {
+		fprintf(stderr, "%s: failed to init proc_linux\n", argv0);
+		goto out_sslreinit_failed;
+	}
+#endif /* __linux__ */
 
 	/* Post-privdrop/chroot/detach initialization, thread spawning */
 	if (log_init(opts, proxy, &clisock[1]) == -1) {
