@@ -38,9 +38,11 @@
 static char *argv01[] = {
 	"https", "127.0.0.1", "10443", "127.0.0.2", "443"
 };
+#ifndef TRAVIS
 static char *argv02[] = {
 	"https", "::1", "10443", "::2", "443"
 };
+#endif /* !TRAVIS */
 static char *argv03[] = {
 	"http", "127.0.0.1", "10443", "127.0.0.2", "443"
 };
@@ -57,7 +59,7 @@ static char *argv06[] = {
 static char *argv07[] = {
 	"http", "127.0.0.1", "10443", "sni", "443"
 };
-#endif /* DOCKER */
+#endif /* !DOCKER */
 static char *argv08[] = {
 	"https", "127.0.0.1", "10443", "no_such_engine"
 };
@@ -80,7 +82,7 @@ static char *argv12[] = {
 static char *argv13[] = {
 	"autossl", "127.0.0.1", "10025", "sni", "25"
 };
-#endif /* DOCKER */
+#endif /* !DOCKER */
 static char *argv14[] = {
 	"https", "127.0.0.1", "10443",
 	"autossl", "127.0.0.1", "10025", "127.0.0.2", "25"
@@ -140,7 +142,7 @@ START_TEST(proxyspec_parse_02)
 	proxyspec_free(spec);
 }
 END_TEST
-#endif /* TRAVIS */
+#endif /* !TRAVIS */
 
 #ifndef DOCKER
 START_TEST(proxyspec_parse_03)
@@ -155,7 +157,7 @@ START_TEST(proxyspec_parse_03)
 		proxyspec_free(spec);
 }
 END_TEST
-#endif /* DOCKER */
+#endif /* !DOCKER */
 
 #ifndef DOCKER
 START_TEST(proxyspec_parse_04)
@@ -170,7 +172,7 @@ START_TEST(proxyspec_parse_04)
 		proxyspec_free(spec);
 }
 END_TEST
-#endif /* DOCKER */
+#endif /* !DOCKER */
 
 START_TEST(proxyspec_parse_05)
 {
@@ -293,7 +295,7 @@ START_TEST(proxyspec_parse_10)
 		proxyspec_free(spec);
 }
 END_TEST
-#endif /* DOCKER */
+#endif /* !DOCKER */
 
 START_TEST(proxyspec_parse_11)
 {
@@ -332,8 +334,9 @@ START_TEST(proxyspec_parse_12)
 		proxyspec_free(spec);
 }
 END_TEST
-#endif /* DOCKER */
+#endif /* !DOCKER */
 
+#ifndef TRAVIS
 START_TEST(proxyspec_parse_13)
 {
 	proxyspec_t *spec = NULL;
@@ -404,6 +407,7 @@ START_TEST(proxyspec_parse_14)
 	proxyspec_free(spec);
 }
 END_TEST
+#endif /* !TRAVIS */
 
 START_TEST(proxyspec_parse_15)
 {
@@ -476,7 +480,7 @@ START_TEST(proxyspec_parse_17)
 		proxyspec_free(spec);
 }
 END_TEST
-#endif /* DOCKER */
+#endif /* !DOCKER */
 
 START_TEST(proxyspec_parse_18)
 {
@@ -538,11 +542,11 @@ opts_suite(void)
 	tcase_add_test(tc, proxyspec_parse_01);
 #ifndef TRAVIS
 	tcase_add_test(tc, proxyspec_parse_02); /* IPv6 */
-#endif /* TRAVIS */
+#endif /* !TRAVIS */
 #ifndef DOCKER
 	tcase_add_exit_test(tc, proxyspec_parse_03, EXIT_FAILURE);
 	tcase_add_exit_test(tc, proxyspec_parse_04, EXIT_FAILURE);
-#endif /* DOCKER */
+#endif /* !DOCKER */
 	tcase_add_test(tc, proxyspec_parse_05);
 	tcase_add_test(tc, proxyspec_parse_06);
 	tcase_add_test(tc, proxyspec_parse_07);
@@ -550,20 +554,20 @@ opts_suite(void)
 #ifndef DOCKER
 	tcase_add_exit_test(tc, proxyspec_parse_09, EXIT_FAILURE);
 	tcase_add_exit_test(tc, proxyspec_parse_10, EXIT_FAILURE);
-#endif /* DOCKER */
+#endif /* !DOCKER */
 	tcase_add_test(tc, proxyspec_parse_11);
 #ifndef DOCKER
 	tcase_add_exit_test(tc, proxyspec_parse_12, EXIT_FAILURE);
-#endif /* DOCKER */
+#endif /* !DOCKER */
 #ifndef TRAVIS
 	tcase_add_test(tc, proxyspec_parse_13); /* IPv6 */
 	tcase_add_test(tc, proxyspec_parse_14); /* IPv6 */
-#endif /* TRAVIS */
+#endif /* !TRAVIS */
 	tcase_add_test(tc, proxyspec_parse_15);
 	tcase_add_test(tc, proxyspec_parse_16);
 #ifndef DOCKER
 	tcase_add_exit_test(tc, proxyspec_parse_17, EXIT_FAILURE);
-#endif /* DOCKER */
+#endif /* !DOCKER */
 	tcase_add_test(tc, proxyspec_parse_18);
 	suite_add_tcase(s, tc);
 
