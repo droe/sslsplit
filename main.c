@@ -54,6 +54,8 @@
 #endif /* !__BSD__ */
 
 #include <event2/event.h>
+#include <libnet.h>
+#include <pcap.h>
 
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
@@ -114,6 +116,16 @@ main_version(void)
 	ssl_openssl_version();
 	fprintf(stderr, "compiled against libevent %s\n", LIBEVENT_VERSION);
 	fprintf(stderr, "rtlinked against libevent %s\n", event_get_version());
+	fprintf(stderr, "compiled against libnet %s\n", LIBNET_VERSION);
+	const char *lnv = libnet_version();
+	if (!strncmp(lnv, "libnet version ", 15))
+		lnv += 15;
+	fprintf(stderr, "rtlinked against libnet %s\n", lnv);
+	fprintf(stderr, "compiled against libpcap n/a\n");
+	const char *lpv = pcap_lib_version();
+	if (!strncmp(lpv, "libpcap version ", 16))
+		lpv += 16;
+	fprintf(stderr, "rtlinked against libpcap %s\n", lpv);
 	fprintf(stderr, "%d CPU cores detected\n", sys_get_cpu_cores());
 }
 

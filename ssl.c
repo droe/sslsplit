@@ -148,12 +148,12 @@ ssl_openssl_version(void)
 		                "---------------------------------------\n");
 	}
 #ifdef LIBRESSL_VERSION_NUMBER
-	fprintf(stderr, "LibreSSL detected: %s (%lx)\n",
+	fprintf(stderr, "OpenSSL API provided by LibreSSL: %s (%lx)\n",
 	                LIBRESSL_VERSION_TEXT,
 	                (long unsigned int)LIBRESSL_VERSION_NUMBER);
 #endif /* LIBRESSL_VERSION_NUMBER */
 #ifdef OPENSSL_IS_BORINGSSL
-	fprintf(stderr, "BoringSSL detected\n")
+	fprintf(stderr, "OpenSSL API provided by BoringSSL\n")
 #endif /* OPENSSL_IS_BORINGSSL */
 #ifndef OPENSSL_NO_TLSEXT
 	fprintf(stderr, "OpenSSL has support for TLS extensions\n"
