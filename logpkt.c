@@ -40,8 +40,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <pcap.h>
 #include <errno.h>
+
+#ifndef WITHOUT_MIRROR
+#include <pcap.h>
+#endif /* !WITHOUT_MIRROR */
 
 #if defined(__OpenBSD__) && !defined(ETHERTYPE_IPV6)
 #include <net/ethertypes.h>
@@ -365,6 +368,7 @@ logpkt_pcap_build(uint8_t *pkt,
 	return sz + payloadlen;
 }
 
+#ifndef WITHOUT_MIRROR
 static int
 logpkt_mirror_build(libnet_t *libnet,
                     uint8_t *src_ether, uint8_t *dst_ether,
@@ -443,6 +447,7 @@ logpkt_mirror_build(libnet_t *libnet,
 	}
 	return 0;
 }
+#endif /* !WITHOUT_MIRROR */
 
 static int
 logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
@@ -476,6 +481,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			return -1;
 		}
 	} else {
+#ifndef WITHOUT_MIRROR
 		/* Source and destination ether are determined by the actual
 		 * local MAC address and target MAC address for mirroring the
 		 * packets to; use them as-is for both directions. */
@@ -506,6 +512,9 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			               libnet_geterror(ctx->libnet));
 		}
 		libnet_clear_packet(ctx->libnet);
+#else /* WITHOUT_MIRROR */
+		rv = -1;
+#endif /* WITHOUT_MIRROR */
 	}
 	return rv;
 }
@@ -608,6 +617,7 @@ logpkt_write_close(logpkt_ctx_t *ctx, int fd, int direction) {
 	return 0;
 }
 
+#ifndef WITHOUT_MIRROR
 typedef struct {
 	uint32_t ip;
 	int result;
@@ -765,4 +775,5 @@ out:
 	libnet_clear_packet(libnet);
 	return ctx.result;
 }
+#endif /* !WITHOUT_MIRROR */
 

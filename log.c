@@ -366,24 +366,27 @@ typedef struct log_content_pcap_ctx {
 	logpkt_ctx_t state;
 } log_content_pcap_ctx_t;
 
+#ifndef WITHOUT_MIRROR
 typedef struct log_content_mirror_ctx {
 	logpkt_ctx_t state;
 } log_content_mirror_ctx_t;
+#endif /* !WITHOUT_MIRROR */
 
 static int content_file_clisock = -1;
 static logger_t *content_file_log = NULL;
 static int content_pcap_clisock = -1;
 static logger_t *content_pcap_log = NULL;
-static logger_t *content_mirror_log = NULL;
-static libnet_t *content_mirror_libnet = NULL;
-static size_t content_mirror_mtu = 0;
 static uint8_t content_pcap_src_ether[ETHER_ADDR_LEN] = {
 	0x02, 0x00, 0x00, 0x11, 0x11, 0x11};
 static uint8_t content_pcap_dst_ether[ETHER_ADDR_LEN] = {
 	0x02, 0x00, 0x00, 0x22, 0x22, 0x22};
+#ifndef WITHOUT_MIRROR
+static logger_t *content_mirror_log = NULL;
+static libnet_t *content_mirror_libnet = NULL;
+static size_t content_mirror_mtu = 0;
 static uint8_t content_mirror_src_ether[ETHER_ADDR_LEN];
 static uint8_t content_mirror_dst_ether[ETHER_ADDR_LEN];
-
+#endif /* !WITHOUT_MIRROR */
 
 /*
  * Split a pathname into static LHS (including final slashes) and dynamic RHS.
@@ -615,7 +618,11 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 	char *dsthost_clean = NULL;
 	char *srchost_clean = NULL;
 
-	if (ctx->file || ctx->pcap || ctx->mirror)
+	if (ctx->file || ctx->pcap
+#ifndef WITHOUT_MIRROR
+	    || ctx->mirror
+#endif /* !WITHOUT_MIRROR */
+	    )
 		return 0; /* does this actually happen? */
 
 	if (opts->contentlog_isdir || opts->contentlog_isspec ||
@@ -738,6 +745,7 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		}
 	}
 
+#ifndef WITHOUT_MIRROR
 	if (opts->mirrorif) {
 		ctx->mirror = malloc(sizeof(log_content_mirror_ctx_t));
 		if (!ctx->mirror)
@@ -751,6 +759,7 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		                content_mirror_dst_ether,
 		                srcaddr, srcaddrlen, dstaddr, dstaddrlen);
 	}
+#endif /* !WITHOUT_MIRROR */
 
 	/* submit open events */
 	if (ctx->file) {
@@ -761,10 +770,12 @@ log_content_open(log_content_ctx_t *ctx, opts_t *opts,
 		if (logger_open(content_pcap_log, ctx->pcap) == -1)
 			goto errout;
 	}
+#ifndef WITHOUT_MIRROR
 	if (ctx->mirror) {
 		if (logger_open(content_mirror_log, ctx->mirror) == -1)
 			goto errout;
 	}
+#endif /* !WITHOUT_MIRROR */
 
 	if (srchost_clean)
 		free(srchost_clean);
@@ -812,6 +823,7 @@ log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 			if (!lbpcap)
 				goto errout;
 		}
+#ifndef WITHOUT_MIRROR
 		if (content_mirror_log) {
 			lbmirror = logbuf_new_deepcopy(lb, 1);
 			if (!lbmirror)
@@ -821,6 +833,7 @@ log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 		lbmirror = logbuf_new_deepcopy(lb, 1);
 		if (!lbmirror)
 			goto errout;
+#endif /* !WITHOUT_MIRROR */
 	}
 
 	if (content_pcap_log) {
@@ -830,6 +843,7 @@ log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 		}
 		lbpcap = NULL;
 	}
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log) {
 		if (logger_submit(content_mirror_log, ctx->mirror,
 		                  prepflags, lbmirror) == -1) {
@@ -837,6 +851,7 @@ log_content_submit(log_content_ctx_t *ctx, logbuf_t *lb, int is_request)
 		}
 		lbmirror = NULL;
 	}
+#endif /* !WITHOUT_MIRROR */
 	if (content_file_log) {
 		if (logger_submit(content_file_log, ctx->file,
 		                  prepflags, lb) == -1) {
@@ -890,6 +905,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 		}
 		ctx->pcap = NULL;
 	}
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log && ctx->mirror) {
 		if (logger_submit(content_mirror_log, ctx->mirror,
 		                  prepflags, NULL) == -1) {
@@ -900,6 +916,7 @@ log_content_close(log_content_ctx_t *ctx, int by_requestor)
 		}
 		ctx->mirror = NULL;
 	}
+#endif /* !WITHOUT_MIRROR */
 	return 0;
 }
 
@@ -1326,6 +1343,7 @@ log_content_pcap_prepcb(UNUSED void *fh, unsigned long prepflags,
  * Mirror writer for -T/-I options.
  */
 
+#ifndef WITHOUT_MIRROR
 static int
 log_content_mirror_preinit(const char *ifname, const char *targetip) {
 	char errbuf[LIBNET_ERRBUF_SIZE];
@@ -1403,6 +1421,7 @@ log_content_mirror_prepcb(UNUSED void *fh, unsigned long prepflags,
 	                                                  : LBFLAG_IS_RESP);
 	return lb;
 }
+#endif /* !WITHOUT_MIRROR */
 
 /*
  * Certificate writer for -w/-W options.
@@ -1537,6 +1556,7 @@ log_preinit(opts_t *opts)
 			goto out;
 		}
 	}
+#ifndef WITHOUT_MIRROR
 	if (opts->mirrorif) {
 		if (log_content_mirror_preinit(opts->mirrorif,
 		                               opts->mirrortarget) == -1)
@@ -1553,6 +1573,7 @@ log_preinit(opts_t *opts)
 			goto out;
 		}
 	}
+#endif /* !WITHOUT_MIRROR */
 	if (opts->connectlog) {
 		if (log_connect_preinit(opts->connectlog) == -1)
 			goto out;
@@ -1598,10 +1619,12 @@ out:
 		log_content_pcap_fini();
 		logger_free(content_pcap_log);
 	}
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log) {
 		log_content_mirror_fini();
 		logger_free(content_mirror_log);
 	}
+#endif /* !WITHOUT_MIRROR */
 	if (cert_log) {
 		logger_free(cert_log);
 	}
@@ -1632,10 +1655,12 @@ log_preinit_undo(void)
 		log_content_pcap_fini();
 		logger_free(content_pcap_log);
 	}
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log) {
 		log_content_mirror_fini();
 		logger_free(content_mirror_log);
 	}
+#endif /* !WITHOUT_MIRROR */
 	if (masterkey_log) {
 		log_masterkey_fini();
 		logger_free(masterkey_log);
@@ -1676,10 +1701,12 @@ log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock[3])
 	} else {
 		privsep_client_close(clisock[1]);
 	}
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log) {
 		if (logger_start(content_mirror_log) == -1)
 			return -1;
 	}
+#endif /* !WITHOUT_MIRROR */
 	if (cert_log) {
 		cert_clisock = clisock[2];
 		if (logger_start(cert_log) == -1)
@@ -1705,8 +1732,10 @@ log_fini(void)
 		logger_leave(cert_log);
 	if (masterkey_log)
 		logger_leave(masterkey_log);
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log)
 		logger_leave(content_mirror_log);
+#endif /* !WITHOUT_MIRROR */
 	if (content_pcap_log)
 		logger_leave(content_pcap_log);
 	if (content_file_log)
@@ -1720,8 +1749,10 @@ log_fini(void)
 		logger_join(cert_log);
 	if (masterkey_log)
 		logger_join(masterkey_log);
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log)
 		logger_join(content_mirror_log);
+#endif /* !WITHOUT_MIRROR */
 	if (content_pcap_log)
 		logger_join(content_pcap_log);
 	if (content_file_log)
@@ -1735,8 +1766,10 @@ log_fini(void)
 		logger_free(cert_log);
 	if (masterkey_log)
 		logger_free(masterkey_log);
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log)
 		logger_free(content_mirror_log);
+#endif /* !WITHOUT_MIRROR */
 	if (content_pcap_log)
 		logger_free(content_pcap_log);
 	if (content_file_log)
@@ -1748,8 +1781,10 @@ log_fini(void)
 
 	if (masterkey_log)
 		log_masterkey_fini();
+#ifndef WITHOUT_MIRROR
 	if (content_mirror_log)
 		log_content_mirror_fini();
+#endif /* !WITHOUT_MIRROR */
 	if (content_pcap_log)
 		log_content_pcap_fini();
 	if (content_file_log)

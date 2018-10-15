@@ -187,7 +187,8 @@ not been implemented yet.
 .TP
 .B \-I \fIif\fP
 Mirror connection content as emulated packets to interface \fIif\fP with
-destination address given by \fB-T\fP.
+destination address given by \fB-T\fP.  This option is not available if
+SSLsplit was built without mirroring support.
 .TP
 .B \-j \fIjaildir\fP
 Change the root directory to \fIjaildir\fP using chroot(2) after opening files.
@@ -334,7 +335,8 @@ Otherwise, connections matching no certificate will be dropped, or if
 .B \-T \fIaddr\fP
 Mirror connection content as emulated packets to destination address \fIaddr\fP
 on the interface given by \fB-I\fP.  Only IPv4 target addresses are currently
-supported.
+supported.  This option is not available if SSLsplit was built without
+mirroring support.
 .TP
 .B \-u \fIuser\fP
 Drop privileges after opening sockets and files by setting the real,

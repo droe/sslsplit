@@ -31,10 +31,16 @@
 
 #include "attrib.h"
 
+#include <sys/socket.h>
 #include <stdint.h>
 #include <time.h>
 
+#ifndef WITHOUT_MIRROR
 #include <libnet.h>
+#else /* WITHOUT_MIRROR */
+#define libnet_t void
+#define ETHER_ADDR_LEN 6
+#endif /* WITHOUT_MIRROR */
 
 typedef struct {
 	libnet_t *libnet;

@@ -99,8 +99,10 @@ typedef struct opts {
 	char *masterkeylog;
 	char *pcaplog;
 	char *pcaplog_basedir; /* static part of pcap logspec for privsep srv */
+#ifndef WITHOUT_MIRROR
 	char *mirrorif;
 	char *mirrortarget;
+#endif /* !WITHOUT_MIRROR */
 	CONST_SSL_METHOD *(*sslmethod)(void);
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	int sslversion;
@@ -181,8 +183,10 @@ void opts_set_pcaplogdir(opts_t *, const char *, const char *)
      NONNULL(1,2,3);
 void opts_set_pcaplogpathspec(opts_t *, const char *, const char *)
      NONNULL(1,2,3);
+#ifndef WITHOUT_MIRROR
 void opts_set_mirrorif(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_mirrortarget(opts_t *, const char *, const char *) NONNULL(1,2,3);
+#endif /* !WITHOUT_MIRROR */
 void opts_set_daemon(opts_t *) NONNULL(1);
 void opts_set_debug(opts_t *) NONNULL(1);
 int opts_set_option(opts_t *, const char *, const char *, char **)

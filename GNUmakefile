@@ -50,6 +50,16 @@
 # % MACOSX_VERSION_MIN=10.11 DEVELOPER_DIR=/Applications/Xcode-7.3.1.app/Contents/Developer make
 
 
+### Mirroring
+
+# Define to disable support for mirroring connection content as emulated
+# packets to a network interface (-I/-T options).  Doing so will remove the
+# dependency on both libnet and libpcap.  Use this for constrained environments
+# or on platforms without usable libnet/libpcap.  Logging connection content to
+# PCAP files will remain fully functional (-X/-Y/-y options) as it does not
+# make use of libnet and libpcap.
+#FEATURES+=	-DWITHOUT_MIRROR
+
 
 ### OpenSSL tweaking
 
@@ -251,9 +261,11 @@ PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_openssl \
 PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libevent_pthreads \
 		&& echo libevent_pthreads)
 endif
+ifneq ($(filter -DWITHOUT_MIRROR,$(FEATURES)),-DWITHOUT_MIRROR)
 ifndef LIBPCAP_BASE
 PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libpcap \
 		&& echo libpcap)
+endif
 endif
 TPKGS:=		
 ifndef CHECK_BASE
@@ -289,11 +301,13 @@ $(error dependency 'libevent 2.x' not found; \
 	install it or point LIBEVENT_BASE to base path)
 endif
 endif
+ifneq ($(filter -DWITHOUT_MIRROR,$(FEATURES)),-DWITHOUT_MIRROR)
 ifeq (,$(filter libpcap,$(PKGS)))
 LIBPCAP_FOUND:=	$(call locate,libpcap,include/pcap.h,$(LIBPCAP_BASE))
 ifndef LIBPCAP_FOUND
 $(error dependency 'libpcap' not found; \
 	install it or point LIBPCAP_BASE to base path)
+endif
 endif
 endif
 ifeq (,$(filter check,$(TPKGS)))
@@ -304,6 +318,7 @@ endif
 endif
 
 # Always search filesystem for libnet because libnet-config is unreliable
+ifneq ($(filter -DWITHOUT_MIRROR,$(FEATURES)),-DWITHOUT_MIRROR)
 LIBNET_FOUND:=	$(call locate,libnet,include/libnet-1.1/libnet.h,$(LIBNET_BASE))
 ifdef LIBNET_FOUND
 LIBNET_FOUND_INC:=	$(LIBNET_FOUND)/include/libnet-1.1
@@ -314,6 +329,7 @@ endif
 ifndef LIBNET_FOUND
 $(error dependency 'libnet' not found; \
 	install it or point LIBNET_BASE to base path)
+endif
 endif
 
 ifdef OPENSSL_FOUND
@@ -332,6 +348,7 @@ endif
 ifeq (,$(filter libevent_pthreads,$(PKGS)))
 PKG_LIBS+=	-levent_pthreads
 endif
+ifneq ($(filter -DWITHOUT_MIRROR,$(FEATURES)),-DWITHOUT_MIRROR)
 ifdef LIBNET_FOUND
 PKG_CPPFLAGS+=	-I$(LIBNET_FOUND_INC)
 PKG_LDFLAGS+=	-L$(LIBNET_FOUND)/lib
@@ -341,6 +358,7 @@ ifdef LIBPCAP_FOUND
 PKG_CPPFLAGS+=	-I$(LIBPCAP_FOUND)/include
 PKG_LDFLAGS+=	-L$(LIBPCAP_FOUND)/lib
 PKG_LIBS+=	-lpcap
+endif
 endif
 ifdef CHECK_FOUND
 TPKG_CPPFLAGS+=	-I$(CHECK_FOUND)/include

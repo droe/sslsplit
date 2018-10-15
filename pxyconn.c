@@ -187,7 +187,11 @@ typedef struct pxy_conn_ctx {
 } pxy_conn_ctx_t;
 
 #define WANT_CONNECT_LOG(ctx)	((ctx)->opts->connectlog||!(ctx)->opts->detach)
+#ifndef WITHOUT_MIRROR
 #define WANT_CONTENT_LOG(ctx)	(((ctx)->opts->contentlog||(ctx)->opts->pcaplog||(ctx)->opts->mirrorif)&&!(ctx)->passthrough)
+#else /* WITHOUT_MIRROR */
+#define WANT_CONTENT_LOG(ctx)	(((ctx)->opts->contentlog||(ctx)->opts->pcaplog)&&!(ctx)->passthrough)
+#endif /* WITHOUT_MIRROR */
 
 static pxy_conn_ctx_t *
 pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
@@ -2495,7 +2499,10 @@ pxy_conn_setup(evutil_socket_t fd,
 	}
 
 	/* prepare logging, part 1 */
-	if (opts->pcaplog || opts->mirrorif
+	if (opts->pcaplog
+#ifndef WITHOUT_MIRROR
+	    || opts->mirrorif
+#endif /* !WITHOUT_MIRROR */
 #ifdef HAVE_LOCAL_PROCINFO
 	    || opts->lprocinfo
 #endif /* HAVE_LOCAL_PROCINFO */

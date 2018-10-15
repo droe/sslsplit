@@ -147,12 +147,14 @@ opts_free(opts_t *opts)
 	if (opts->pcaplog_basedir) {
 		free(opts->pcaplog_basedir);
 	}
+#ifndef WITHOUT_MIRROR
 	if (opts->mirrorif) {
 		free(opts->mirrorif);
 	}
 	if (opts->mirrortarget) {
 		free(opts->mirrortarget);
 	}
+#endif /* !WITHOUT_MIRROR */
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }
@@ -1141,6 +1143,7 @@ opts_set_pcaplogpathspec(opts_t *opts, const char *argv0, const char *optarg)
 	               opts->pcaplog_basedir, opts->pcaplog);
 }
 
+#ifndef WITHOUT_MIRROR
 void
 opts_set_mirrorif(opts_t *opts, const char *argv0, const char *optarg)
 {
@@ -1162,6 +1165,7 @@ opts_set_mirrortarget(opts_t *opts, const char *argv0, const char *optarg)
 		oom_die(argv0);
 	log_dbg_printf("MirrorTarget: %s\n", opts->mirrortarget);
 }
+#endif /* !WITHOUT_MIRROR */
 
 void
 opts_set_daemon(opts_t *opts)
@@ -1336,10 +1340,12 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 		opts_set_pcaplogdir(opts, argv0, value);
 	} else if (!strncmp(name, "PcapLogPathSpec", 16)) {
 		opts_set_pcaplogpathspec(opts, argv0, value);
+#ifndef WITHOUT_MIRROR
 	} else if (!strncmp(name, "MirrorIf", 9)) {
 		opts_set_mirrorif(opts, argv0, value);
 	} else if (!strncmp(name, "MirrorTarget", 13)) {
 		opts_set_mirrortarget(opts, argv0, value);
+#endif /* !WITHOUT_MIRROR */
 	} else if (!strncmp(name, "Daemon", 7)) {
 		yes = check_value_yesno(value, "Daemon", line_num);
 		if (yes == -1) {

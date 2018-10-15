@@ -53,12 +53,13 @@
 #include <getopt.h>
 #endif /* !__BSD__ */
 
-#include <event2/event.h>
-#include <libnet.h>
-#include <pcap.h>
-
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
+#include <event2/event.h>
+#ifndef WITHOUT_MIRROR
+#include <libnet.h>
+#include <pcap.h>
+#endif /* !WITHOUT_MIRROR */
 
 #if __APPLE__
 #undef daemon
@@ -116,6 +117,7 @@ main_version(void)
 	ssl_openssl_version();
 	fprintf(stderr, "compiled against libevent %s\n", LIBEVENT_VERSION);
 	fprintf(stderr, "rtlinked against libevent %s\n", event_get_version());
+#ifndef WITHOUT_MIRROR
 	fprintf(stderr, "compiled against libnet %s\n", LIBNET_VERSION);
 	const char *lnv = libnet_version();
 	if (!strncmp(lnv, "libnet version ", 15))
@@ -126,6 +128,7 @@ main_version(void)
 	if (!strncmp(lpv, "libpcap version ", 16))
 		lpv += 16;
 	fprintf(stderr, "rtlinked against libpcap %s\n", lpv);
+#endif /* !WITHOUT_MIRROR */
 	fprintf(stderr, "%d CPU cores detected\n", sys_get_cpu_cores());
 }
 
@@ -214,8 +217,15 @@ main_usage(void)
 "  -Y pcapdir  pcap log: packets to separate files in dir (excludes -X/-y)\n"
 "  -y pathspec pcap log: packets to sep files with %% subst (excl. -X/-Y):\n"
 "              see option -F for pathspec format\n"
+#ifndef WITHOUT_MIRROR
 "  -I if       mirror packets to interface\n"
 "  -T addr     mirror packets to target address (used with -I)\n"
+#define OPT_I "I:"
+#define OPT_T "T:"
+#else /* WITHOUT_MIRROR */
+#define OPT_I 
+#define OPT_T 
+#endif /* WITHOUT_MIRROR */
 "  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
 #ifdef HAVE_LOCAL_PROCINFO
 "  -i          look up local process owning each connection for logging\n"
@@ -328,9 +338,10 @@ main(int argc, char *argv[])
 		natengine = NULL;
 	}
 
-	while ((ch = getopt(argc, argv, OPT_g OPT_G OPT_Z OPT_i OPT_x
+	while ((ch = getopt(argc, argv,
+	                    OPT_g OPT_G OPT_Z OPT_i OPT_x OPT_T OPT_I
 	                    "k:c:C:K:t:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
-	                    "dDVhW:w:q:f:o:X:Y:y:I:T:")) != -1) {
+	                    "dDVhW:w:q:f:o:X:Y:y:")) != -1) {
 		switch (ch) {
 			case 'f':
 				if (opts->conffile)
@@ -451,12 +462,14 @@ main(int argc, char *argv[])
 			case 'y':
 				opts_set_pcaplogpathspec(opts, argv0, optarg);
 				break;
+#ifndef WITHOUT_MIRROR
 			case 'I':
 				opts_set_mirrorif(opts, argv0, optarg);
 				break;
 			case 'T':
 				opts_set_mirrortarget(opts, argv0, optarg);
 				break;
+#endif /* !WITHOUT_MIRROR */
 			case 'W':
 				opts_set_certgendir_writeall(opts, argv0, optarg);
 				break;
@@ -500,6 +513,7 @@ main(int argc, char *argv[])
 		                argv0);
 		exit(EXIT_FAILURE);
 	}
+#ifndef WITHOUT_MIRROR
 	if (opts->mirrortarget && !opts->mirrorif) {
 		fprintf(stderr, "%s: -T depends on -I.\n", argv0);
 		exit(EXIT_FAILURE);
@@ -508,6 +522,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: -I depends on -T.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
+#endif /* !WITHOUT_MIRROR */
 	if (!opts->spec) {
 		fprintf(stderr, "%s: no proxyspec specified.\n", argv0);
 		exit(EXIT_FAILURE);
