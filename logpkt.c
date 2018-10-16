@@ -46,10 +46,6 @@
 #include <pcap.h>
 #endif /* !WITHOUT_MIRROR */
 
-#if defined(__OpenBSD__) && !defined(ETHERTYPE_IPV6)
-#include <net/ethertypes.h>
-#endif /* __OpenBSD__ && !ETHERTYPE_IPV6 */
-
 typedef struct __attribute__((packed)) {
 	uint32_t magic_number;  /* magic number */
 	uint16_t version_major; /* major version number */

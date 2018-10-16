@@ -119,10 +119,14 @@ main_version(void)
 	fprintf(stderr, "rtlinked against libevent %s\n", event_get_version());
 #ifndef WITHOUT_MIRROR
 	fprintf(stderr, "compiled against libnet %s\n", LIBNET_VERSION);
+#ifndef __OpenBSD__
 	const char *lnv = libnet_version();
 	if (!strncmp(lnv, "libnet version ", 15))
 		lnv += 15;
 	fprintf(stderr, "rtlinked against libnet %s\n", lnv);
+#else /* __OpenBSD__ */
+	fprintf(stderr, "rtlinked against libnet n/a\n");
+#endif /* __OpenBSD__ */
 	fprintf(stderr, "compiled against libpcap n/a\n");
 	const char *lpv = pcap_lib_version();
 	if (!strncmp(lpv, "libpcap version ", 16))
