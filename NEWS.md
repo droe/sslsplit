@@ -1,7 +1,7 @@
 
 ### SSLsplit develop
 
-This release contains work sponsored by HackerOne.
+This release includes work sponsored by HackerOne.
 
 -   Add PCAP content log modes (-X, -Y, -y) and a packet mirroring content log
     mode (-T, -I) to encapsulate decrypted network segments in emulated TCP,
@@ -14,10 +14,11 @@ This release contains work sponsored by HackerOne.
 -   Suppress Expect-CT header in order to avoid Certificate Transparency log
     lookup failures (issue #205).
 -   Add -x option for activating an OpenSSL engine (issue #204, pull req #206).
--   Add -f option for loading configuration from file (pull req #193).
+-   Add -f option for loading configuration from file, including a new manual
+    page, sslsplit.conf(5) (pull req #193).
 -   Add `sudotest` target with unit tests which require privileges to run.
--   Add XNU headers for macOS High Sierra 10.13.1 to 10.13.6.
 -   Fix crash when using LibreSSL (pull req #207).
+-   Add XNU headers for macOS High Sierra 10.13.1 to 10.13.6.
 -   Minor bugfixes and improvements.
 
 
