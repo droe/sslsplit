@@ -1,35 +1,38 @@
-# This is the SSLsplit configuration file
+# SSLsplit sample configuration
+#
+# Use the -f command line option to start sslsplit with a config file.
+# See sslsplit.conf(5) and sslsplit(1) for documentation.
 
 # Use CA cert (and key) to sign forged certs
-CACert /etc/sslsplit/ca.crt
+CACert /usr/local/etc/sslsplit/ca.crt
 
 # Use CA key (and cert) to sign forged certs
-CAKey /etc/sslsplit/ca.key
+CAKey /usr/local/etc/sslsplit/ca.key
 
 # Use cert from pemfile when destination requests client certs
-#ClientCert /etc/sslsplit/client.crt
+#ClientCert /usr/local/etc/sslsplit/client.crt
 
 # Use key from pemfile when destination requests client certs
-#ClientKey /etc/sslsplit/client.key
+#ClientKey /usr/local/etc/sslsplit/client.key
 
 # Use CA chain from pemfile (intermediate and root CA certs)
-#CAChain /etc/sslsplit/chain.crt
+#CAChain /usr/local/etc/sslsplit/chain.crt
 
 # Use key from pemfile for leaf certs (default: generate)
-#LeafCerts /etc/sslsplit/leaf.key
+#LeafCerts /usr/local/etc/sslsplit/leaf.key
 
 # Use URL as CRL distribution point for all forged certs
-#CRL http://example.com
+#CRL http://example.com/example.crl
 
 # Use cert+chain+key PEM files from certdir to target all sites
 # matching the common names (non-matching: generate if CA)
-#TargetCertDir /etc/sslsplit/target
+#TargetCertDir /usr/local/etc/sslsplit/target
 
 # Write leaf key and only generated certificates to gendir
-#WriteGenCertsDir /var/run/sslsplit
+#WriteGenCertsDir /var/log/sslsplit
 
 # Write leaf key and all certificates to gendir
-#WriteAllCertsDir /var/run/sslsplit
+#WriteAllCertsDir /var/log/sslsplit
 
 # Deny all OCSP requests on all proxyspecs
 #DenyOCSP yes
@@ -39,7 +42,7 @@ CAKey /etc/sslsplit/ca.key
 #Passthrough yes
 
 # Use DH group params from pemfile (default: keyfiles or auto)
-#DHGroupParams /etc/sslsplit/dh.pem
+#DHGroupParams /usr/local/etc/sslsplit/dh.pem
 
 # Use ECDH named curve (default: prime256v1)
 #ECDHCurve prime256v1
@@ -54,7 +57,7 @@ CAKey /etc/sslsplit/ca.key
 #DisableSSLProto tls10
 
 # Use the given OpenSSL cipher suite spec (default: ALL:-aNULL)
-Ciphers MEDIUM:HIGH
+#Ciphers MEDIUM:HIGH
 
 # OpenSSL engine to activate, either ID or full path to shared library
 #OpenSSLEngine cloudhsm
@@ -70,7 +73,7 @@ Ciphers MEDIUM:HIGH
 #Chroot /var/run/sslsplit
 
 # Write pid to pidfile (default: no pid file)
-#PidFile /var/run/sslsplit.pid
+PidFile /var/run/sslsplit.pid
 
 # Connect log: log one line summary per connection to logfile
 #ConnectLog /var/log/sslsplit/connect.log
@@ -79,7 +82,7 @@ Ciphers MEDIUM:HIGH
 #ContentLog /var/log/sslsplit/content.log
 
 # Content log: full data to separate files in dir (excludes ContentLog/ContentLogPathSpec)
-#ContentLogDir /var/log/sslsplit/content
+#ContentLogDir /var/log/sslsplit/content.log
 
 # Content log: full data to sep files with % subst (excludes ContentLog/ContentLogDir)
 #ContentLogPathSpec /var/log/sslsplit/%X/%u-%s-%d-%T.log
@@ -103,7 +106,7 @@ Ciphers MEDIUM:HIGH
 #MirrorIf lo
 
 # Mirror packets to target address, used with MirrorIf
-#MirrorTarget 127.0.0.1
+#MirrorTarget 192.0.2.1
 
 # Daemon mode: run in background, log error messages to syslog
 Daemon yes
@@ -121,5 +124,8 @@ Daemon yes
 
 # Proxy specifications
 # type listenaddr+port [natengine|targetaddr+port|"sni"+port]
+ProxySpec https 127.0.0.1 8080
+ProxySpec https ::1 8080
 ProxySpec https 127.0.0.1 8443
 ProxySpec https ::1 8443
+

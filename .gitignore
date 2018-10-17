@@ -2,6 +2,7 @@
 /*.dSYM
 /sslsplit
 /sslsplit.test
+/sslsplit.conf
 /extra/*.pyc
 /extra/engine/*.dylib
 /extra/engine/*.so
