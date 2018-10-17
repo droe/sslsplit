@@ -32,7 +32,10 @@
 .LP 
 The file sslsplit.conf configures SSLsplit, sslsplit(1).
 .SH "FILE FORMAT"
-The file consists of comments and options with arguments. Each line which starts with a hash (\fB#\fR) symbol is ignored by the parser. Options and arguments are of the form \fBOption Argument\fR. The arguments are of the following types:
+The file consists of comments and options with arguments. Each line which 
+starts with a hash (\fB#\fR) symbol is ignored by the parser. Options and 
+arguments are of the form \fBOption Argument\fR. The arguments are of the 
+following types:
 .TP
 \fBBOOL\fR 
 Boolean value (yes/no).
@@ -41,73 +44,75 @@ Boolean value (yes/no).
 String.
 .SH "DIRECTIVES"
 .LP 
-When an option is not used (hashed or doesn't exist in the configuration file) sslsplit takes a default action.
+When an option is not used (hashed or doesn't exist in the configuration file) 
+sslsplit takes a default action. If an option does not have a command line 
+equivalent, -o opt=val option can be used to override it on the command line.
 .TP 
 \fBCACert STRING\fR
-Use CA cert (and key) to sign forged certs.
+Use CA cert (and key) to sign forged certs. Equivalent to -c command line option.
 .TP
 \fBCAKey STRING\fR
-Use CA key (and cert) to sign forged certs.
+Use CA key (and cert) to sign forged certs. Equivalent to -k command line option.
 .TP 
 \fBClientCert STRING\fR
-Use cert from pemfile when destination requests client certs.
+Use cert from pemfile when destination requests client certs. Equivalent to -a command line option.
 .TP
 \fBClientKey STRING\fR
-Use key from pemfile when destination requests client certs.
+Use key from pemfile when destination requests client certs. Equivalent to -b command line option.
 .TP
 \fBCAChain STRING\fR
-Use CA chain from pemfile (intermediate and root CA certs).
+Use CA chain from pemfile (intermediate and root CA certs). Equivalent to -C command line option.
 .TP
 \fBLeafCerts STRING\fR
-Use key from pemfile for leaf certs.
+Use key from pemfile for leaf certs. Equivalent to -K command line option.
 .br
 Default: generate
 .TP
 \fBCRL STRING\fR
-Use URL as CRL distribution point for all forged certs.
+Use URL as CRL distribution point for all forged certs. Equivalent to -q command line option.
 .TP
 \fBTargetCertDir STRING\fR
-Use cert+chain+key PEM files from certdir to target all sites matching the common names (non-matching: generate if CA).
+Use cert+chain+key PEM files from certdir to target all sites matching the common names (non-matching: generate if CA). Equivalent to -t command line option.
 .TP
 \fBWriteGenCertsDir STRING\fR
-Write leaf key and only generated certificates to gendir.
+Write leaf key and only generated certificates to gendir. Equivalent to -w command line option.
 .TP
 \fBWriteAllCertsDir STRING\fR
-Write leaf key and all certificates to gendir.
+Write leaf key and all certificates to gendir. Equivalent to -W command line option.
 .TP
 \fBDenyOCSP BOOL\fR
-Deny all OCSP requests on all proxyspecs.
+Deny all OCSP requests on all proxyspecs. Equivalent to -O command line option.
 .TP
 \fBPassthrough BOOL\fR
-Passthrough SSL connections if they cannot be split because of client cert auth or no matching cert and no CA.
+Passthrough SSL connections if they cannot be split because of client cert auth or no matching cert and no CA. Equivalent to -P command line option.
 .br 
 Default: drop
 .TP
 \fBDHGroupParams STRING\fR
-Use DH group params from pemfile.
+Use DH group params from pemfile. Equivalent to -g command line option.
 .br 
 Default: keyfiles or auto
 .TP
 \fBECDHCurve STRING\fR
-Use ECDH named curve.
+Use ECDH named curve. Equivalent to -G command line option.
 .br 
 Default: prime256v1
 .TP
 \fBSSLCompression BOOL\fR
-Enable/disable SSL/TLS compression on all connections.
+Enable/disable SSL/TLS compression on all connections. Equivalent to -Z command line option.
 .TP
 \fBForceSSLProto STRING\fR
-Force SSL/TLS protocol version only.
+Force SSL/TLS protocol version only. Equivalent to -r command line option.
 .br 
 Default: all
 .TP
 \fBDisableSSLProto STRING\fR
-Disable SSL/TLS protocol version.
+Disable SSL/TLS protocol version. Equivalent to -R command line option.
 .br 
 Default: none
 .TP
 \fBCiphers STRING\fR
-Use the given OpenSSL cipher suite spec.
+Use the given OpenSSL cipher suite spec. Equivalent to -s command line option.
 .br 
 Default: ALL:-aNULL
 .TP 
@@ -115,65 +120,66 @@ Default: ALL:-aNULL
 The OpenSSL engine to activate, either the ID or the full path to the shared
 library implementing the engine.  If an ID is given, the engine needs to be
 known to the system-wide OpenSSL configuration.  Only available if built
-against a version of OpenSSL with engine support.
+against a version of OpenSSL with engine support.  Equivalent to -x command
+line option.
 .TP 
 \fBNATEngine STRING\fR
-Specify default NAT engine to use.
+Specify default NAT engine to use. Equivalent to -e command line option.
 .TP 
 \fBUser STRING\fR
-Drop privileges to user.
+Drop privileges to user. Equivalent to -u command line option.
 .br 
 Default: nobody, if run as root
 .TP
 \fBGroup STRING\fR
-Drop privileges to group.
+Drop privileges to group. Equivalent to -m command line option.
 .br
 Default: Primary group of user
 .TP 
 \fBChroot STRING\fR
-chroot() to jaildir (impacts sni proxyspecs, see sslsplit(1)).
+chroot() to jaildir (impacts sni proxyspecs, see sslsplit(1)). Equivalent to -j command line option.
 .TP 
 \fBPidFile STRING\fR
-Write pid to file.
+Write pid to file. Equivalent to -p command line option.
 .TP 
 \fBConnectLog STRING\fR
-Connect log: log one line summary per connection to logfile.
+Connect log: log one line summary per connection to logfile. Equivalent to -l command line option.
 .TP 
 \fBContentLog STRING\fR
-Content log: full data to file or named pipe (excludes ContentLogDir/ContentLogPathSpec).
+Content log: full data to file or named pipe (excludes ContentLogDir/ContentLogPathSpec). Equivalent to -L command line option.
 .TP 
 \fBContentLogDir STRING\fR
-Content log: full data to separate files in dir (excludes ContentLog/ContentLogPathSpec).
+Content log: full data to separate files in dir (excludes ContentLog/ContentLogPathSpec). Equivalent to -S command line option.
 .TP 
 \fBContentLogPathSpec STRING\fR
-Content log: full data to sep files with % subst (excludes ContentLog/ContentLogDir).
+Content log: full data to sep files with % subst (excludes ContentLog/ContentLogDir). Equivalent to -F command line option.
 .TP 
 \fBLogProcInfo BOOL\fR
-Look up local process owning each connection for logging.
-.TP 
-\fBMasterKeyLog STRING\fR
-Log master keys to logfile in SSLKEYLOGFILE format.
+Look up local process owning each connection for logging. Equivalent to -i command line option.
 .TP 
 \fBPcapLog STRING\fR
-Pcap log: packets to pcapfile (excludes PcapLogDir/PcapLogPathSpec).
+Pcap log: packets to pcapfile (excludes PcapLogDir/PcapLogPathSpec). Equivalent to -X command line option.
 .TP 
 \fBPcapLogDir STRING\fR
-Pcap log: packets to separate files in dir (excludes PcapLog/PcapLogPathSpec).
+Pcap log: packets to separate files in dir (excludes PcapLog/PcapLogPathSpec). Equivalent to -Y command line option.
 .TP 
 \fBPcapLogPathSpec STRING\fR
-Pcap log: packets to sep files with % subst (excludes PcapLog/PcapLogDir).
+Pcap log: packets to sep files with % subst (excludes PcapLog/PcapLogDir). Equivalent to -y command line option.
 .TP 
 \fBMirrorIf STRING\fR
-Mirror packets to interface.
+Mirror packets to interface. Equivalent to -I command line option.
 .TP 
 \fBMirrorTarget STRING\fR
-Mirror packets to target address (used with MirrorIf).
+Mirror packets to target address (used with MirrorIf). Equivalent to -T command line option.
+.TP 
+\fBMasterKeyLog STRING\fR
+Log master keys to logfile in SSLKEYLOGFILE format. Equivalent to -M command line option.
 .TP 
 \fBDaemon BOOL\fR
-Daemon mode: run in background, log error messages to syslog.
+Daemon mode: run in background, log error messages to syslog. Equivalent to -d command line option.
 .TP 
 \fBDebug BOOL\fR
-Debug mode: run in foreground, log debug messages on stderr.
+Debug mode: run in foreground, log debug messages on stderr. Equivalent to -D command line option.
 .TP
 \fBVerifyPeer BOOL\fR
 Verify peer using default certificates.
@@ -181,7 +187,9 @@ Verify peer using default certificates.
 Default: no
 .TP
 \fBAddSNIToCertificate BOOL\fR
-When disabled, never add the SNI to forged certificates, even if the SNI provided by the client does not match the server certificate's CN/SAN. Helps pass the wrong.host test at https://badssl.com.
+When disabled, never add the SNI to forged certificates, even if the SNI 
+provided by the client does not match the server certificate's CN/SAN. Helps 
+pass the wrong.host test at https://badssl.com.
 .br
 Default: yes
 .TP 
