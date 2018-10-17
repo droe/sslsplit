@@ -3,115 +3,171 @@
 # Use the -f command line option to start sslsplit with a config file.
 # See sslsplit.conf(5) and sslsplit(1) for documentation.
 
-# Use CA cert (and key) to sign forged certs
+# Use CA cert (and key) to sign forged certs.
+# Equivalent to -c command line option.
 CACert /usr/local/etc/sslsplit/ca.crt
 
-# Use CA key (and cert) to sign forged certs
+# Use CA key (and cert) to sign forged certs.
+# Equivalent to -k command line option.
 CAKey /usr/local/etc/sslsplit/ca.key
 
-# Use cert from pemfile when destination requests client certs
+# Use cert from pemfile when destination requests client certs.
+# Equivalent to -a command line option.
 #ClientCert /usr/local/etc/sslsplit/client.crt
 
-# Use key from pemfile when destination requests client certs
+# Use key from pemfile when destination requests client certs.
+# Equivalent to -b command line option.
 #ClientKey /usr/local/etc/sslsplit/client.key
 
-# Use CA chain from pemfile (intermediate and root CA certs)
+# Use CA chain from pemfile (intermediate and root CA certs).
+# Equivalent to -C command line option.
 #CAChain /usr/local/etc/sslsplit/chain.crt
 
-# Use key from pemfile for leaf certs (default: generate)
+# Use key from pemfile for leaf certs.
+# Equivalent to -K command line option.
+# (default: generate)
 #LeafCerts /usr/local/etc/sslsplit/leaf.key
 
-# Use URL as CRL distribution point for all forged certs
+# Use URL as CRL distribution point for all forged certs.
+# Equivalent to -q command line option.
 #CRL http://example.com/example.crl
 
-# Use cert+chain+key PEM files from certdir to target all sites
-# matching the common names (non-matching: generate if CA)
+# Use cert+chain+key PEM files from certdir to target all sites matching the
+# common names (non-matching: generate if CA).
+# Equivalent to -t command line option.
 #TargetCertDir /usr/local/etc/sslsplit/target
 
-# Write leaf key and only generated certificates to gendir
+# Write leaf key and only generated certificates to gendir.
+# Equivalent to -w command line option.
 #WriteGenCertsDir /var/log/sslsplit
 
-# Write leaf key and all certificates to gendir
+# Write leaf key and all certificates to gendir.
+# Equivalent to -W command line option.
 #WriteAllCertsDir /var/log/sslsplit
 
-# Deny all OCSP requests on all proxyspecs
+# Deny all OCSP requests on all proxyspecs.
+# Equivalent to -O command line option.
 #DenyOCSP yes
 
-# Passthrough SSL connections if they cannot be split because of
-# client cert auth or no matching cert and no CA (default: drop)
+# Passthrough SSL connections if they cannot be split because of client cert 
+# auth or no matching cert and no CA.
+# Equivalent to -P command line option.
+# (default: drop)
 #Passthrough yes
 
-# Use DH group params from pemfile (default: keyfiles or auto)
+# Use DH group params from pemfile.
+# Equivalent to -g command line option.
+# (default: keyfiles or auto)
 #DHGroupParams /usr/local/etc/sslsplit/dh.pem
 
-# Use ECDH named curve (default: prime256v1)
+# Use ECDH named curve.
+# Equivalent to -G command line option.
+# (default: prime256v1)
 #ECDHCurve prime256v1
 
-# Enable/disable SSL/TLS compression on all connections
+# Enable/disable SSL/TLS compression on all connections.
+# Equivalent to -Z command line option.
 #SSLCompression no
 
-# Force SSL/TLS protocol version only (default: all)
+# Force SSL/TLS protocol version only.
+# Equivalent to -r command line option.
+# (default: all)
 #ForceSSLProto tls12
 
-# Disable SSL/TLS protocol version (default: none)
+# Disable SSL/TLS protocol version.
+# Equivalent to -R command line option.
+# (default: none)
 #DisableSSLProto tls10
 
-# Use the given OpenSSL cipher suite spec (default: ALL:-aNULL)
+# Use the given OpenSSL cipher suite spec.
+# Equivalent to -s command line option.
+# (default: ALL:-aNULL)
 #Ciphers MEDIUM:HIGH
 
-# OpenSSL engine to activate, either ID or full path to shared library
+# The OpenSSL engine to activate, either the ID or the full path to the shared
+# library implementing the engine. If an ID is given, the engine needs to be
+# known to the system-wide OpenSSL configuration. Only available if built
+# against a version of OpenSSL with engine support.
+# Equivalent to -x command line option
 #OpenSSLEngine cloudhsm
 
-# Specify default NAT engine to use
+# Specify default NAT engine to use.
+# Equivalent to -e command line option.
 #NATEngine netfilter
 
-# Drop privileges to user and group (default if run as root: nobody)
+# Drop privileges to user.
+# Equivalent to -u command line option.
+# (default: nobody, if run as root)
 #User sslsplit
+
+# Drop privileges to group.
+# Equivalent to -m command line option.
+# (default: primary group of user)
 #Group sslsplit
 
-# chroot() to jaildir (impacts sni proxyspecs, see manual page)
+# chroot() to jaildir (impacts sni proxyspecs, see sslsplit(1)).
+# Equivalent to -j command line option.
 #Chroot /var/run/sslsplit
 
-# Write pid to pidfile (default: no pid file)
+# Write pid to file.
+# Equivalent to -p command line option.
+# (default: no pid file)
 PidFile /var/run/sslsplit.pid
 
-# Connect log: log one line summary per connection to logfile
+# Connect log: log one line summary per connection to logfile.
+# Equivalent to -l command line option.
 #ConnectLog /var/log/sslsplit/connect.log
 
-# Content log: full data to file or named pipe (excludes ContentLogDir/ContentLogPathSpec)
+# Content log: full data to file or named pipe
+# (excludes ContentLogDir/ContentLogPathSpec).
+# Equivalent to -L command line option.
 #ContentLog /var/log/sslsplit/content.log
 
-# Content log: full data to separate files in dir (excludes ContentLog/ContentLogPathSpec)
-#ContentLogDir /var/log/sslsplit/content.log
+# Content log: full data to separate files in dir
+# (excludes ContentLog/ContentLogPathSpec).
+# Equivalent to -S command line option.
+#ContentLogDir /var/log/sslsplit/content
 
-# Content log: full data to sep files with % subst (excludes ContentLog/ContentLogDir)
+# Content log: full data to sep files with % subst
+# (excludes ContentLog/ContentLogDir).
+# Equivalent to -F command line option.
 #ContentLogPathSpec /var/log/sslsplit/%X/%u-%s-%d-%T.log
 
-# Look up local process owning each connection for logging
+# Look up local process owning each connection for logging.
+# Equivalent to -i command line option.
 #LogProcInfo yes
 
-# Log master keys to logfile in SSLKEYLOGFILE format
-#MasterKeyLog /var/log/sslsplit/masterkeys.log
-
-# Pcap log: packets to pcapfile (excludes PcapLogDir/PcapLogPathSpec)
+# Pcap log: packets to pcapfile (excludes PcapLogDir/PcapLogPathSpec).
+# Equivalent to -X command line option.
 #PcapLog /var/log/sslsplit/content.pcap
 
-# Pcap log: packets to separate files in dir (excludes PcapLog/PcapLogPathSpec)
+# Pcap log: packets to separate files in dir
+# (excludes PcapLog/PcapLogPathSpec).
+# Equivalent to -Y command line option.
 #PcapLogDir /var/log/sslsplit/pcap
 
-# Pcap log: packets to sep files with % subst (excludes PcapLog/PcapLogDir)
+# Pcap log: packets to sep files with % subst (excludes PcapLog/PcapLogDir).
+# Equivalent to -y command line option.
 #PcapLogPathSpec /var/log/sslsplit/%X/%u-%s-%d-%T.pcap
 
-# Mirror packets to interface
+# Mirror packets to interface.
+# Equivalent to -I command line option.
 #MirrorIf lo
 
-# Mirror packets to target address, used with MirrorIf
+# Mirror packets to target address (used with MirrorIf).
+# Equivalent to -T command line option.
 #MirrorTarget 192.0.2.1
 
-# Daemon mode: run in background, log error messages to syslog
+# Log master keys to logfile in SSLKEYLOGFILE format.
+# Equivalent to -M command line option.
+#MasterKeyLog /var/log/sslsplit/masterkeys.log
+
+# Daemon mode: run in background, log error messages to syslog.
+# Equivalent to -d command line option.
 Daemon yes
 
-# Debug mode: run in foreground, log debug messages on stderr
+# Debug mode: run in foreground, log debug messages on stderr.
+# Equivalent to -D command line option.
 #Debug yes
 
 # Verify peer using default certificates
@@ -124,8 +180,7 @@ Daemon yes
 
 # Proxy specifications
 # type listenaddr+port [natengine|targetaddr+port|"sni"+port]
-ProxySpec https 127.0.0.1 8080
-ProxySpec https ::1 8080
+ProxySpec http 127.0.0.1 8080
+ProxySpec http ::1 8080
 ProxySpec https 127.0.0.1 8443
 ProxySpec https ::1 8443
-
