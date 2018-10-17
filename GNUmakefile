@@ -181,14 +181,19 @@ INSTALLGID?=	0
 BINUID?=	$(INSTALLUID)
 BINGID?=	$(INSTALLGID)
 BINMODE?=	0755
+CNFUID?=	$(INSTALLUID)
+CNFGID?=	$(INSTALLGID)
+CNFMODE?=	0644
 MANUID?=	$(INSTALLUID)
 MANGID?=	$(INSTALLGID)
 MANMODE?=	0644
 ifeq ($(shell id -u),0)
 BINOWNERFLAGS?=	-o $(BINUID) -g $(BINGID)
+CNFOWNERFLAGS?=	-o $(CNFUID) -g $(CNFGID)
 MANOWNERFLAGS?=	-o $(MANUID) -g $(MANGID)
 else
 BINOWNERFLAGS?=	
+CNFOWNERFLAGS?=	
 MANOWNERFLAGS?=	
 endif
 
@@ -235,6 +240,7 @@ TARGET:=	$(PKGNAME)
 SRCS:=		$(filter-out $(wildcard *.t.c),$(wildcard *.c))
 HDRS:=		$(wildcard *.h)
 OBJS:=		$(SRCS:.c=.o)
+MKFS=		$(wildcard GNUmakefile Mk/*.mk)
 FEATURES:=	$(sort $(FEATURES))
 
 TSRCS:=		$(wildcard *.t.c)
@@ -452,7 +458,10 @@ $(info uname -a:       $(shell uname -a))
 $(info ------------------------------------------------------------------------------)
 endif
 
-all: $(TARGET)
+all: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
+
+$(TARGET).test: $(TOBJS)
+	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -460,7 +469,7 @@ $(TARGET): $(OBJS)
 build.o: CPPFLAGS+=$(BUILD_CPPFLAGS)
 build.o: build.c FORCE
 
-%.t.o: %.t.c $(HDRS) GNUmakefile
+%.t.o: %.t.c $(HDRS) $(MKFS)
 ifdef CHECK_MISSING
 	$(error unit test dependency 'check' not found; \
 	install it or point CHECK_BASE to base path)
@@ -468,11 +477,8 @@ endif
 	$(CC) -c $(CPPFLAGS) $(TCPPFLAGS) $(CFLAGS) $(TPKG_CFLAGS) -o $@ \
 		-x c $<
 
-%.o: %.c $(HDRS) GNUmakefile
+%.o: %.c $(HDRS) $(MKFS)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
-
-travis: TCPPFLAGS+=-DTRAVIS
-travis: test
 
 test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n root||echo 0)\""
 test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n root||echo 0)\""
@@ -484,22 +490,35 @@ test: $(TARGET).test
 sudotest: test
 	sudo ./$(TARGET).test
 
-$(TARGET).test: $(TOBJS)
-	$(CC) $(LDFLAGS) $(TPKG_LDFLAGS) -o $@ $^ $(LIBS) $(TPKG_LIBS)
+travis: TCPPFLAGS+=-DTRAVIS
+travis: test
 
 clean:
 	$(MAKE) -C extra/engine clean
 	$(RM) -f $(TARGET) $(TARGET).test *.o .*.o *.core *~
+	$(RM) -f $(TARGET).conf
 	$(RM) -rf *.dSYM
 
-install: $(TARGET)
+$(TARGET).conf: $(TARGET).conf.in $(MKFS)
+	$(SED) 's,/usr/local,$(PREFIX),' <$< >$@
+
+install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
+	test -d $(DESTDIR)$(PREFIX)/$(TARGET) || \
+		$(MKDIR) -p $(DESTDIR)$(PREFIX)/sslsplit
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man5 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
+	test -d $(DESTDIR)/var/log/$(TARGET) || \
+		$(MKDIR) -p $(DESTDIR)/var/log/$(TARGET)
+	test -d $(DESTDIR)/var/run/$(TARGET) || \
+		$(MKDIR) -p $(DESTDIR)/var/run/$(TARGET)
 	$(INSTALL) $(BINOWNERFLAGS) -m $(BINMODE) \
 		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) $(CNFOWNERFLAGS) -m $(CNFMODE) \
+		$(TARGET).conf \
+		$(DESTDIR)$(PREFIX)/$(TARGET)/$(TARGET).conf.sample
 	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \
 		$(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
 	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \

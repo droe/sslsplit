@@ -1,50 +1,49 @@
-# This is the SSLsplit configuration file.
-# When an option is not used (hashed or doesn't exist in the configuration 
-# file) sslsplit takes a default action.
-# If an option does not have a command line equivalent, -o opt=val option can
-# be used to override it on the command line.
+# SSLsplit sample configuration
+#
+# Use the -f command line option to start sslsplit with a config file.
+# See sslsplit.conf(5) and sslsplit(1) for documentation.
 
 # Use CA cert (and key) to sign forged certs.
 # Equivalent to -c command line option.
-CACert /etc/sslsplit/ca.crt
+CACert /usr/local/etc/sslsplit/ca.crt
 
 # Use CA key (and cert) to sign forged certs.
 # Equivalent to -k command line option.
-CAKey /etc/sslsplit/ca.key
+CAKey /usr/local/etc/sslsplit/ca.key
 
 # Use cert from pemfile when destination requests client certs.
 # Equivalent to -a command line option.
-#ClientCert /etc/sslsplit/client.crt
+#ClientCert /usr/local/etc/sslsplit/client.crt
 
 # Use key from pemfile when destination requests client certs.
 # Equivalent to -b command line option.
-#ClientKey /etc/sslsplit/client.key
+#ClientKey /usr/local/etc/sslsplit/client.key
 
 # Use CA chain from pemfile (intermediate and root CA certs).
 # Equivalent to -C command line option.
-#CAChain /etc/sslsplit/chain.crt
+#CAChain /usr/local/etc/sslsplit/chain.crt
 
 # Use key from pemfile for leaf certs.
 # Equivalent to -K command line option.
 # (default: generate)
-#LeafCerts /etc/sslsplit/leaf.key
+#LeafCerts /usr/local/etc/sslsplit/leaf.key
 
 # Use URL as CRL distribution point for all forged certs.
 # Equivalent to -q command line option.
-#CRL http://example.com
+#CRL http://example.com/example.crl
 
 # Use cert+chain+key PEM files from certdir to target all sites matching the
 # common names (non-matching: generate if CA).
 # Equivalent to -t command line option.
-#TargetCertDir /etc/sslsplit/target
+#TargetCertDir /usr/local/etc/sslsplit/target
 
 # Write leaf key and only generated certificates to gendir.
 # Equivalent to -w command line option.
-#WriteGenCertsDir /var/run/sslsplit
+#WriteGenCertsDir /var/log/sslsplit
 
 # Write leaf key and all certificates to gendir.
 # Equivalent to -W command line option.
-#WriteAllCertsDir /var/run/sslsplit
+#WriteAllCertsDir /var/log/sslsplit
 
 # Deny all OCSP requests on all proxyspecs.
 # Equivalent to -O command line option.
@@ -59,7 +58,7 @@ CAKey /etc/sslsplit/ca.key
 # Use DH group params from pemfile.
 # Equivalent to -g command line option.
 # (default: keyfiles or auto)
-#DHGroupParams /etc/sslsplit/dh.pem
+#DHGroupParams /usr/local/etc/sslsplit/dh.pem
 
 # Use ECDH named curve.
 # Equivalent to -G command line option.
@@ -83,7 +82,7 @@ CAKey /etc/sslsplit/ca.key
 # Use the given OpenSSL cipher suite spec.
 # Equivalent to -s command line option.
 # (default: ALL:-aNULL)
-Ciphers MEDIUM:HIGH
+#Ciphers MEDIUM:HIGH
 
 # The OpenSSL engine to activate, either the ID or the full path to the shared
 # library implementing the engine. If an ID is given, the engine needs to be
@@ -113,7 +112,7 @@ Ciphers MEDIUM:HIGH
 # Write pid to file.
 # Equivalent to -p command line option.
 # (default: no pid file)
-#PidFile /var/run/sslsplit.pid
+PidFile /var/run/sslsplit.pid
 
 # Connect log: log one line summary per connection to logfile.
 # Equivalent to -l command line option.
@@ -157,7 +156,7 @@ Ciphers MEDIUM:HIGH
 
 # Mirror packets to target address (used with MirrorIf).
 # Equivalent to -T command line option.
-#MirrorTarget 127.0.0.1
+#MirrorTarget 192.0.2.1
 
 # Log master keys to logfile in SSLKEYLOGFILE format.
 # Equivalent to -M command line option.
@@ -181,5 +180,7 @@ Daemon yes
 
 # Proxy specifications
 # type listenaddr+port [natengine|targetaddr+port|"sni"+port]
+ProxySpec http 127.0.0.1 8080
+ProxySpec http ::1 8080
 ProxySpec https 127.0.0.1 8443
 ProxySpec https ::1 8443
