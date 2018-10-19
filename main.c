@@ -623,15 +623,14 @@ main(int argc, char *argv[])
 		}
 #endif /* __APPLE__ */
 	}
-	if (!geteuid() && !getuid() &&
-	    opts->dropuser && !strcmp(opts->dropuser, "root")) {
+	if (opts->dropuser && sys_isgeteuid(opts->dropuser)) {
 		free(opts->dropuser);
 		opts->dropuser = NULL;
 	}
 
 	/* usage checks after defaults */
 	if (opts->dropgroup && !opts->dropuser) {
-		fprintf(stderr, "%s: -m depends on -u.\n", argv0);
+		fprintf(stderr, "%s: -m depends on -u != EUID.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 

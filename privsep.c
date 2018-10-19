@@ -863,10 +863,10 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 	pid_t pid;
 
 	if (!opts->dropuser) {
-		log_dbg_printf("Not dropping privileges: "
-		               "privsep fastpath enabled\n");
+		log_dbg_printf("Privsep fastpath enabled\n");
 		privsep_fastpath = 1;
 	} else {
+		log_dbg_printf("Privsep fastpath disabled\n");
 		privsep_fastpath = 0;
 	}
 

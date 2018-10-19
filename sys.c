@@ -146,7 +146,37 @@ error:
 	if (pw) {
 		endpwent();
 	}
+	if (gr) {
+		endgrent();
+	}
 	return ret;
+}
+
+/*
+ * If the user exists and on successful lookup, return 0 and if uid != NULL,
+ * write the uid of *username* to the value pointed to by uid.
+ * Return -1 on failure or if the user does not exist.
+ */
+int
+sys_uid(const char *username, uid_t *uid)
+{
+	struct passwd *pw;
+	int rv;
+
+	errno = 0;
+	if (!(pw = getpwnam(username))) {
+		if (errno != 0 && errno != ENOENT) {
+			log_err_printf("Failed to load user '%s': %s (%i)\n",
+			               username, strerror(errno), errno);
+		}
+		rv = -1;
+	} else {
+		if (uid)
+			*uid = pw->pw_uid;
+		rv = 0;
+	}
+	endpwent();
+	return rv;
 }
 
 /*
@@ -155,17 +185,34 @@ error:
 int
 sys_isuser(const char *username)
 {
-	errno = 0;
-	if (!getpwnam(username)) {
-		if (errno != 0 && errno != ENOENT) {
-			log_err_printf("Failed to load user '%s': %s (%i)\n",
-			               username, strerror(errno), errno);
-		}
-		return 0;
-	}
+	return sys_uid(username, NULL) == 0;
+}
 
-	endpwent();
-	return 1;
+/*
+ * If the group exists and on successful lookup, return 0 and if gid != NULL,
+ * write the gid of *groupname* to the value pointed to by gid.
+ * Return -1 on failure or if the group does not exist.
+ */
+int
+sys_gid(const char *groupname, gid_t *gid)
+{
+	struct group *gr;
+	int rv;
+
+	errno = 0;
+	if (!(gr = getgrnam(groupname))) {
+		if (errno != 0 && errno != ENOENT) {
+			log_err_printf("Failed to load group '%s': %s (%i)\n",
+			               groupname, strerror(errno), errno);
+		}
+		rv = -1;
+	} else {
+		if (gid)
+			*gid = gr->gr_gid;
+		rv = 0;
+	}
+	endgrent();
+	return rv;
 }
 
 /*
@@ -174,15 +221,23 @@ sys_isuser(const char *username)
 int
 sys_isgroup(const char *groupname)
 {
-	errno = 0;
-	if (!getgrnam(groupname)) {
-		if (errno != 0 && errno != ENOENT) {
-			log_err_printf("Failed to load group '%s': %s (%i)\n",
-			               groupname, strerror(errno), errno);
-		}
+	return sys_gid(groupname, NULL) == 0;
+}
+
+/*
+ * Returns 1 if username is equivalent to the current effective UID.
+ * Returns 0 otherwise.
+ */
+int
+sys_isgeteuid(const char *username)
+{
+	uid_t uid;
+
+	if (sys_uid(username, &uid) == -1)
 		return 0;
-	}
-	return 1;
+	if (uid == geteuid())
+		return 1;
+	return 0;
 }
 
 /*

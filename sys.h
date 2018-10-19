@@ -41,8 +41,11 @@ int sys_pidf_open(const char *) NONNULL(1) WUNRES;
 int sys_pidf_write(int) WUNRES;
 void sys_pidf_close(int, const char *) NONNULL(2);
 
+int sys_uid(const char *, uid_t *) NONNULL(1) WUNRES;
+int sys_gid(const char *, gid_t *) NONNULL(1) WUNRES;
 int sys_isuser(const char *) NONNULL(1) WUNRES;
 int sys_isgroup(const char *) NONNULL(1) WUNRES;
+int sys_isgeteuid(const char *) NONNULL(1) WUNRES;
 char * sys_user_str(uid_t) MALLOC;
 char * sys_group_str(gid_t) MALLOC;
 
