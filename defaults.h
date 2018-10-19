@@ -69,6 +69,17 @@
  */
 #define DFLT_CURVE "prime256v1"
 
+/*
+ * Default leaf key RSA keysize in bits.
+ *
+ * While browsers still generally accept it, use a leaf key size of 1024 bit
+ * for leaf keys.  When browsers start to sunset 1024 bit RSA in leaf keys, we
+ * will need to make this value bigger, and/or configurable.
+ * Until then, users who want a different size can always use their own
+ * pre-generated leaf key instead of generating one automatically.
+ */
+#define DFLT_LEAFKEY_RSABITS 1024
+
 #endif /* !DEFAULTS_H */
 
 /* vim: set noet ft=c: */
