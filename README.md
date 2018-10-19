@@ -40,16 +40,22 @@ enforcement (Expect-CT) and prevent switching to QUIC/SPDY, HTTP/2 or
 WebSockets (Upgrade, Alternate Protocols).  HTTP compression, encodings and
 keep-alive are disabled to make the logs more readable.
 
+Logging options include traditional SSLsplit connect and content log files as
+well as PCAP files and mirroring decrypted traffic to a network interface.
+Additionally, certificates, master secrets and local process information can be
+logged.
+
 See the manual page sslsplit(1) for details on using SSLsplit and setting up
 the various NAT engines.
 
 
 ## Requirements
 
-SSLsplit depends on the OpenSSL, libevent 2.x, libpcap and libnet libraries.
-The build depends on GNU make and a POSIX.2 environment in `PATH`.
-If available, pkg-config is used to locate and configure the dependencies.
-The optional unit tests depend on the check library.
+SSLsplit depends on the OpenSSL, libevent 2.x, libpcap and libnet 1.1.x
+libraries bydefault; libpcap and libnet are not needed if the mirroring feature
+is omitted.  The build depends on GNU make and a POSIX.2 environment in `PATH`.
+If available, pkg-config is used to locate and configure the dependencies.  The
+optional unit tests depend on the check library.
 
 SSLsplit currently supports the following operating systems and NAT mechanisms:
 
@@ -68,7 +74,7 @@ LibreSSL.
 
 ## Installation
 
-With OpenSSL, libevent 2.x, pkg-config and check available, run:
+With the requirements above available, run:
 
     make
     make test       # optional unit tests
@@ -77,30 +83,34 @@ With OpenSSL, libevent 2.x, pkg-config and check available, run:
 
 Dependencies are autoconfigured using pkg-config.  If dependencies are not
 picked up and fixing `PKG_CONFIG_PATH` does not help, you can specify their
-respective locations manually by setting `OPENSSL_BASE`, `LIBEVENT_BASE` and/or
-`CHECK_BASE` to the respective prefixes.
+respective locations manually by setting `OPENSSL_BASE`, `LIBEVENT_BASE`,
+`LIBPCAP_BASE`, `LIBNET_BASE` and/or `CHECK_BASE` to the respective prefixes.
 
 You can override the default install prefix (`/usr/local`) by setting `PREFIX`.
-For more build options see `GNUmakefile` and `defaults.h`.
+For more build options and build-time defaults see [`GNUmakefile`](GNUmakefile)
+and [`defaults.h`](defaults.h).
 
 
 ## Documentation
 
-See the manual page `sslsplit.1` for user documentation.
-See `NEWS.md` for release notes listing significant changes between releases.
+See the manual pages `sslsplit(1)` and `sslsplit.conf(5)` for user
+documentation.  See [`NEWS.md`](NEWS.md) for release notes listing significant
+changes between releases and [`SECURITY.md`](SECURITY.md) for information on
+security vulnerability disclosure.
 
 
 ## License
 
 SSLsplit is provided under a 2-clause BSD license.
 SSLsplit contains components licensed under the MIT and APSL licenses.
-See `LICENSE`, `LICENSE.contrib` and `LICENSE.third` as well as the respective
-source file headers for details.
+See [`LICENSE`](LICENSE), [`LICENSE.contrib`](LICENSE.contrib) and
+[`LICENSE.third`](LICENSE.third) as well as the respective source file headers
+for details.
 
 
 ## Credits
 
-See `AUTHORS.md` for the list of contributors.
+See [`AUTHORS.md`](AUTHORS.md) for the list of contributors.
 
 SSLsplit was inspired by `mitm-ssl` by Claes M. Nyberg and `sslsniff` by Moxie
 Marlinspike, but shares no source code with them.

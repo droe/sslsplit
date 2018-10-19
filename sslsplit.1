@@ -94,8 +94,13 @@ Alternate Protocols).
 HTTP compression, encodings and keep-alive are disabled to make the logs more
 readable.
 .LP
+Logging options include traditional SSLsplit connect and content log files as
+well as PCAP files and mirroring decrypted traffic to a network interface.
+Additionally, certificates, master secrets and local process information can be
+logged.
+.LP
 In order to maximize the chances that a connection can be successfully split,
-SSLsplit does not verify upstream server certificates.  Instead, all
+SSLsplit does not verify upstream server certificates by default.  Instead, all
 certificates including self-signed are accepted and if the expected hostname
 signalled in SNI is missing from the server certificate, it will be added to
 dynamically forged certificates.
