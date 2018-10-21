@@ -480,14 +480,16 @@ endif
 %.o: %.c $(HDRS) $(MKFS)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-test: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n root||echo 0)\""
-test: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n root||echo 0)\""
-test: $(TARGET).test
+buildtest: TCPPFLAGS+=-D"TEST_ZEROUSR=\"$(shell id -u -n root||echo 0)\""
+buildtest: TCPPFLAGS+=-D"TEST_ZEROGRP=\"$(shell id -g -n root||echo 0)\""
+buildtest: $(TARGET).test
 	$(MAKE) -C extra/engine
 	$(MAKE) -C extra/pki testreqs
+
+test: buildtest
 	./$(TARGET).test
 
-sudotest: test
+sudotest: buildtest
 	sudo ./$(TARGET).test
 
 travis: TCPPFLAGS+=-DTRAVIS
@@ -598,7 +600,7 @@ docker:
 
 FORCE:
 
-.PHONY: all config clean test travis lint install deinstall copyright manlint \
-        mantest man manclean fetchdeps dist disttest distclean realclean \
-        docker
+.PHONY: all config clean buildtest test sudotest travis lint \
+        install deinstall copyright manlint mantest man manclean fetchdeps \
+        dist disttest distclean realclean docker
 

@@ -16,7 +16,8 @@ This release includes work sponsored by HackerOne.
 -   Add -x option for activating an OpenSSL engine (issue #204, pull req #206).
 -   Add -f option for loading configuration from file, including a new manual
     page, sslsplit.conf(5) (pull req #193).
--   Add `sudotest` target with unit tests which require privileges to run.
+-   Add `sudotest` target for optional unit tests which require privileges to
+    run successfully.
 -   Fix crash when using LibreSSL (pull req #207).
 -   Add XNU headers for macOS High Sierra 10.13.1 to 10.13.6.
 -   Minor bugfixes and improvements.
