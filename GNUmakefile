@@ -220,7 +220,7 @@ SORT?=		sort
 ### Variables only used for developer targets
 
 KHASH_URL?=	https://github.com/attractivechaos/klib/raw/master/khash.h
-GPGSIGNKEY?=	0xB5D3397E
+GPGSIGNKEY?=	0xE1520675375F5E35
 
 CPPCHECK?=	cppcheck
 GPG?=		gpg

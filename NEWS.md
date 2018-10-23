@@ -4,22 +4,23 @@
 This release includes work sponsored by HackerOne.
 
 -   Add PCAP content log modes (-X, -Y, -y) and a packet mirroring content log
-    mode (-T, -I) to encapsulate decrypted network segments in emulated TCP,
-    IP and Ethernet headers and write the result to PCAP files or send it to
-    a packet capture host on the local network segment (issue #215, based on
-    pull req #149).
--   Bypass privilege separation overhead for when privileges are not actually
-    dropped; this allows the use of `-u root` to actively prevent privilege
-    separation and remove the associated communication overhead (issue #222).
+    mode (-T, -I) to encapsulate decrypted traffic segments in emulated TCP, IP
+    and Ethernet headers and write the result to PCAP files or send it to a
+    packet capture host on the local network segment (issue #215, based on pull
+    req #149 by @cihankom).
 -   Suppress Expect-CT header in order to avoid Certificate Transparency log
     lookup failures (issue #205).
 -   Add -x option for activating an OpenSSL engine (issue #204, pull req #206).
 -   Add -f option for loading configuration from file, including a new manual
     page, sslsplit.conf(5) (pull req #193).
+-   Bypass privilege separation overhead for when privileges are not actually
+    dropped; this allows the use of `-u root` to actively prevent privilege
+    separation and remove the associated IPC overhead (issue #222).
 -   Add `sudotest` target for optional unit tests which require privileges to
     run successfully.
 -   Fix crash when using LibreSSL (pull req #207).
 -   Add XNU headers for macOS High Sierra 10.13.1 to 10.13.6.
+-   Release sig PGP/GPG key rollover from 0xB5D3397E to 0xE1520675375F5E35.
 -   Minor bugfixes and improvements.
 
 

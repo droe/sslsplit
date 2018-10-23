@@ -63,7 +63,7 @@ typedef struct __attribute__((packed)) {
 	uint32_t orig_len;      /* actual length of packet */
 } pcap_rec_hdr_t;
 
-#define PCAP_MAGIC 0xa1b2c3d4
+#define PCAP_MAGIC      0xa1b2c3d4
 
 typedef struct __attribute__((packed)) {
 	uint8_t  dst_mac[ETHER_ADDR_LEN];
@@ -72,10 +72,10 @@ typedef struct __attribute__((packed)) {
 } ether_hdr_t;
 
 #ifndef ETHERTYPE_IP
-#define ETHERTYPE_IP 0x0800
+#define ETHERTYPE_IP    0x0800
 #endif
 #ifndef ETHERTYPE_IPV6
-#define ETHERTYPE_IPV6 0x86dd
+#define ETHERTYPE_IPV6  0x86dd
 #endif
 
 typedef struct __attribute__((packed)) {
@@ -112,26 +112,33 @@ typedef struct __attribute__((packed)) {
 } tcp_hdr_t;
 
 #ifndef TH_FIN
-#define TH_FIN  0x01
+#define TH_FIN          0x01
 #endif
 #ifndef TH_SYN
-#define TH_SYN  0x02
+#define TH_SYN          0x02
 #endif
 #ifndef TH_RST
-#define TH_RST  0x04
+#define TH_RST          0x04
 #endif
 #ifndef TH_PUSH
-#define TH_PUSH 0x08
+#define TH_PUSH         0x08
 #endif
 #ifndef TH_ACK
-#define TH_ACK  0x10
+#define TH_ACK          0x10
 #endif
 
 /*
- * These constants are only used for PCAP writing.  Largest possible MSS for an
- * MTU of 1500 are used for PCAP files, where we have no interface limitations.
- * For mirroring, we calculate the actual MSS based on the MTU of the target
- * interface.
+ * *MTU* is the size of the largest layer 3 packet, including IP header.
+ *
+ * *MAX_PKTSZ* is the buffer size needed to construct a layer 2 frame
+ * containing the largest possible layer 3 packet allowed by MTU.
+ *
+ * *MSS_IP4* and *MSS_IP6* are the maximum TCP segment sizes that fit into a
+ * single IPv4 and IPv6 packet, respectively.
+ *
+ * The calculations assume no IPv4 options and no IPv6 option headers.
+ *
+ * These constants are only used for PCAP writing, not for mirroring.
  */
 #define MTU             1500
 #define MAX_PKTSZ       (MTU + sizeof(ether_hdr_t))
@@ -171,10 +178,17 @@ typedef struct __attribute__((packed)) {
 		(C) = ~(C); \
 	}
 
+/* Socket address typecasting shorthand notations. */
 #define CSA(X)          ((const struct sockaddr *)(X))
 #define CSIN(X)         ((const struct sockaddr_in *)(X))
 #define CSIN6(X)        ((const struct sockaddr_in6 *)(X))
 
+/*
+ * Write the PCAP file-level header to file descriptor *fd* open for writing,
+ * positioned at the beginning of an empty file.
+ *
+ * Returns 0 on success and -1 on failure.
+ */
 static int
 logpkt_write_global_pcap_hdr(int fd)
 {
@@ -227,6 +241,15 @@ logpkt_pcap_open_fd(int fd) {
 	return logpkt_write_global_pcap_hdr(fd);
 }
 
+/*
+ * Initialize the per-connection packet crafting context.  For mirroring,
+ * *libnet* must be an initialized libnet instance and *mtu* must be the
+ * target interface MTU greater than 0.  For PCAP writing, *libnet* must be
+ * NULL and *mtu* must be 0.  The ether and sockaddr addresses are used as the
+ * layer 2 and layer 3 addresses respectively.  For mirroring, the ethers must
+ * match the actual link layer addresses to be used when sending traffic, not
+ * some emulated addresses.
+ */
 void
 logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet, size_t mtu,
                 const uint8_t *src_ether, const uint8_t *dst_ether,
@@ -250,6 +273,10 @@ logpkt_ctx_init(logpkt_ctx_t *ctx, libnet_t *libnet, size_t mtu,
 	}
 }
 
+/*
+ * Write the layer 2 frame contained in *pkt* to file descriptor *fd* already
+ * open for writing.  First writes a PCAP record header, then the actual frame.
+ */
 static int
 logpkt_pcap_write(const uint8_t *pkt, size_t pktsz, int fd)
 {
@@ -274,6 +301,17 @@ logpkt_pcap_write(const uint8_t *pkt, size_t pktsz, int fd)
 	return 0;
 }
 
+/*
+ * Build a frame from the given layer 2, layer 3 and layer 4 parameters plus
+ * payload, write the resulting bytes into buffer pointed to by *pkt*, and fix
+ * the checksums on all layers.  The receiving buffer must be at least
+ * MAX_PKTSZ bytes large and payload must be a maximum of MSS_IP4 or MSS_IP6
+ * respectively.  Layer 2 is Ethernet II, layer 3 is IPv4 or IPv6 depending on
+ * the address family of *dst_addr*, and layer 4 is TCP.
+ *
+ * This function is stateless.  For header fields that cannot be directly
+ * derived from the arguments, default values will be used.
+ */
 static size_t
 logpkt_pcap_build(uint8_t *pkt,
                   uint8_t *src_ether, uint8_t *dst_ether,
@@ -365,6 +403,10 @@ logpkt_pcap_build(uint8_t *pkt,
 }
 
 #ifndef WITHOUT_MIRROR
+/*
+ * Build a packet using libnet intended for mirroring mode.  The packet will
+ * be dynamically allocated on the heap by the libnet instance *libnet*.
+ */
 static int
 logpkt_mirror_build(libnet_t *libnet,
                     uint8_t *src_ether, uint8_t *dst_ether,
@@ -445,6 +487,16 @@ logpkt_mirror_build(libnet_t *libnet,
 }
 #endif /* !WITHOUT_MIRROR */
 
+/*
+ * Write a single packet to either PCAP (*fd* != -1) or a network interface
+ * (*fd* == -1).  Caller must ensure that *ctx* was initialized accordingly.
+ * The packet will be in direction *direction*, use TCP flags *flags*, and
+ * transmit a payload *payload*.  TCP sequence and acknowledgement numbers as
+ * well as source and destination identifiers are taken from *ctx*.
+ *
+ * Caller must ensure that *payload* fits into a frame depending on the MTU
+ * selected (interface in mirroring mode, MTU value in PCAP writing mode).
+ */
 static int
 logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
                     const uint8_t *payload, size_t payloadlen)
@@ -515,6 +567,9 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 	return rv;
 }
 
+/*
+ * Emulate the initial SYN handshake.
+ */
 static int
 logpkt_write_syn_handshake(logpkt_ctx_t *ctx, int fd)
 {
@@ -534,6 +589,11 @@ logpkt_write_syn_handshake(logpkt_ctx_t *ctx, int fd)
 	return 0;
 }
 
+/*
+ * Emulate the necessary packets to write a single payload segment.  If
+ * necessary, a SYN handshake will automatically be generated before emitting
+ * the packet carrying the payload plus a matching ACK.
+ */
 int
 logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
                      const uint8_t *payload, size_t payloadlen)
@@ -572,6 +632,10 @@ logpkt_write_payload(logpkt_ctx_t *ctx, int fd, int direction,
 	return 0;
 }
 
+/*
+ * Emulate a connection close, emitting a FIN handshake in the correct
+ * direction.  Does not close the file descriptor.
+ */
 int
 logpkt_write_close(logpkt_ctx_t *ctx, int fd, int direction) {
 	int other_direction = (direction == LOGPKT_REQUEST) ? LOGPKT_RESPONSE
@@ -620,6 +684,9 @@ typedef struct {
 	uint8_t ether[ETHER_ADDR_LEN];
 } logpkt_recv_arp_reply_ctx_t;
 
+/*
+ * Receive a single ARP reply and copy the resulting ether to ctx->ether.
+ */
 static void
 logpkt_recv_arp_reply(uint8_t *user,
                       UNUSED const struct pcap_pkthdr *h,
@@ -773,3 +840,4 @@ out:
 }
 #endif /* !WITHOUT_MIRROR */
 
+/* vim: set noet ft=c: */
