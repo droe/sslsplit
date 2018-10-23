@@ -313,7 +313,7 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine,
 				af = sys_sockaddr_parse(&spec->listen_addr,
 				                        &spec->listen_addrlen,
 				                        addr, **argv,
-										sys_get_af(addr),
+				                        sys_get_af(addr),
 				                        EVUTIL_AI_PASSIVE);
 				if (af == -1) {
 					exit(EXIT_FAILURE);
@@ -473,12 +473,10 @@ opts_set_cacrt(opts_t *opts, const char *argv0, const char *optarg)
 		X509_free(opts->cacrt);
 	opts->cacrt = ssl_x509_load(optarg);
 	if (!opts->cacrt) {
-		fprintf(stderr, "%s: error loading CA "
-						"cert from '%s':\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: error loading CA cert from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -504,12 +502,10 @@ opts_set_cakey(opts_t *opts, const char *argv0, const char *optarg)
 		EVP_PKEY_free(opts->cakey);
 	opts->cakey = ssl_key_load(optarg);
 	if (!opts->cakey) {
-		fprintf(stderr, "%s: error loading CA "
-						"key from '%s':\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: error loading CA key from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -518,10 +514,8 @@ opts_set_cakey(opts_t *opts, const char *argv0, const char *optarg)
 	if (!opts->cacrt) {
 		opts->cacrt = ssl_x509_load(optarg);
 		if (opts->cacrt) {
-			ssl_x509_refcount_inc(
-						   opts->cacrt);
-			sk_X509_insert(opts->chain,
-						   opts->cacrt, 0);
+			ssl_x509_refcount_inc(opts->cacrt);
+			sk_X509_insert(opts->chain, opts->cacrt, 0);
 		}
 	}
 #ifndef OPENSSL_NO_DH
@@ -535,14 +529,11 @@ opts_set_cakey(opts_t *opts, const char *argv0, const char *optarg)
 void
 opts_set_chain(opts_t *opts, const char *argv0, const char *optarg)
 {
-	if (ssl_x509chain_load(NULL, &opts->chain,
-						   optarg) == -1) {
-		fprintf(stderr, "%s: error loading "
-						"chain from '%s':\n",
-						argv0, optarg);
+	if (ssl_x509chain_load(NULL, &opts->chain, optarg) == -1) {
+		fprintf(stderr, "%s: error loading chain from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -558,12 +549,10 @@ opts_set_key(opts_t *opts, const char *argv0, const char *optarg)
 		EVP_PKEY_free(opts->key);
 	opts->key = ssl_key_load(optarg);
 	if (!opts->key) {
-		fprintf(stderr, "%s: error loading lea"
-						"f key from '%s':\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: error loading leaf key from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -590,9 +579,8 @@ void
 opts_set_tgcrtdir(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (!sys_isdir(optarg)) {
-		fprintf(stderr, "%s: '%s' is not a "
-						"directory\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: '%s' is not a directory\n",
+		        argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	if (opts->tgcrtdir)
@@ -614,7 +602,8 @@ set_certgendir(opts_t *opts, const char *argv0, const char *optarg)
 }
 
 void
-opts_set_certgendir_writegencerts(opts_t *opts, const char *argv0, const char *optarg)
+opts_set_certgendir_writegencerts(opts_t *opts, const char *argv0,
+                                  const char *optarg)
 {
 	opts->certgen_writeall = 0;
 	set_certgendir(opts, argv0, optarg);
@@ -623,7 +612,8 @@ opts_set_certgendir_writegencerts(opts_t *opts, const char *argv0, const char *o
 }
 
 void
-opts_set_certgendir_writeall(opts_t *opts, const char *argv0, const char *optarg)
+opts_set_certgendir_writeall(opts_t *opts, const char *argv0,
+                             const char *optarg)
 {
 	opts->certgen_writeall = 1;
 	set_certgendir(opts, argv0, optarg);
@@ -662,12 +652,10 @@ opts_set_clientcrt(opts_t *opts, const char *argv0, const char *optarg)
 		X509_free(opts->clientcrt);
 	opts->clientcrt = ssl_x509_load(optarg);
 	if (!opts->clientcrt) {
-		fprintf(stderr, "%s: error loading cli"
-						"ent cert from '%s':\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: error loading client cert from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -683,12 +671,10 @@ opts_set_clientkey(opts_t *opts, const char *argv0, const char *optarg)
 		EVP_PKEY_free(opts->clientkey);
 	opts->clientkey = ssl_key_load(optarg);
 	if (!opts->clientkey) {
-		fprintf(stderr, "%s: error loading cli"
-						"ent key from '%s':\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: error loading client key from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -705,12 +691,10 @@ opts_set_dh(opts_t *opts, const char *argv0, const char *optarg)
 		DH_free(opts->dh);
 	opts->dh = ssl_dh_load(optarg);
 	if (!opts->dh) {
-		fprintf(stderr, "%s: error loading DH "
-						"params from '%s':\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: error loading DH params from '%s':\n",
+		        argv0, optarg);
 		if (errno) {
-			fprintf(stderr, "%s\n",
-					strerror(errno));
+			fprintf(stderr, "%s\n", strerror(errno));
 		} else {
 			ERR_print_errors_fp(stderr);
 		}
@@ -728,9 +712,7 @@ opts_set_ecdhcurve(opts_t *opts, const char *argv0, const char *optarg)
 	if (opts->ecdhcurve)
 		free(opts->ecdhcurve);
 	if (!(ec = ssl_ec_by_name(optarg))) {
-		fprintf(stderr, "%s: unknown curve "
-						"'%s'\n",
-						argv0, optarg);
+		fprintf(stderr, "%s: unknown curve '%s'\n", argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
 	EC_KEY_free(ec);
@@ -1233,7 +1215,8 @@ check_value_yesno(const char *value, const char *name, int line_num)
 #define MAX_TOKEN 10
 
 static int
-set_option(opts_t *opts, const char *argv0, const char *name, char *value, char **natengine, int line_num)
+set_option(opts_t *opts, const char *argv0,
+           const char *name, char *value, char **natengine, int line_num)
 {
 	int yes;
 	int retval = -1;
@@ -1367,7 +1350,9 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 		int argc = 0;
 		char *p, *last = NULL;
 
-		for ((p = strtok_r(value, " ", &last)); p; (p = strtok_r(NULL, " ", &last))) {
+		for ((p = strtok_r(value, " ", &last));
+		     p;
+		     (p = strtok_r(NULL, " ", &last))) {
 			/* Limit max # token */
 			if (argc < MAX_TOKEN) {
 				argv[argc++] = p;
@@ -1390,11 +1375,13 @@ set_option(opts_t *opts, const char *argv0, const char *name, char *value, char 
 		if (yes == -1) {
 			goto leave;
 		}
-		yes ? opts_set_allow_wrong_host(opts) : opts_unset_allow_wrong_host(opts);
+		yes ? opts_set_allow_wrong_host(opts)
+		    : opts_unset_allow_wrong_host(opts);
 		log_dbg_printf("AddSNIToCertificate: %u\n",
 		               opts->allow_wrong_host);
 	} else {
-		fprintf(stderr, "Error in conf: Unknown option '%s' at line %d\n", name, line_num);
+		fprintf(stderr, "Error in conf: Unknown option "
+		                "'%s' at line %d\n", name, line_num);
 		goto leave;
 	}
 
@@ -1472,7 +1459,8 @@ leave:
 }
 
 int
-opts_set_option(opts_t *opts, const char *argv0, const char *optarg, char **natengine)
+opts_set_option(opts_t *opts, const char *argv0, const char *optarg,
+                char **natengine)
 {
 	char *name, *value;
 	int retval = -1;
