@@ -811,10 +811,11 @@ main(int argc, char *argv[])
 	}
 
 	/* Fork into parent monitor process and (potentially unprivileged)
-	 * child process doing the actual work.  We request 4 privsep client
-	 * sockets: three logger threads, and the child process main thread,
-	 * which will become the main proxy thread. */
-	int clisock[4];
+	 * child process doing the actual work.  We request 6 privsep client
+	 * sockets: five logger threads, and the child process main thread,
+	 * which will become the main proxy thread.  First slot is main thread,
+	 * remaining slots are passed down to log subsystem. */
+	int clisock[6];
 	if (privsep_fork(opts, clisock,
 	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
 		/* parent has exited the monitor loop after waiting for child,

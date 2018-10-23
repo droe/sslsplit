@@ -183,6 +183,7 @@ log_dbg_mode(int mode)
 logger_t *masterkey_log = NULL;
 static int masterkey_fd = -1;
 static char *masterkey_fn = NULL;
+static int masterkey_clisock = -1;
 
 static int
 log_masterkey_preinit(const char *logfile)
@@ -207,8 +208,9 @@ static int
 log_masterkey_reopencb(void)
 {
 	close(masterkey_fd);
-	masterkey_fd = open(masterkey_fn, O_WRONLY|O_APPEND|O_CREAT,
-	                    DFLT_FILEMODE);
+	masterkey_fd = privsep_client_openfile(masterkey_clisock,
+	                                       masterkey_fn,
+	                                       0);
 	if (masterkey_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s\n",
 		               masterkey_fn, strerror(errno));
@@ -249,6 +251,7 @@ log_masterkey_fini(void)
 logger_t *connect_log = NULL;
 static int connect_fd = -1;
 static char *connect_fn = NULL;
+static int connect_clisock = -1;
 
 static int
 log_connect_preinit(const char *logfile)
@@ -273,7 +276,9 @@ static int
 log_connect_reopencb(void)
 {
 	close(connect_fd);
-	connect_fd = open(connect_fn, O_WRONLY|O_APPEND|O_CREAT, DFLT_FILEMODE);
+	connect_fd = privsep_client_openfile(connect_clisock,
+	                                     connect_fn,
+	                                     0);
 	if (connect_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s\n",
 		               connect_fn, strerror(errno));
@@ -1050,9 +1055,9 @@ static int
 log_content_file_single_reopencb(void)
 {
 	close(content_file_single_fd);
-	content_file_single_fd = open(content_file_single_fn,
-	                              O_WRONLY|O_APPEND|O_CREAT,
-	                              DFLT_FILEMODE);
+	content_file_single_fd = privsep_client_openfile(content_file_clisock,
+	                                                 content_file_single_fn,
+	                                                 0);
 	if (content_file_single_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
 		               content_file_single_fn, strerror(errno), errno);
@@ -1202,7 +1207,9 @@ log_content_pcap_fini(void)
 static int
 log_content_pcap_reopencb(void) {
 	close(content_pcap_fd);
-	content_pcap_fd = open(content_pcap_fn, O_RDWR|O_CREAT, DFLT_FILEMODE);
+	content_pcap_fd = privsep_client_openfile(content_pcap_clisock,
+	                                          content_pcap_fn,
+	                                          0);
 	if (content_pcap_fd == -1) {
 		log_err_printf("Failed to open '%s' for writing: %s (%i)\n",
 		               content_pcap_fn, strerror(errno), errno);
@@ -1672,7 +1679,7 @@ log_preinit_undo(void)
  * Return -1 on errors, 0 otherwise.
  */
 int
-log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock[3])
+log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock[5])
 {
 	proxy_ctx = ctx;
 	if (err_log)
@@ -1681,38 +1688,52 @@ log_init(opts_t *opts, proxy_ctx_t *ctx, int clisock[3])
 	if (!opts->debug) {
 		err_shortcut_logger = 1;
 	}
-	if (masterkey_log)
+
+	if (masterkey_log) {
+		masterkey_clisock = clisock[0];
 		if (logger_start(masterkey_log) == -1)
-			return -1;
-	if (connect_log)
-		if (logger_start(connect_log) == -1)
-			return -1;
-	if (content_file_log) {
-		content_file_clisock = clisock[0];
-		if (logger_start(content_file_log) == -1)
 			return -1;
 	} else {
 		privsep_client_close(clisock[0]);
 	}
-	if (content_pcap_log) {
-		content_pcap_clisock = clisock[1];
-		if (logger_start(content_pcap_log) == -1)
+
+	if (connect_log) {
+		connect_clisock = clisock[1];
+		if (logger_start(connect_log) == -1)
 			return -1;
 	} else {
 		privsep_client_close(clisock[1]);
 	}
+
+	if (content_file_log) {
+		content_file_clisock = clisock[2];
+		if (logger_start(content_file_log) == -1)
+			return -1;
+	} else {
+		privsep_client_close(clisock[2]);
+	}
+
+	if (content_pcap_log) {
+		content_pcap_clisock = clisock[3];
+		if (logger_start(content_pcap_log) == -1)
+			return -1;
+	} else {
+		privsep_client_close(clisock[3]);
+	}
+
 #ifndef WITHOUT_MIRROR
 	if (content_mirror_log) {
 		if (logger_start(content_mirror_log) == -1)
 			return -1;
 	}
 #endif /* !WITHOUT_MIRROR */
+
 	if (cert_log) {
-		cert_clisock = clisock[2];
+		cert_clisock = clisock[4];
 		if (logger_start(cert_log) == -1)
 			return -1;
 	} else {
-		privsep_client_close(clisock[2]);
+		privsep_client_close(clisock[4]);
 	}
 	return 0;
 }
@@ -1792,12 +1813,16 @@ log_fini(void)
 	if (connect_log)
 		log_connect_fini();
 
+	if (masterkey_clisock != -1)
+		privsep_client_close(masterkey_clisock);
 	if (cert_clisock != -1)
 		privsep_client_close(cert_clisock);
 	if (content_file_clisock != -1)
 		privsep_client_close(content_file_clisock);
 	if (content_pcap_clisock != -1)
 		privsep_client_close(content_pcap_clisock);
+	if (connect_clisock != -1)
+		privsep_client_close(connect_clisock);
 }
 
 int

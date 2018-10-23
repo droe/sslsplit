@@ -146,19 +146,37 @@ privsep_server_signal_handler(int sig)
 }
 
 static int WUNRES
-privsep_server_openfile_verify(opts_t *opts, const char *fn, int mkpath)
+privsep_server_openfile_verify(opts_t *opts, const char *fn, UNUSED int mkpath)
 {
-	if (mkpath && !(opts->contentlog_isspec || opts->pcaplog_isspec))
+	/* Prefix must match one of the active log files that use privsep. */
+	do {
+		if (opts->contentlog) {
+			if (strstr(fn, opts->contentlog_isspec
+			               ? opts->contentlog_basedir
+			               : opts->contentlog) == fn)
+				break;
+		}
+		if (opts->pcaplog) {
+			if (strstr(fn, opts->pcaplog_isspec
+			               ? opts->pcaplog_basedir
+			               : opts->pcaplog) == fn)
+				break;
+		}
+		if (opts->connectlog) {
+			if (strstr(fn, opts->connectlog) == fn)
+				break;
+		}
+		if (opts->masterkeylog) {
+			if (strstr(fn, opts->masterkeylog) == fn)
+				break;
+		}
 		return -1;
-	if (!mkpath && !(opts->contentlog_isdir || opts->pcaplog_isdir))
-		return -1;
-	if (strstr(fn, opts->contentlog_isspec ? opts->contentlog_basedir
-	                                        : opts->contentlog) != fn &&
-	    strstr(fn, opts->pcaplog_isspec ? opts->pcaplog_basedir
-	                                     : opts->pcaplog) != fn)
-		return -1;
+	} while (0);
+
+	/* Path must not contain dot-dot to prevent escaping the prefix. */
 	if (strstr(fn, "/../"))
 		return -1;
+
 	return 0;
 }
 
