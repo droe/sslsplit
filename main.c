@@ -624,13 +624,18 @@ main(int argc, char *argv[])
 #endif /* __APPLE__ */
 	}
 	if (opts->dropuser && sys_isgeteuid(opts->dropuser)) {
+		if (opts->dropgroup) {
+			fprintf(stderr, "%s: cannot use -m when -u is "
+			        "current user\n", argv0);
+			exit(EXIT_FAILURE);
+		}
 		free(opts->dropuser);
 		opts->dropuser = NULL;
 	}
 
 	/* usage checks after defaults */
 	if (opts->dropgroup && !opts->dropuser) {
-		fprintf(stderr, "%s: -m depends on -u != EUID.\n", argv0);
+		fprintf(stderr, "%s: -m depends on -u\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 
