@@ -50,7 +50,7 @@ END_TEST
 /*
  * This test is designed to fail in the third assertion if the currently
  * configured default dropuser is not allowed to make outbound network
- * connections.
+ * connections.  It also fails if we do not have Internet connection.
  */
 START_TEST(defaults_dropuser_02)
 {
