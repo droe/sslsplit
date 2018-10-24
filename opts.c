@@ -983,9 +983,11 @@ opts_set_connectlog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->connectlog)
 		free(opts->connectlog);
-	opts->connectlog = strdup(optarg);
-	if (!opts->connectlog)
+	if (!(opts->connectlog = realpath(optarg, NULL))) {
+		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+		              optarg, strerror(errno), errno);
 		oom_die(argv0);
+	}
 #ifdef DEBUG_OPTS
 	log_dbg_printf("ConnectLog: %s\n", opts->connectlog);
 #endif /* DEBUG_OPTS */
@@ -996,9 +998,11 @@ opts_set_contentlog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->contentlog)
 		free(opts->contentlog);
-	opts->contentlog = strdup(optarg);
-	if (!opts->contentlog)
+	if (!(opts->contentlog = realpath(optarg, NULL))) {
+		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+		              optarg, strerror(errno), errno);
 		oom_die(argv0);
+	}
 	opts->contentlog_isdir = 0;
 	opts->contentlog_isspec = 0;
 #ifdef DEBUG_OPTS
@@ -1123,9 +1127,11 @@ opts_set_masterkeylog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->masterkeylog)
 		free(opts->masterkeylog);
-	opts->masterkeylog = strdup(optarg);
-	if (!opts->masterkeylog)
+	if (!(opts->masterkeylog = realpath(optarg, NULL))) {
+		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+		              optarg, strerror(errno), errno);
 		oom_die(argv0);
+	}
 #ifdef DEBUG_OPTS
 	log_dbg_printf("MasterKeyLog: %s\n", opts->masterkeylog);
 #endif /* DEBUG_OPTS */
@@ -1136,9 +1142,11 @@ opts_set_pcaplog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->pcaplog)
 		free(opts->pcaplog);
-	opts->pcaplog = strdup(optarg);
-	if (!opts->pcaplog)
+	if (!(opts->pcaplog = realpath(optarg, NULL))) {
+		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+		              optarg, strerror(errno), errno);
 		oom_die(argv0);
+	}
 	opts->pcaplog_isdir = 0;
 	opts->pcaplog_isspec = 0;
 #ifdef DEBUG_OPTS
