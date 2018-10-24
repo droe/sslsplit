@@ -194,9 +194,8 @@ log_masterkey_preinit(const char *logfile)
 		               logfile, strerror(errno), errno);
 		return -1;
 	}
-	if (!(masterkey_fn = realpath(logfile, NULL))) {
-		log_err_printf("Failed to realpath '%s': %s (%i)\n",
-		              logfile, strerror(errno), errno);
+	masterkey_fn = strdup(logfile);
+	if (!masterkey_fn) {
 		close(masterkey_fd);
 		masterkey_fd = -1;
 		return -1;
@@ -262,9 +261,8 @@ log_connect_preinit(const char *logfile)
 		               logfile, strerror(errno), errno);
 		return -1;
 	}
-	if (!(connect_fn = realpath(logfile, NULL))) {
-		log_err_printf("Failed to realpath '%s': %s (%i)\n",
-		              logfile, strerror(errno), errno);
+	connect_fn = strdup(logfile);
+	if (!connect_fn) {
 		close(connect_fd);
 		connect_fd = -1;
 		return -1;
@@ -1028,9 +1026,8 @@ log_content_file_single_preinit(const char *logfile)
 		               logfile, strerror(errno), errno);
 		return -1;
 	}
-	if (!(content_file_single_fn = realpath(logfile, NULL))) {
-		log_err_printf("Failed to realpath '%s': %s (%i)\n",
-		              logfile, strerror(errno), errno);
+	content_file_single_fn = strdup(logfile);
+	if (!content_file_single_fn) {
 		close(content_file_single_fd);
 		content_file_single_fd = -1;
 		return -1;
@@ -1180,10 +1177,8 @@ log_content_pcap_preinit(const char *pcapfile)
 		content_pcap_fd = -1;
 		return -1;
 	}
-
-	if (!(content_pcap_fn = realpath(pcapfile, NULL))) {
-		log_err_printf("Failed to realpath '%s': %s (%i)\n",
-		               pcapfile, strerror(errno), errno);
+	content_pcap_fn = strdup(pcapfile);
+	if (!content_pcap_fn) {
 		close(content_pcap_fd);
 		content_pcap_fd = -1;
 		return -1;
