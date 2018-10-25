@@ -628,6 +628,52 @@ sys_mkpath(const char *path, mode_t mode)
 }
 
 /*
+ * Return realpath(dirname(path)) + / + basename(path) in a newly allocated
+ * string.  Returns NULL on failure and sets errno to ENOENT if the directory
+ * part does not exist.
+ */
+char *
+sys_realdir(const char *path)
+{
+	char *sep, *udir, *rdir, *p;
+	int rerrno;
+
+	if (path[0] == '\0') {
+		errno = EINVAL;
+		return NULL;
+	}
+
+	udir = strdup(path);
+	if (!udir)
+		return NULL;
+
+	sep = strrchr(udir, '/');
+	if (!sep) {
+		free(udir);
+		(void)asprintf(&udir, "./%s", path);
+		if (!udir)
+			return NULL;
+		sep = udir + 1;
+	} else if (sep == udir) {
+		return udir;
+	}
+	*sep = '\0';
+	rdir = realpath(udir, NULL);
+	if (!rdir) {
+		rerrno = errno;
+		free(udir);
+		errno = rerrno;
+		return NULL;
+	}
+	(void)asprintf(&p, "%s/%s", rdir, sep + 1);
+	rerrno = errno;
+	free(rdir);
+	free(udir);
+	errno = rerrno;
+	return p;
+}
+
+/*
  * Iterate over all files in a directory hierarchy, calling the callback
  * cb for each file, passing the filename and arg as arguments.  Files and
  * directories beginning with a dot are skipped, symlinks are followed.

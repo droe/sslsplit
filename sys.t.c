@@ -175,6 +175,49 @@ START_TEST(sys_mkpath_01)
 }
 END_TEST
 
+START_TEST(sys_realdir_01)
+{
+	char *rd;
+
+	rd = sys_realdir("./extra/../sys.t.c");
+	fail_unless(!!rd, "sys_realdir failed");
+	fail_unless(!!strstr(rd, "/sys.t.c"), "filename not found");
+	fail_unless(!strstr(rd, "/extra/"), "extra in path");
+	fail_unless(!strstr(rd, "/../"), "dot-dot in path");
+	free(rd);
+}
+END_TEST
+
+START_TEST(sys_realdir_02)
+{
+	char *rd;
+
+	rd = sys_realdir("/foo/bar/baz");
+	fail_unless(!rd, "sys_realdir did not fail");
+	fail_unless(errno == ENOENT, "errno not ENOENT");
+}
+END_TEST
+
+START_TEST(sys_realdir_03)
+{
+	char *rd;
+
+	rd = sys_realdir("foobarbaz");
+	fail_unless(!!rd, "sys_realdir failed");
+	fail_unless(!!strstr(rd, "/foobarbaz"), "filename not found or dir");
+	free(rd);
+}
+END_TEST
+
+START_TEST(sys_realdir_04)
+{
+	char *rd;
+
+	rd = sys_realdir("");
+	fail_unless(!rd, "sys_realdir did not fail");
+}
+END_TEST
+
 int
 sys_dir_eachfile_cb(UNUSED const char *fn, void *arg)
 {
@@ -292,6 +335,13 @@ sys_suite(void)
 	tc = tcase_create("sys_mkpath");
 	tcase_add_unchecked_fixture(tc, sys_mkpath_setup, sys_mkpath_teardown);
 	tcase_add_test(tc, sys_mkpath_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("sys_realdir");
+	tcase_add_test(tc, sys_realdir_01);
+	tcase_add_test(tc, sys_realdir_02);
+	tcase_add_test(tc, sys_realdir_03);
+	tcase_add_test(tc, sys_realdir_04);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("sys_dir_eachfile");

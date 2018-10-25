@@ -59,6 +59,7 @@ size_t sys_get_mtu(const char *);
 
 int sys_isdir(const char *) NONNULL(1) WUNRES;
 int sys_mkpath(const char *, mode_t) NONNULL(1) WUNRES;
+char * sys_realdir(const char *) NONNULL(1) MALLOC;
 
 typedef int (*sys_dir_eachfile_cb_t)(const char *, void *) NONNULL(1) WUNRES;
 int sys_dir_eachfile(const char *, sys_dir_eachfile_cb_t, void *) NONNULL(1,2) WUNRES;

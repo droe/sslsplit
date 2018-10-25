@@ -956,7 +956,7 @@ opts_set_jaildir(opts_t *opts, const char *argv0, const char *optarg)
 		free(opts->jaildir);
 	opts->jaildir = realpath(optarg, NULL);
 	if (!opts->jaildir) {
-		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		fprintf(stderr, "%s: Failed to realpath '%s': %s (%i)\n",
 		        argv0, optarg, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
@@ -983,10 +983,16 @@ opts_set_connectlog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->connectlog)
 		free(opts->connectlog);
-	if (!(opts->connectlog = realpath(optarg, NULL))) {
-		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
-		              optarg, strerror(errno), errno);
-		oom_die(argv0);
+	if (!(opts->connectlog = sys_realdir(optarg))) {
+		if (errno == ENOENT) {
+			fprintf(stderr, "Directory part of '%s' does not "
+			                "exist\n", optarg);
+			exit(EXIT_FAILURE);
+		} else {
+			fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+			              optarg, strerror(errno), errno);
+			oom_die(argv0);
+		}
 	}
 #ifdef DEBUG_OPTS
 	log_dbg_printf("ConnectLog: %s\n", opts->connectlog);
@@ -998,10 +1004,16 @@ opts_set_contentlog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->contentlog)
 		free(opts->contentlog);
-	if (!(opts->contentlog = realpath(optarg, NULL))) {
-		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
-		              optarg, strerror(errno), errno);
-		oom_die(argv0);
+	if (!(opts->contentlog = sys_realdir(optarg))) {
+		if (errno == ENOENT) {
+			fprintf(stderr, "Directory part of '%s' does not "
+			                "exist\n", optarg);
+			exit(EXIT_FAILURE);
+		} else {
+			fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+			              optarg, strerror(errno), errno);
+			oom_die(argv0);
+		}
 	}
 	opts->contentlog_isdir = 0;
 	opts->contentlog_isspec = 0;
@@ -1021,7 +1033,7 @@ opts_set_contentlogdir(opts_t *opts, const char *argv0, const char *optarg)
 		free(opts->contentlog);
 	opts->contentlog = realpath(optarg, NULL);
 	if (!opts->contentlog) {
-		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		fprintf(stderr, "%s: Failed to realpath '%s': %s (%i)\n",
 		        argv0, optarg, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
@@ -1064,7 +1076,7 @@ opts_set_logbasedir(const char *argv0, const char *optarg,
 	}
 	*basedir = realpath(lhs, NULL);
 	if (!*basedir) {
-		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		fprintf(stderr, "%s: Failed to realpath '%s': %s (%i)\n",
 		        argv0, lhs, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
@@ -1127,10 +1139,16 @@ opts_set_masterkeylog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->masterkeylog)
 		free(opts->masterkeylog);
-	if (!(opts->masterkeylog = realpath(optarg, NULL))) {
-		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
-		              optarg, strerror(errno), errno);
-		oom_die(argv0);
+	if (!(opts->masterkeylog = sys_realdir(optarg))) {
+		if (errno == ENOENT) {
+			fprintf(stderr, "Directory part of '%s' does not "
+			                "exist\n", optarg);
+			exit(EXIT_FAILURE);
+		} else {
+			fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+			              optarg, strerror(errno), errno);
+			oom_die(argv0);
+		}
 	}
 #ifdef DEBUG_OPTS
 	log_dbg_printf("MasterKeyLog: %s\n", opts->masterkeylog);
@@ -1142,10 +1160,16 @@ opts_set_pcaplog(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->pcaplog)
 		free(opts->pcaplog);
-	if (!(opts->pcaplog = realpath(optarg, NULL))) {
-		fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
-		              optarg, strerror(errno), errno);
-		oom_die(argv0);
+	if (!(opts->pcaplog = sys_realdir(optarg))) {
+		if (errno == ENOENT) {
+			fprintf(stderr, "Directory part of '%s' does not "
+			                "exist\n", optarg);
+			exit(EXIT_FAILURE);
+		} else {
+			fprintf(stderr, "Failed to realpath '%s': %s (%i)\n",
+			              optarg, strerror(errno), errno);
+			oom_die(argv0);
+		}
 	}
 	opts->pcaplog_isdir = 0;
 	opts->pcaplog_isspec = 0;
@@ -1165,7 +1189,7 @@ opts_set_pcaplogdir(opts_t *opts, const char *argv0, const char *optarg)
 		free(opts->pcaplog);
 	opts->pcaplog = realpath(optarg, NULL);
 	if (!opts->pcaplog) {
-		fprintf(stderr, "%s: Failed to canonicalize '%s': %s (%i)\n",
+		fprintf(stderr, "%s: Failed to realpath '%s': %s (%i)\n",
 		        argv0, optarg, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
