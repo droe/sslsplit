@@ -356,7 +356,9 @@ main(int argc, char *argv[])
 				if (load_conffile(opts, argv0, &natengine) == -1) {
 					exit(EXIT_FAILURE);
 				}
+#ifdef DEBUG_OPTS
 				fprintf(stderr, "Conf file: %s\n", opts->conffile);
+#endif /* DEBUG_OPTS */
 				break;
 			case 'o':
 				if (opts_set_option(opts, argv0, optarg, &natengine) == -1) {
