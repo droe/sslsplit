@@ -117,7 +117,10 @@ START_TEST(cache_fkcrt_04)
 #ifndef LIBRESSL_VERSION_NUMBER
 	/* deliberate access of free'd X509* */
 	fail_unless(c1->references == 0, "refcount != 0");
-#endif /* !LIBRESSL_VERSION_NUMBER */
+#else /* LIBRESSL_VERSION_NUMBER */
+	fprintf(stderr, "deliberate access after free test in cache_fkcrt_04 "
+			"omitted because LibreSSL fails with refcount != 0\n");
+#endif /* LIBRESSL_VERSION_NUMBER */
 	fail_unless(cachemgr_preinit() != -1, "reinit");
 }
 END_TEST
