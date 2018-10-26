@@ -122,7 +122,7 @@ session.pem: server.pem
 	test -r $@
 
 clean:
-	rm -rf rsa.* dsa.* ec.* dh*.param targets *.srl session.pem server.*
+	rm -rf rsa.* dsa.* ec.* dh*.param targets *.srl server.*
 
 .PHONY: all clean rsa dsa ec dh session targets
 
