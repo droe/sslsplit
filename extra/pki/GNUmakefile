@@ -17,7 +17,7 @@ NO_SSL2:=	$(shell $(OPENSSL) s_server -h 2>&1|awk '/-no_ssl2/ {print $$1}')
 
 all: rsa dsa ec targets server pwd
 
-testreqs: rsa targets server
+testreqs: rsa targets server session
 
 session: session.pem
 
@@ -112,7 +112,7 @@ targets/wildcard.roe.ch.pem: rsa.crt
 		targets/wildcard.roe.ch.crt
 
 # localhost network connectivity is required
-session.pem: server.pem
+session.pem: | server.pem
 	$(OPENSSL) s_server -accept 46143 -cert server.pem -quiet $(NO_SSL2) & \
 		pid=$$! ; \
 		sleep 1 ; \
