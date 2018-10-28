@@ -114,8 +114,10 @@ START_TEST(cache_fkcrt_04)
 	cachemgr_fini();
 	fail_unless(c1->references == 1, "refcount != 1");
 	X509_free(c2);
+#if 0
 	/* deliberate access of free'd X509* */
 	fail_unless(c1->references == 0, "refcount != 0");
+#endif
 	fail_unless(cachemgr_preinit() != -1, "reinit");
 }
 END_TEST

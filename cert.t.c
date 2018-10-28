@@ -62,8 +62,10 @@ START_TEST(cert_refcount_inc_01)
 	cert_free(c);
 	fail_unless(c->references == 1, "refcount mismatch");
 	cert_free(c);
+#if 0
 	/* deliberate access after last free() */
 	fail_unless(c->references == 0, "refcount mismatch");
+#endif
 }
 END_TEST
 
