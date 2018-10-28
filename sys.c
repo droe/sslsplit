@@ -636,7 +636,7 @@ char *
 sys_realdir(const char *path)
 {
 	char *sep, *udir, *rdir, *p;
-	int rerrno;
+	int rerrno, rv;
 
 	if (path[0] == '\0') {
 		errno = EINVAL;
@@ -650,8 +650,8 @@ sys_realdir(const char *path)
 	sep = strrchr(udir, '/');
 	if (!sep) {
 		free(udir);
-		(void)asprintf(&udir, "./%s", path);
-		if (!udir)
+		rv = asprintf(&udir, "./%s", path);
+		if (rv == -1)
 			return NULL;
 		sep = udir + 1;
 	} else if (sep == udir) {
@@ -665,11 +665,13 @@ sys_realdir(const char *path)
 		errno = rerrno;
 		return NULL;
 	}
-	(void)asprintf(&p, "%s/%s", rdir, sep + 1);
+	rv = asprintf(&p, "%s/%s", rdir, sep + 1);
 	rerrno = errno;
 	free(rdir);
 	free(udir);
 	errno = rerrno;
+	if (rv == -1)
+		return NULL;
 	return p;
 }
 
