@@ -480,7 +480,11 @@ Note that when using \fB-j\fP with \fBsni\fP, you may need to prepare
 \fIjaildir\fP to make name resolution work from within the chroot directory.
 .SH SIGNALS
 A running \fBsslsplit\fP accepts SIGINT and SIGQUIT for a clean shutdown and
-SIGUSR1 to re-open the long-living log files (such as \fB-l\fP, \fB-L\fP).
+SIGUSR1 to re-open the single-file log files (such as \fB-l\fP, \fB-L\fP and
+\fB-X\fP).  The canonical way to rotate or post-process logs is to rename the
+active log file, send SIGUSR1 to the PID in the PID file given by \fB-p\fP,
+give SSLsplit some time to flush buffers after closing the old file, and then
+post-process the renamed log file.
 Per-connection log files (such as \fB-S\fP and \fB-F\fP) are not re-opened
 because their filename is specific to the connection.
 .SH "LOG SPECIFICATIONS"
@@ -714,6 +718,17 @@ instead of querying a NAT engine:
 \fBsslsplit -t /path/to/cert.d -l connect.log -S /tmp \\
          https ::1       10443 www.example.org 443 \\
          https 127.0.0.1 10443 www.example.org 443\fP
+.fi
+.LP
+The original example, but using plain ssl and tcp proxyspecs to avoid header
+modifications, and logging to a single PCAP file for post-processing with an
+external tool.  To facilitate log rotation via SIGUSR1, \fB-p\fP is also given,
+so external log rotation tools or scripts can read the PID from the PID file.
+.LP
+.nf
+\fBsslsplit -k ca.key -c ca.crt -X log.pcap -p /var/run/sslsplit.pid \\
+         ssl ::1 10443  ssl 127.0.0.1 10443 \\
+         tcp ::1 10080  tcp 127.0.0.1 10080\fP
 .fi
 .LP
 The original example, but using SSL options optimized for speed by disabling
