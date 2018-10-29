@@ -504,11 +504,18 @@ clean:
 	$(RM) -f $(TARGET).conf
 	$(RM) -rf *.dSYM
 
+SUBSTITUTIONS:=	-e 's,/usr/local,$(PREFIX),' \
+		-e 's,@@VERSION@@,$(VERSION),' \
+		-e 's,@@DATE@@,$(BUILD_DATE),'
+
+$(TARGET).1: $(TARGET).1.in $(MKFS)
+	$(SED) $(SUBSTITUTIONS) <$< >$@
+
 $(TARGET).conf: $(TARGET).conf.in $(MKFS)
-	$(SED) 's,/usr/local,$(PREFIX),' <$< >$@
+	$(SED) $(SUBSTITUTIONS) <$< >$@
 
 $(TARGET).conf.5: $(TARGET).conf.5.in $(MKFS)
-	$(SED) 's,/usr/local,$(PREFIX),' <$< >$@
+	$(SED) $(SUBSTITUTIONS) <$< >$@
 
 install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin

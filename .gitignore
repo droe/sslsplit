@@ -2,6 +2,7 @@
 /*.dSYM
 /sslsplit
 /sslsplit.test
+/sslsplit.1
 /sslsplit.conf
 /sslsplit.conf.5
 /extra/*.pyc

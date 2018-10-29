@@ -1,4 +1,4 @@
-# SSLsplit sample configuration
+# Sample configuration for sslsplit @@VERSION@@
 #
 # Use the -f command line option to start sslsplit with a config file.
 # See sslsplit.conf(5) and sslsplit(1) for documentation.
