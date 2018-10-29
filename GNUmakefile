@@ -508,13 +508,13 @@ SUBSTITUTIONS:=	-e 's,/usr/local,$(PREFIX),' \
 		-e 's,@@VERSION@@,$(VERSION),' \
 		-e 's,@@DATE@@,$(BUILD_DATE),'
 
-$(TARGET).1: $(TARGET).1.in $(MKFS)
+$(TARGET).1: $(TARGET).1.in $(MKFS) FORCE
 	$(SED) $(SUBSTITUTIONS) <$< >$@
 
-$(TARGET).conf: $(TARGET).conf.in $(MKFS)
+$(TARGET).conf: $(TARGET).conf.in $(MKFS) FORCE
 	$(SED) $(SUBSTITUTIONS) <$< >$@
 
-$(TARGET).conf.5: $(TARGET).conf.5.in $(MKFS)
+$(TARGET).conf.5: $(TARGET).conf.5.in $(MKFS) FORCE
 	$(SED) $(SUBSTITUTIONS) <$< >$@
 
 install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
