@@ -1,5 +1,5 @@
 
-### SSLsplit develop
+### SSLsplit 0.5.4 2018-10-29
 
 This release includes work sponsored by HackerOne.
 
