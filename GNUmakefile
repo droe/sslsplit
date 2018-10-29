@@ -537,14 +537,16 @@ ifdef GITDIR
 lint:
 	$(CPPCHECK) $(CPPCHECKFLAGS) --force --enable=all --error-exitcode=1 .
 
-manlint: $(TARGET).1
+manlint: $(TARGET).1 $(TARGET).conf.5
 	$(CHECKNR) $(TARGET).1
 
-mantest: $(TARGET).1
-	$(RM) -f man1
+mantest: $(TARGET).1 $(TARGET).conf.5
+	$(RM) -f man1 man5
 	$(LN) -sf . man1
+	$(LN) -sf . man5
 	$(MAN) -M . 1 $(TARGET)
-	$(RM) man1
+	$(MAN) -M . 5 $(TARGET).conf
+	$(RM) man1 man5
 
 copyright: *.c *.h *.1 *.5 extra/*/*.c
 	Mk/bin/copyright.py $^
@@ -555,10 +557,16 @@ $(PKGNAME)-$(VERSION).1.txt: $(TARGET).1
 	$(MAN) -M . 1 $(TARGET) | $(COL) -b >$@
 	$(RM) man1
 
-man: $(PKGNAME)-$(VERSION).1.txt
+$(PKGNAME)-$(VERSION).conf.5.txt: $(TARGET).conf.5
+	$(RM) -f man5
+	$(LN) -sf . man5
+	$(MAN) -M . 5 $(TARGET).conf | $(COL) -b >$@
+	$(RM) man5
+
+man: $(PKGNAME)-$(VERSION).1.txt $(PKGNAME)-$(VERSION).conf.5.txt
 
 manclean:
-	$(RM) -f $(PKGNAME)-*.1.txt
+	$(RM) -f $(PKGNAME)-*.1.txt $(PKGNAME)-*.conf.5.txt
 
 fetchdeps:
 	$(WGET) -O- $(KHASH_URL) >khash.h
