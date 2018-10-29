@@ -197,7 +197,7 @@ Default: yes
 Proxy specification: type listenaddr+port [natengine|targetaddr+port|"sni"+port]. Multiple specs are allowed, one on each line.
 .SH "FILES"
 .LP 
-/etc/sslsplit/sslsplit.conf
+/usr/local/etc/sslsplit/sslsplit.conf
 .SH "AUTHOR"
 .LP 
 The config file facility was added by Soner Tari <sonertari@gmail.com>.

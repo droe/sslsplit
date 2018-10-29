@@ -507,6 +507,9 @@ clean:
 $(TARGET).conf: $(TARGET).conf.in $(MKFS)
 	$(SED) 's,/usr/local,$(PREFIX),' <$< >$@
 
+$(TARGET).conf.5: $(TARGET).conf.5.in $(MKFS)
+	$(SED) 's,/usr/local,$(PREFIX),' <$< >$@
+
 install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
 	test -d $(DESTDIR)$(PREFIX)/$(TARGET) || \

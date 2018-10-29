@@ -3,6 +3,7 @@
 /sslsplit
 /sslsplit.test
 /sslsplit.conf
+/sslsplit.conf.5
 /extra/*.pyc
 /extra/engine/*.dylib
 /extra/engine/*.so
