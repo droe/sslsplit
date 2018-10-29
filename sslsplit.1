@@ -162,6 +162,7 @@ Log connection content to separate log files with the given path specification
 (see LOG SPECIFICATIONS below).  For each connection, a log file will be
 written, which will contain both directions of data as transmitted.
 Information about the connection will be contained in the filename only.
+Only one of \fB-F\fP, \fB-L\fP and \fB-S\fP may be used (last one wins).
 .TP
 .B \-g \fIpemfile\fP
 Use Diffie-Hellman group parameters from \fIpemfile\fP for Ephemereal
@@ -227,6 +228,7 @@ Log connection content to \fIlogfile\fP.  The content log will contain a
 parsable log format with transmitted data, prepended with headers identifying
 the connection and the data length of each logged segment.
 SIGUSR1 will cause \fIlogfile\fP to be re-opened.
+Only one of \fB-F\fP, \fB-L\fP and \fB-S\fP may be used (last one wins).
 .TP
 .B \-m
 When dropping privileges using \fB-u\fP, override the target primary group
@@ -322,6 +324,7 @@ Log connection content to separate log files under \fIlogdir\fP.  For each
 connection, a log file will be written, which will contain both directions of
 data as transmitted.  Information about the connection will be contained in
 the filename only.
+Only one of \fB-F\fP, \fB-L\fP and \fB-S\fP may be used (last one wins).
 .TP
 .B \-t \fIcertdir\fP
 Use private key, certificate and certificate chain from PEM files in
@@ -371,15 +374,18 @@ support.
 Log connection content to \fIpcapfile\fP in PCAP format, with emulated TCP, IP
 and Ethernet headers.
 SIGUSR1 will cause \fIpcapfile\fP to be re-opened.
+Only one of \fB-X\fP, \fB-Y\fP and \fB-y\fP may be used (last one wins).
 .TP
 .B \-Y \fIpcapdir\fP
 Log connection content to separate PCAP files under \fIpcapdir\fP.  For each
 connection, a separate PCAP file will be written.
+Only one of \fB-X\fP, \fB-Y\fP and \fB-y\fP may be used (last one wins).
 .TP
 .B \-y \fIpcapspec\fP
 Log connection content to separate PCAP files with the given path specification
 (see LOG SPECIFICATIONS below).  For each connection, a separate PCAP file will
 be written.
+Only one of \fB-X\fP, \fB-Y\fP and \fB-y\fP may be used (last one wins).
 .TP
 .B \-V
 Display version and compiled features information and exit.
