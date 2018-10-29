@@ -34,6 +34,7 @@ case "$EVENT" in
 libevent-2.1.8)
 	EVENTURL=https://github.com/libevent/libevent/releases/download/release-2.1.8-stable/libevent-2.1.8-stable.tar.gz
 	EVENTPATCH=Mk/patches/libevent-2.1.8.diff
+	EVENTOPTS="$EVENTOPTS --disable-libevent-regress --disable-samples"
 	;;
 libevent-2.0.22)
 	EVENTURL=https://github.com/libevent/libevent/releases/download/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz
@@ -44,13 +45,16 @@ libevent-2.0.22)
 esac
 
 if [ ! -d "$HOME/opt/$SSL" ]; then
+	if [ "`uname`" = "Linux" ]; then
+		SSLOPTS="$SSLOPTS -Wl,-rpath=$HOME/opt/$SSL/lib"
+	fi
 	wget "$SSLURL" || exit 1
 	tar -xzvf "$SSL.tar.gz" || exit 1
 	cd "$SSL" || exit 1
 	./config shared \
-		-Wl,-rpath="$HOME/opt/$SSL/lib" \
 		--prefix="$HOME/opt/$SSL" \
-		--openssldir="$HOME/opt/$SSL" || exit 1
+		--openssldir="$HOME/opt/$SSL" \
+		$SSLOPTS || exit 1
 	make && make install || { rm -rf "$HOME/opt/$SSL"; exit 1; }
 	cd ..
 fi
@@ -65,7 +69,7 @@ if [ ! -d "$HOME/opt/$EVENT" ]; then
 	if [ -n "$EVENTPATCH" ]; then
 		patch -p0 < ../$EVENTPATCH || exit 1
 	fi
-	./configure --prefix="$HOME/opt/$EVENT" || exit 1
+	./configure --prefix="$HOME/opt/$EVENT" $EVENTOPTS || exit 1
 	make && make install || { rm -rf "$HOME/opt/$EVENT"; exit 1; }
 	cd ..
 fi

@@ -89,6 +89,20 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: linux
       compiler: clang
+      env: SSL=openssl-1.1.1 EVENT=libevent-2.1.8
+      cache:
+        directories:
+          - $HOME/opt
+      before_install:
+        - sudo apt-get install -qq libnet1-dev libpcap-dev check
+      install:
+        - ./Mk/bin/install-opt.sh
+      before_script:
+        - export OPENSSL_BASE="$HOME/opt/$SSL"
+        - export LIBEVENT_BASE="$HOME/opt/$EVENT"
+        - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
+    - os: linux
+      compiler: clang
       env: SSL=libressl-2.2.7 EVENT=libevent-2.0.22
       cache:
         directories:
