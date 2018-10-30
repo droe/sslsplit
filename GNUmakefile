@@ -558,7 +558,7 @@ mantest: $(TARGET).1 $(TARGET).conf.5
 	$(MAN) -M . 5 $(TARGET).conf
 	$(RM) man1 man5
 
-copyright: *.c *.h *.1 *.5 extra/*/*.c
+copyright: *.c *.h *.1.in *.5.in extra/*/*.c
 	Mk/bin/copyright.py $^
 
 $(PKGNAME)-$(VERSION).1.txt: $(TARGET).1
