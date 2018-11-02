@@ -82,7 +82,7 @@ is available, instead of generating forged ones.  SSLsplit supports NULL-prefix
 CN certificates but otherwise does not implement exploits against specific
 certificate verification vulnerabilities in SSL/TLS stacks.
 .LP
-SSLsplit implements a number of defenses against mechanisms which would
+SSLsplit implements a number of defences against mechanisms which would
 normally prevent MitM attacks or make them more difficult.
 SSLsplit can deny OCSP requests in a generic way.
 For HTTP and HTTPS connections, SSLsplit mangles headers to
@@ -102,7 +102,7 @@ logged.
 In order to maximize the chances that a connection can be successfully split,
 SSLsplit does not verify upstream server certificates by default.  Instead, all
 certificates including self-signed are accepted and if the expected hostname
-signalled in SNI is missing from the server certificate, it will be added to
+signaled in SNI is missing from the server certificate, it will be added to
 dynamically forged certificates.
 .LP
 SSLsplit does not automagically redirect any network traffic.  To actually
@@ -155,7 +155,7 @@ List all supported NAT engines available on the system and exit.  See
 NAT ENGINES for a list of NAT engines currently supported by SSLsplit.
 .TP
 .B \-f \fIconffile\fP
-Read configuraion from \fIconffile\fP.
+Read configuration from \fIconffile\fP.
 .TP
 .B \-F \fIlogspec\fP
 Log connection content to separate log files with the given path specification

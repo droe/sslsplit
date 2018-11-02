@@ -76,7 +76,7 @@
 /* Whether we short-circuit calls to privsep_client_* directly to
  * privsep_server_* within the client process, bypassing the privilege
  * separation mechanism; this is a performance optimization for use cases
- * where the user choses performance over security, especially with options
+ * where the user chooses performance over security, especially with options
  * that require privsep operations for each connection passing through.
  * In the current implementation, for consistency, we still fork normally, but
  * will not actually send any privsep requests to the parent process. */

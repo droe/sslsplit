@@ -33,7 +33,7 @@
 #include <pthread.h>
 
 /*
- * Threadsafe, bounded-size queue based on pthreads mutex and conds.
+ * Thread-safe, bounded-size queue based on pthreads mutex and conds.
  * Both enqueue and dequeue are available in a blocking and non-blocking
  * version.
  */

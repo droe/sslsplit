@@ -1935,7 +1935,7 @@ ssl_session_to_str(SSL_SESSION *sess)
 
 /*
  * Returns non-zero if the session timeout has not expired yet,
- * zero if the session has expired or an error occured.
+ * zero if the session has expired or an error occurred.
  */
 int
 ssl_session_is_valid(SSL_SESSION *sess)
@@ -1979,7 +1979,7 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
  *
  * The OpenSSL SNI API only allows to read the indicated server name at the
  * time when we have to provide the server certificate.  OpenSSL does not
- * allow to asynchroniously read the indicated server name, wait for some
+ * allow to asynchronously read the indicated server name, wait for some
  * unrelated event to happen, and then later to provide the server certificate
  * to use and continue the handshake.  Therefore we resort to parsing the
  * server name from the ClientHello manually before OpenSSL gets to work on it.

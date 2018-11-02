@@ -73,7 +73,7 @@
 
 
 /*
- * Access NAT state tables in a NAT engine independant way.
+ * Access NAT state tables in a NAT engine independent way.
  * Adding support for additional NAT engines should require only
  * changes in this file.
  */

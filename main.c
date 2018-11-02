@@ -821,7 +821,7 @@ main(int argc, char *argv[])
 	if (privsep_fork(opts, clisock,
 	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
-		 * or an error occured */
+		 * or an error occurred */
 		if (opts->pidfile) {
 			sys_pidf_close(pidfd, opts->pidfile);
 		}
