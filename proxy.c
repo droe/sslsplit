@@ -368,7 +368,7 @@ leave0:
 }
 
 /*
- * Run the event loop.  Returns when the event loop is canceled by a signal
+ * Run the event loop.  Returns when the event loop is cancelled by a signal
  * or on failure.
  */
 void

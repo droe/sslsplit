@@ -491,7 +491,7 @@ logpkt_mirror_build(libnet_t *libnet,
  * Write a single packet to either PCAP (*fd* != -1) or a network interface
  * (*fd* == -1).  Caller must ensure that *ctx* was initialized accordingly.
  * The packet will be in direction *direction*, use TCP flags *flags*, and
- * transmit a payload *payload*.  TCP sequence and acknowledgment numbers as
+ * transmit a payload *payload*.  TCP sequence and acknowledgement numbers as
  * well as source and destination identifiers are taken from *ctx*.
  *
  * Caller must ensure that *payload* fits into a frame depending on the MTU

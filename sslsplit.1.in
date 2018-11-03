@@ -102,7 +102,7 @@ logged.
 In order to maximize the chances that a connection can be successfully split,
 SSLsplit does not verify upstream server certificates by default.  Instead, all
 certificates including self-signed are accepted and if the expected hostname
-signaled in SNI is missing from the server certificate, it will be added to
+signalled in SNI is missing from the server certificate, it will be added to
 dynamically forged certificates.
 .LP
 SSLsplit does not automagically redirect any network traffic.  To actually
