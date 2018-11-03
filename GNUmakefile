@@ -5,38 +5,38 @@
 #
 # Dependencies and features are auto-detected, but can be overridden:
 #
-# OPENSSL_BASE	Prefix of OpenSSL library and headers to build against
-# LIBEVENT_BASE	Prefix of libevent library and headers to build against
-# LIBPCAP_BASE	Prefix of libpcap library and headers to build against
-# LIBNET_BASE	Prefix of libnet library and headers to build against
-# CHECK_BASE	Prefix of check library and headers to build against (optional)
-# PKGCONFIG	Name/path of pkg-config program to use for auto-detection
-# PCFLAGS	Additional pkg-config flags
-# XNU_VERSION	Version of included XNU headers to build against (OS X only)
-# FEATURES	Enable optional or force-enable undetected features (see below)
+# OPENSSL_BASE  Prefix of OpenSSL library and headers to build against
+# LIBEVENT_BASE Prefix of libevent library and headers to build against
+# LIBPCAP_BASE  Prefix of libpcap library and headers to build against
+# LIBNET_BASE   Prefix of libnet library and headers to build against
+# CHECK_BASE    Prefix of check library and headers to build against (optional)
+# PKGCONFIG     Name/path of pkg-config program to use for auto-detection
+# PCFLAGS       Additional pkg-config flags
+# XNU_VERSION   Version of included XNU headers to build against (OS X only)
+# FEATURES      Enable optional or force-enable undetected features (see below)
 #
 # Where and how to install to:
 #
-# PREFIX	Prefix to install under (default /usr/local)
-# DESTDIR	Destination root under which prefix is located (default /)
-# MANDIR	Subdir of PREFIX that contains man section dirs
-# INSTALLUID	UID to use for installed files if installing as root
-# INSTALLGID	GID to use for installed files if installing as root
+# PREFIX        Prefix to install under (default /usr/local)
+# DESTDIR       Destination root under which prefix is located (default /)
+# MANDIR        Subdir of PREFIX that contains man section dirs
+# INSTALLUID    UID to use for installed files if installing as root
+# INSTALLGID    GID to use for installed files if installing as root
 #
 # Standard compiler variables are respected, e.g.:
 #
-# CC		Compiler, e.g. for cross-compiling, ccache or ccc-analyzer
-# CFLAGS	Additional compiler flags, e.g. optimization flags
-# CPPFLAGS	Additional pre-processor flags
-# LDFLAGS	Additional linker flags
-# LIBS		Additional libraries to link against
-# SOURCE_DATE_EPOCH	Set to epoch time to make the build reproducible
+# CC            Compiler, e.g. for cross-compiling, ccache or ccc-analyzer
+# CFLAGS        Additional compiler flags, e.g. optimization flags
+# CPPFLAGS      Additional pre-processor flags
+# LDFLAGS       Additional linker flags
+# LIBS          Additional libraries to link against
+# SOURCE_DATE_EPOCH     Set to epoch time to make the build reproducible
 #
 # On macOS, the following build environment variables are respected:
 #
-# DEVELOPER_DIR		Override Xcode Command Line Developer Tools directory
-# MACOSX_VERSION_MIN	Minimal version of macOS to target, e.g. 10.11
-# SDK			SDK name to build against, e.g. macosx, macosx10.11
+# DEVELOPER_DIR         Override Xcode Command Line Developer Tools directory
+# MACOSX_VERSION_MIN    Minimal version of macOS to target, e.g. 10.11
+# SDK                   SDK name to build against, e.g. macosx, macosx10.11
 #
 # Examples:
 #
@@ -45,6 +45,9 @@
 #
 # Create a statically linked binary:
 # % PCFLAGS='--static' CFLAGS='-static' LDFLAGS='-static' make
+#
+# Build against musl libc that needs an additional library for fts(3):
+# % LIBS='-lfts' make
 #
 # Build a macOS binary for El Capitan using the default SDK from Xcode 7.3.1:
 # % MACOSX_VERSION_MIN=10.11 DEVELOPER_DIR=/Applications/Xcode-7.3.1.app/Contents/Developer make
