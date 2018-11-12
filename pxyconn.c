@@ -1966,6 +1966,14 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 
 		/* prepare logging, part 2 */
 		if (WANT_CONNECT_LOG(ctx) || WANT_CONTENT_LOG(ctx)) {
+			if (ctx->dsthost_str) {
+				free(ctx->dsthost_str);
+				ctx->dsthost_str = NULL;
+			}
+			if (ctx->dstport_str) {
+				free(ctx->dstport_str);
+				ctx->dstport_str = NULL;
+			}
 			if (sys_sockaddr_str((struct sockaddr *)
 			                     &ctx->dstaddr, ctx->dstaddrlen,
 			                     &ctx->dsthost_str,
