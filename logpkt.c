@@ -336,7 +336,7 @@ logpkt_pcap_build(uint8_t *pkt,
 		ether_hdr->ethertype = htons(ETHERTYPE_IP);
 		ip4_hdr = (ip4_hdr_t *)(((uint8_t *)ether_hdr) +
 		                        sizeof(ether_hdr_t));
-		ip4_hdr->version_ihl = 0x45;
+		ip4_hdr->version_ihl = 0x45; /* version 4, ihl 5 words */
 		ip4_hdr->dscp_ecn = 0;
 		ip4_hdr->len = htons(sizeof(ip4_hdr_t) +
 		                     sizeof(tcp_hdr_t) + payloadlen);
@@ -366,7 +366,7 @@ logpkt_pcap_build(uint8_t *pkt,
 		ether_hdr->ethertype = htons(ETHERTYPE_IPV6);
 		ip6_hdr = (ip6_hdr_t *)(((uint8_t *)ether_hdr) +
 		                        sizeof(ether_hdr_t));
-		ip6_hdr->flags = htonl(0x60000000UL);
+		ip6_hdr->flags = htonl(0x60000000UL); /* version 6 */
 		ip6_hdr->len = htons(sizeof(tcp_hdr_t) + payloadlen);
 		ip6_hdr->next_hdr = IPPROTO_TCP;
 		ip6_hdr->hop_limit = 255;
@@ -390,7 +390,7 @@ logpkt_pcap_build(uint8_t *pkt,
 	}
 	tcp_hdr->seq = htonl(seq);
 	tcp_hdr->ack = htonl(ack);
-	tcp_hdr->flags = htons(0x5000|flags);
+	tcp_hdr->flags = htons(0x5000|flags); /* data offset 5 words */
 	tcp_hdr->win = htons(32767);
 	tcp_hdr->urgp = 0;
 	tcp_hdr->chksum = 0;
