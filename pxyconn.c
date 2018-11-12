@@ -62,6 +62,19 @@
 
 
 /*
+ * libevent compatibility
+ */
+#if LIBEVENT_VERSION_NUMBER < 0x02010000
+static void
+bufferevent_openssl_set_allow_dirty_shutdown(UNUSED struct bufferevent *bev,
+                                             UNUSED int allow_dirty_shutdown)
+{
+	return;
+}
+#endif /* LIBEVENT_VERSION_NUMBER < 0x02010000 */
+
+
+/*
  * Maximum size of data to buffer per connection direction before
  * temporarily stopping to read data from the other end.
  */
@@ -1256,13 +1269,9 @@ pxy_bufferevent_setup(pxy_conn_ctx_t *ctx, evutil_socket_t fd, SSL *ssl)
 		log_err_printf("Error creating bufferevent socket\n");
 		return NULL;
 	}
-#if LIBEVENT_VERSION_NUMBER >= 0x02010000
 	if (ssl) {
-		/* Prevent unclean (dirty) shutdowns to cause error
-		 * events on the SSL socket bufferevent. */
 		bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
 	}
-#endif /* LIBEVENT_VERSION_NUMBER >= 0x02010000 */
 	bufferevent_setcb(bev, pxy_bev_readcb, pxy_bev_writecb,
 	                  pxy_bev_eventcb, ctx);
 	bufferevent_enable(bev, EV_READ|EV_WRITE);
@@ -1618,6 +1627,8 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			if (!ctx->dst.bev) {
 				return 0;
 			}
+			bufferevent_openssl_set_allow_dirty_shutdown(
+			                                      ctx->dst.bev, 1);
 			bufferevent_setcb(ctx->dst.bev, pxy_bev_readcb,
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
@@ -1928,6 +1939,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			               BUFFEREVENT_SSL_ACCEPTING,
 			               BEV_OPT_DEFER_CALLBACKS);
 			if (ctx->src.bev) {
+				bufferevent_openssl_set_allow_dirty_shutdown(
+				                              ctx->src.bev, 1);
 				bufferevent_setcb(ctx->src.bev,
 				                  pxy_bev_readcb,
 				                  pxy_bev_writecb,
