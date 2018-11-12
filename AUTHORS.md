@@ -27,6 +27,7 @@ patches or pull requests, in chronological order of their first contribution:
 -   Levente Polyak ([anthraxx](https://github.com/anthraxx))
 -   Nick French ([naf419](https://github.com/naf419))
 -   Cihan Kömeçoğlu ([cihankom](https://github.com/cihankom))
+-   Sergey Pinaev (n/a)
 
 Many more individuals have contributed by reporting bugs or feature requests.
 See [issue tracker on Github][1], `NEWS.md` and `git log` for details.
