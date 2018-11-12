@@ -1218,6 +1218,7 @@ static void
 bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 {
 	evutil_socket_t fd = bufferevent_getfd(bev);
+	struct bufferevent *ubev = bufferevent_get_underlying(bev);
 	SSL *ssl = NULL;
 
 	if ((ctx->spec->ssl || ctx->clienthello_found) && !ctx->passthrough) {
@@ -1231,10 +1232,16 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	}
 #endif /* DEBUG_PROXY */
 
+	if (ubev) {
+		bufferevent_setfd(ubev, -1);
+		bufferevent_free(ubev);
+	}
 	bufferevent_free(bev); /* does not free SSL unless the option
 	                          BEV_OPT_CLOSE_ON_FREE was set */
 	if (ssl) {
-		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd);
+		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd,
+		                 ctx->dst.bev == bev ?
+		                 ctx->clienthello_found : 0);
 	} else {
 		evutil_closesocket(fd);
 	}

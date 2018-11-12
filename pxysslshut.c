@@ -56,10 +56,12 @@ typedef struct pxy_ssl_shutdown_ctx {
 	struct event *ev;
 	SSL *ssl;
 	unsigned int retries;
+	int set_recv_shut;
 } pxy_ssl_shutdown_ctx_t;
 
 static pxy_ssl_shutdown_ctx_t *
-pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl)
+pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl,
+                         int set_recv_shut)
 {
 	pxy_ssl_shutdown_ctx_t *ctx;
 
@@ -71,6 +73,7 @@ pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl)
 	ctx->ssl = ssl;
 	ctx->ev = NULL;
 	ctx->retries = 0;
+	ctx->set_recv_shut = set_recv_shut;
 	return ctx;
 }
 
@@ -108,6 +111,11 @@ pxy_ssl_shutdown_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 	 * This is a good collection of recent and relevant documents:
 	 * http://bugs.python.org/issue8108
 	 */
+	if (ctx->set_recv_shut && ctx->retries == 0) {
+		/* With autossl, SSL_shutdown() never succeeds on dst
+		 * connection without setting SSL_RECEIVED_SHUTDOWN. */
+		SSL_set_shutdown(ctx->ssl, SSL_RECEIVED_SHUTDOWN);
+	}
 	rv = SSL_shutdown(ctx->ssl);
 	if (rv == 1)
 		goto complete;
@@ -166,11 +174,11 @@ complete:
  */
 void
 pxy_ssl_shutdown(opts_t *opts, struct event_base *evbase, SSL *ssl,
-                 evutil_socket_t fd)
+                 evutil_socket_t fd, int set_recv_shut)
 {
 	pxy_ssl_shutdown_ctx_t *sslshutctx;
 
-	sslshutctx = pxy_ssl_shutdown_ctx_new(opts, evbase, ssl);
+	sslshutctx = pxy_ssl_shutdown_ctx_new(opts, evbase, ssl, set_recv_shut);
 	if (!sslshutctx) {
 		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("SSL_free() in state ");
