@@ -1,6 +1,9 @@
 # SSLsplit - transparent SSL/TLS interception
 https://www.roe.ch/SSLsplit
 
+[![Build Status](https://travis-ci.org/droe/sslsplit.svg)](https://travis-ci.org/droe/sslsplit)
+[![Gitter chat](https://badges.gitter.im/droe/sslsplit.png)](https://gitter.im/droe/sslsplit)
+
 ## Overview
 
 SSLsplit is a tool for man-in-the-middle attacks against SSL/TLS encrypted
