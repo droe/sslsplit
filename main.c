@@ -341,9 +341,11 @@ main_compute_fd_limit(opts_t *opts)
 	if (opts->masterkeylog) {
 		fd_count += 2;
 	}
+#ifndef WITHOUT_MIRROR
 	if (opts->mirrortarget) {
 		fd_count++;
 	}
+#endif /* !WITHOUT_MIRROR */
 	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 		fd_count++;
 	}
