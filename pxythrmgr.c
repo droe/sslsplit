@@ -38,7 +38,7 @@
  * Proxy thread manager: manages the connection handling worker threads
  * and the per-thread resources (i.e. event bases).  The load is shared
  * across num_cpu * 2 connection handling threads, using the number of
- * currently assigned connections as the sole metric.
+ * currently assigned fds as the sole metric.
  *
  * The attach and detach functions are thread-safe.
  */
@@ -57,6 +57,8 @@ struct pxy_thrmgr_ctx {
 	pxy_thr_ctx_t **thr;
 	pthread_mutex_t mutex;
 };
+
+int fd_limit = 0;
 
 /*
  * Dummy recurring timer event to prevent the event loops from exiting when
@@ -238,18 +240,20 @@ pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
  * Attach a new connection to a thread.  Chooses the thread with the fewest
  * currently active connections, returns the appropriate event bases.
  * Returns the index of the chosen thread (for passing to _detach later).
- * This function cannot fail.
+ * This function can fail if we reach the max number of fds we can handle.
  */
 int
 pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
                   struct evdns_base **dnsbase)
 {
-	int thridx;
+	int thridx, fd_count;
 	size_t minload;
 
 	thridx = 0;
+	fd_count = 0;
 	pthread_mutex_lock(&ctx->mutex);
 	minload = ctx->thr[thridx]->load;
+	fd_count = minload;
 #ifdef DEBUG_THREAD
 	log_dbg_printf("===> Proxy connection handler thread status:\n"
 	               "thr[%d]: %zu\n", thridx, minload);
@@ -262,10 +266,16 @@ pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
 			minload = ctx->thr[idx]->load;
 			thridx = idx;
 		}
+		fd_count += ctx->thr[idx]->load;
+	}
+	if (fd_count + 2 > fd_limit) {
+		pthread_mutex_unlock(&ctx->mutex);
+		return -1;
 	}
 	*evbase = ctx->thr[thridx]->evbase;
 	*dnsbase = ctx->thr[thridx]->dnsbase;
-	ctx->thr[thridx]->load++;
+	/* 2x fds per connection: src and dst */
+	ctx->thr[thridx]->load += 2;
 	pthread_mutex_unlock(&ctx->mutex);
 
 #ifdef DEBUG_THREAD
@@ -280,10 +290,10 @@ pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
  * This function cannot fail.
  */
 void
-pxy_thrmgr_detach(pxy_thrmgr_ctx_t *ctx, int thridx)
+pxy_thrmgr_detach(pxy_thrmgr_ctx_t *ctx, int thridx, int dec)
 {
 	pthread_mutex_lock(&ctx->mutex);
-	ctx->thr[thridx]->load--;
+	ctx->thr[thridx]->load -= dec;
 	pthread_mutex_unlock(&ctx->mutex);
 }
 

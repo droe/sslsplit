@@ -29,6 +29,7 @@
 #ifndef PXYSSLSHUT_H
 #define PXYSSLSHUT_H
 
+#include "pxythrmgr.h"
 #include "attrib.h"
 #include "opts.h"
 
@@ -36,8 +37,8 @@
 #include <event2/event.h>
 #include <event2/util.h>
 
-void pxy_ssl_shutdown(opts_t *, struct event_base *, SSL *, evutil_socket_t)
-     NONNULL(1,2,3);
+void pxy_ssl_shutdown(opts_t *, struct event_base *, SSL *, evutil_socket_t,
+		pxy_thrmgr_ctx_t *, int) NONNULL(1,2,3,5);
 
 #endif /* !PXYSSLSHUT_H */
 

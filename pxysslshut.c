@@ -56,10 +56,13 @@ typedef struct pxy_ssl_shutdown_ctx {
 	struct event *ev;
 	SSL *ssl;
 	unsigned int retries;
+	int thridx;
+	pxy_thrmgr_ctx_t *thrmgr;
 } pxy_ssl_shutdown_ctx_t;
 
 static pxy_ssl_shutdown_ctx_t *
-pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl)
+pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl,
+		pxy_thrmgr_ctx_t *thrmgr, int thridx)
 {
 	pxy_ssl_shutdown_ctx_t *ctx;
 
@@ -71,6 +74,8 @@ pxy_ssl_shutdown_ctx_new(opts_t *opts, struct event_base *evbase, SSL *ssl)
 	ctx->ssl = ssl;
 	ctx->ev = NULL;
 	ctx->retries = 0;
+	ctx->thrmgr = thrmgr;
+	ctx->thridx = thridx;
 	return ctx;
 }
 
@@ -155,6 +160,7 @@ complete:
 	}
 	SSL_free(ctx->ssl);
 	evutil_closesocket(fd);
+	pxy_thrmgr_detach(ctx->thrmgr, ctx->thridx, 1);
 	pxy_ssl_shutdown_ctx_free(ctx);
 }
 
@@ -166,11 +172,11 @@ complete:
  */
 void
 pxy_ssl_shutdown(opts_t *opts, struct event_base *evbase, SSL *ssl,
-                 evutil_socket_t fd)
+                 evutil_socket_t fd, pxy_thrmgr_ctx_t *thrmgr, int thridx)
 {
 	pxy_ssl_shutdown_ctx_t *sslshutctx;
 
-	sslshutctx = pxy_ssl_shutdown_ctx_new(opts, evbase, ssl);
+	sslshutctx = pxy_ssl_shutdown_ctx_new(opts, evbase, ssl, thrmgr, thridx);
 	if (!sslshutctx) {
 		if (OPTS_DEBUG(opts)) {
 			log_dbg_printf("SSL_free() in state ");
@@ -179,6 +185,7 @@ pxy_ssl_shutdown(opts_t *opts, struct event_base *evbase, SSL *ssl,
 		}
 		SSL_free(ssl);
 		evutil_closesocket(fd);
+		pxy_thrmgr_detach(thrmgr, thridx, 1);
 		return;
 	}
 	pxy_ssl_shutdown_cb(fd, 0, sslshutctx);

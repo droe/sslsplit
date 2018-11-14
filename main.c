@@ -66,6 +66,7 @@
 extern int daemon(int, int);
 #endif /* __APPLE__ */
 
+extern int fd_limit;
 
 /*
  * Print version information to stderr.
@@ -317,6 +318,37 @@ main_loadtgcrt(const char *filename, void *arg)
 	free(names);
 	cert_free(cert);
 	return 0;
+}
+
+static void
+main_compute_fd_limit(opts_t *opts)
+{
+	/* fd count with all other opts disabled */
+	int fd_count = 19;
+
+	if (opts->certgendir) {
+		fd_count++;
+	}
+	if (opts->connectlog) {
+		fd_count += 2;
+	}
+	if (opts->contentlog) {
+		fd_count += 2;
+	}
+	if (opts->pcaplog) {
+		fd_count += 2;
+	}
+	if (opts->masterkeylog) {
+		fd_count += 2;
+	}
+	if (opts->mirrortarget) {
+		fd_count++;
+	}
+	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
+		fd_count++;
+	}
+
+	fd_limit = getdtablesize() - fd_count;
 }
 
 /*
@@ -872,6 +904,8 @@ main(int argc, char *argv[])
 	}
 	rv = EXIT_SUCCESS;
 
+	main_compute_fd_limit(opts);
+	
 	proxy_run(proxy);
 	proxy_free(proxy);
 	nat_fini();

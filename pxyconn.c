@@ -131,6 +131,7 @@ typedef struct pxy_conn_ctx {
 	/* autossl */
 	unsigned int clienthello_search : 1;       /* 1 if waiting for hello */
 	unsigned int clienthello_found : 1;      /* 1 if conn upgrade to SSL */
+	unsigned int ssl_shutdown : 1;   /* 1 if SSL shutdown is in progress */
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
@@ -210,6 +211,11 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->clienthello_search = spec->upgrade;
 	ctx->fd = fd;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
+	if (ctx->thridx == -1) {
+		log_err_printf("Reached max number of file descriptors\n");
+		free(ctx);
+		return NULL;
+	}
 	ctx->thrmgr = thrmgr;
 #ifdef HAVE_LOCAL_PROCINFO
 	ctx->lproc.pid = -1;
@@ -237,7 +243,8 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx, int by_requestor)
 			log_err_printf("Warning: Content log close failed\n");
 		}
 	}
-	pxy_thrmgr_detach(ctx->thrmgr, ctx->thridx);
+	if (!ctx->ssl_shutdown)
+		pxy_thrmgr_detach(ctx->thrmgr, ctx->thridx, 2);
 	if (ctx->srchost_str) {
 		free(ctx->srchost_str);
 	}
@@ -1221,7 +1228,8 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	bufferevent_free(bev); /* does not free SSL unless the option
 	                          BEV_OPT_CLOSE_ON_FREE was set */
 	if (ssl) {
-		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd);
+		ctx->ssl_shutdown = 1;
+		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd, ctx->thrmgr, ctx->thridx);
 	} else {
 		evutil_closesocket(fd);
 	}
