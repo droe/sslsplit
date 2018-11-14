@@ -323,6 +323,7 @@ main_loadtgcrt(const char *filename, void *arg)
 static void
 main_compute_fd_limit(opts_t *opts)
 {
+	/* TODO: Compute initial fd_count, instead of hardcoding it, how? */
 	/* fd count with all other opts disabled */
 	int fd_count = 19;
 

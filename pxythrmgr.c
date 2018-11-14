@@ -269,13 +269,14 @@ pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
 		fd_count += ctx->thr[idx]->load;
 	}
 	if (fd_count + 2 > fd_limit) {
-		pthread_mutex_unlock(&ctx->mutex);
-		return -1;
+		thridx = -1;
+		goto out;
 	}
 	*evbase = ctx->thr[thridx]->evbase;
 	*dnsbase = ctx->thr[thridx]->dnsbase;
 	/* 2x fds per connection: src and dst */
 	ctx->thr[thridx]->load += 2;
+out:
 	pthread_mutex_unlock(&ctx->mutex);
 
 #ifdef DEBUG_THREAD
@@ -290,10 +291,10 @@ pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
  * This function cannot fail.
  */
 void
-pxy_thrmgr_detach(pxy_thrmgr_ctx_t *ctx, int thridx, int dec)
+pxy_thrmgr_detach(pxy_thrmgr_ctx_t *ctx, int thridx, int fd_count)
 {
 	pthread_mutex_lock(&ctx->mutex);
-	ctx->thr[thridx]->load -= dec;
+	ctx->thr[thridx]->load -= fd_count;
 	pthread_mutex_unlock(&ctx->mutex);
 }
 

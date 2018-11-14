@@ -122,6 +122,7 @@ typedef struct pxy_conn_ctx {
 	unsigned int sni_peek_retries : 6;       /* max 64 SNI parse retries */
 	unsigned int immutable_cert : 1;  /* 1 if the cert cannot be changed */
 	unsigned int generated_cert : 1;     /* 1 if we generated a new cert */
+	unsigned int ssl_shutdown : 1;   /* 1 if SSL shutdown is in progress */
 	unsigned int passthrough : 1;      /* 1 if SSL passthrough is active */
 	/* http */
 	unsigned int seen_req_header : 1; /* 0 until request header complete */
@@ -131,7 +132,6 @@ typedef struct pxy_conn_ctx {
 	/* autossl */
 	unsigned int clienthello_search : 1;       /* 1 if waiting for hello */
 	unsigned int clienthello_found : 1;      /* 1 if conn upgrade to SSL */
-	unsigned int ssl_shutdown : 1;   /* 1 if SSL shutdown is in progress */
 
 	/* server name indicated by client in SNI TLS extension */
 	char *sni;
@@ -243,8 +243,9 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx, int by_requestor)
 			log_err_printf("Warning: Content log close failed\n");
 		}
 	}
-	if (!ctx->ssl_shutdown)
+	if (!ctx->ssl_shutdown) {
 		pxy_thrmgr_detach(ctx->thrmgr, ctx->thridx, 2);
+	}
 	if (ctx->srchost_str) {
 		free(ctx->srchost_str);
 	}
