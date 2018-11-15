@@ -321,20 +321,25 @@ main_loadtgcrt(const char *filename, void *arg)
 }
 
 static void
-main_compute_fd_limit(opts_t *opts, size_t nclisock)
+main_compute_fd_limit(opts_t *opts)
 {
 	/* TODO: Check if fd sum here is correct for all possible cases */
 	/* stdin, stdout, and stderr = 3 */
 	int fd_count = 3;
 
-	/* client sockets */
-	fd_count += nclisock;
+	/* proxy = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	fd_count += 3 + opts_has_dns_spec(opts);
 
 	/* connection handling threads */
 	int num_thr = 2 * sys_get_cpu_cores();
-	/* 3 fds per eventbase + 1 fd for dns if has dns spec */
+	/* each thread = 3 fds for eventbase + 1 fd for dns if we have dns spec */
 	int num_fds_per_thr = 3 + opts_has_dns_spec(opts);
 	fd_count += num_thr * num_fds_per_thr;
+
+	/* reserve an extra fd per thread, because the conn is attached after the
+	 * src fd is allocated, which is before we compare the sum of thread loads
+	 * against fd_limit */
+	fd_count += num_thr;
 
 	if (opts->certgendir) {
 		fd_count++;
@@ -916,7 +921,7 @@ main(int argc, char *argv[])
 	}
 	rv = EXIT_SUCCESS;
 
-	main_compute_fd_limit(opts, sizeof(clisock)/sizeof(clisock[0]));
+	main_compute_fd_limit(opts);
 	
 	proxy_run(proxy);
 	proxy_free(proxy);
