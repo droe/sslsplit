@@ -327,13 +327,15 @@ main_compute_fd_limit(opts_t *opts)
 	/* stdin, stdout, and stderr = 3 */
 	int fd_count = 3;
 
+	int dns = opts_has_dns_spec(opts);
+
 	/* proxy = 3 fds for eventbase + 1 fd for dns if we have dns spec */
-	fd_count += 3 + opts_has_dns_spec(opts);
+	fd_count += 3 + dns;
 
 	/* connection handling threads */
 	int num_thr = 2 * sys_get_cpu_cores();
 	/* each thread = 3 fds for eventbase + 1 fd for dns if we have dns spec */
-	int num_fds_per_thr = 3 + opts_has_dns_spec(opts);
+	int num_fds_per_thr = 3 + dns;
 	fd_count += num_thr * num_fds_per_thr;
 
 	/* reserve an extra fd per thread, because the conn is attached after the
@@ -361,6 +363,8 @@ main_compute_fd_limit(opts_t *opts)
 		fd_count++;
 	}
 #endif /* !WITHOUT_MIRROR */
+
+	/* each proxyspec = 1 fd */
 	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
 		fd_count++;
 	}
