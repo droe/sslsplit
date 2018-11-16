@@ -27,13 +27,40 @@
  */
 
 #include "attrib.h"
+#include "proxy.h"
 #include "opts.h"
+#include "sys.h"
 #include "build.h"
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <check.h>
+
+static char *argv01[] = {
+	"https", "127.0.0.1", "10443", "127.0.0.2", "443"
+};
+
+static char *argv02[] = {
+	"https", "127.0.0.1", "10443", "127.0.0.2", "443",
+	"https", "::1", "10443", "::2", "443"
+};
+
+static char *argv03[] = {
+	"https", "127.0.0.1", "10443", "sni", "443"
+};
+
+static int num_thr;
+static int dtable_size;
+static int fd_count;
+static opts_t *opts;
+
+#ifdef __linux__
+#define NATENGINE "netfilter"
+#else
+#define NATENGINE "pf"
+#endif
 
 Suite *
 blank_suite(void)
@@ -51,6 +78,212 @@ START_TEST(build_date_01)
 }
 END_TEST
 
+static void
+fd_usage_setup(void)
+{
+	num_thr = 2 * sys_get_cpu_cores();
+	dtable_size = getdtablesize();
+	/* stdin, stdout, and stderr = 3 */
+	fd_count = 3;
+	opts = opts_new();
+}
+
+static void
+fd_usage_teardown(void)
+{
+	opts_free(opts);
+}
+
+START_TEST(fd_usage_01)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	proxy_compute_fd_limit(opts);
+
+	/* proxy + conn thr + proxyspec */
+	fd_count += 3 + 3 * num_thr + 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with one proxyspec");
+}
+END_TEST
+
+START_TEST(fd_usage_02)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 10;
+	char **argv = argv02;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	proxy_compute_fd_limit(opts);
+
+	/* +2 for second proxyspec */
+	fd_count += 3 + 3 * num_thr + 2 * 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with two proxyspecs");
+}
+END_TEST
+
+START_TEST(fd_usage_03)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv03;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	proxy_compute_fd_limit(opts);
+
+	/* +1 for dns, both for proxy and per conn thr */
+	fd_count += 4 + 4 * num_thr + 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with dns");
+}
+END_TEST
+
+START_TEST(fd_usage_04)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	opts_set_certgendir_writeall(opts, "sslsplit", "/var/log/sslsplit");
+	proxy_compute_fd_limit(opts);
+
+	/* +1 for certgendir */
+	fd_count += 3 + 3 * num_thr + 2 + 1;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with certgendir");
+}
+END_TEST
+
+START_TEST(fd_usage_05)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	opts_set_connectlog(opts, "sslsplit", "connect.log");
+	proxy_compute_fd_limit(opts);
+
+	/* +2 for connectlog */
+	fd_count += 3 + 3 * num_thr + 2 + 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with connectlog");
+}
+END_TEST
+
+START_TEST(fd_usage_06)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	opts_set_contentlog(opts, "sslsplit", "content.log");
+	proxy_compute_fd_limit(opts);
+
+	/* +2 for contentlog */
+	fd_count += 3 + 3 * num_thr + 2 + 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with contentlog");
+
+	opts_set_contentlogdir(opts, "sslsplit", ".");
+	proxy_compute_fd_limit(opts);
+
+	fail_unless(fd_limit == expected_fd_limit, "contentlogdir changes fd_limit");
+
+	opts_set_contentlogpathspec(opts, "sslsplit", "%s-%d-%T.log");
+	proxy_compute_fd_limit(opts);
+
+	fail_unless(fd_limit == expected_fd_limit, "contentlogpathspec changes fd_limit");
+}
+END_TEST
+
+START_TEST(fd_usage_07)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	opts_set_pcaplog(opts, "sslsplit", "content.pcap");
+	proxy_compute_fd_limit(opts);
+
+	/* +2 for contentlog */
+	fd_count += 3 + 3 * num_thr + 2 + 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with pcaplog");
+
+	opts_set_pcaplogdir(opts, "sslsplit", ".");
+	proxy_compute_fd_limit(opts);
+
+	fail_unless(fd_limit == expected_fd_limit, "pcaplogdir changes fd_limit");
+
+	opts_set_pcaplogpathspec(opts, "sslsplit", "%s-%d-%T.pcap");
+	proxy_compute_fd_limit(opts);
+
+	fail_unless(fd_limit == expected_fd_limit, "pcaplogpathspec changes fd_limit");
+}
+END_TEST
+
+START_TEST(fd_usage_08)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	opts_set_masterkeylog(opts, "sslsplit", "masterkeys.log");
+	proxy_compute_fd_limit(opts);
+
+	/* +2 for masterkeylog */
+	fd_count += 3 + 3 * num_thr + 2 + 2;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with masterkeylog");
+}
+END_TEST
+
+#ifndef WITHOUT_MIRROR
+START_TEST(fd_usage_09)
+{
+	proxyspec_t *spec = NULL;
+	int argc = 5;
+	char **argv = argv01;
+
+	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
+	opts->spec = spec;
+	opts_set_mirrortarget(opts, "sslsplit", "192.0.2.1");
+	proxy_compute_fd_limit(opts);
+
+	/* +1 for mirrortarget */
+	fd_count += 3 + 3 * num_thr + 2 + 1;
+	int expected_fd_limit = dtable_size - fd_count;
+
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with mirrortarget");
+}
+END_TEST
+#endif /* !WITHOUT_MIRROR */
+
 Suite *
 main_suite(void)
 {
@@ -60,6 +293,21 @@ main_suite(void)
 
 	tc = tcase_create("build_date");
 	tcase_add_test(tc, build_date_01);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("fd_usage");
+	tcase_add_checked_fixture(tc, fd_usage_setup, fd_usage_teardown);
+	tcase_add_test(tc, fd_usage_01);
+	tcase_add_test(tc, fd_usage_02);
+	tcase_add_test(tc, fd_usage_03);
+	tcase_add_test(tc, fd_usage_04);
+	tcase_add_test(tc, fd_usage_05);
+	tcase_add_test(tc, fd_usage_06);
+	tcase_add_test(tc, fd_usage_07);
+	tcase_add_test(tc, fd_usage_08);
+#ifndef WITHOUT_MIRROR
+	tcase_add_test(tc, fd_usage_09);
+#endif /* !WITHOUT_MIRROR */
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -33,6 +33,7 @@
 #include "pxyconn.h"
 #include "cachemgr.h"
 #include "opts.h"
+#include "sys.h"
 #include "log.h"
 #include "attrib.h"
 
@@ -58,6 +59,8 @@
  */
 
 static int signals[] = { SIGTERM, SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
+
+int fd_limit = 0;
 
 struct proxy_ctx {
 	pxy_thrmgr_ctx_t *thrmgr;
@@ -428,6 +431,56 @@ proxy_free(proxy_ctx_t *ctx)
 		event_base_free(ctx->evbase);
 	}
 	free(ctx);
+}
+
+void
+proxy_compute_fd_limit(opts_t *opts)
+{
+	/* TODO: Check if fd sum here is correct for all possible cases */
+	/* stdin, stdout, and stderr = 3 */
+	int fd_count = 3;
+
+	int dns = opts_has_dns_spec(opts);
+
+	/* proxy = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	fd_count += 3 + dns;
+
+	/* connection handling threads */
+	int num_thr = 2 * sys_get_cpu_cores();
+	/* each thread = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	int num_fds_per_thr = 3 + dns;
+	fd_count += num_thr * num_fds_per_thr;
+
+	if (opts->certgendir) {
+		fd_count++;
+	}
+	if (opts->connectlog) {
+		fd_count += 2;
+	}
+	if (opts->contentlog) {
+		fd_count += 2;
+	}
+	if (opts->pcaplog) {
+		fd_count += 2;
+	}
+	if (opts->masterkeylog) {
+		fd_count += 2;
+	}
+#ifndef WITHOUT_MIRROR
+	if (opts->mirrortarget) {
+		fd_count++;
+	}
+#endif /* !WITHOUT_MIRROR */
+
+	/* each proxyspec = 1 fd, but reserve an extra fd per proxyspec, otherwise
+	 * if all fds have been used up, a new conn would bring us down, because
+	 * conns are attached after src fd is allocated, which is before we compare
+	 * the sum of thread loads against fd_limit */
+	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
+		fd_count += 2;
+	}
+
+	fd_limit = getdtablesize() - fd_count;
 }
 
 /* vim: set noet ft=c: */

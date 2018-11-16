@@ -58,8 +58,6 @@ struct pxy_thrmgr_ctx {
 	pthread_mutex_t mutex;
 };
 
-int fd_limit = 0;
-
 /*
  * Dummy recurring timer event to prevent the event loops from exiting when
  * they run out of events.
