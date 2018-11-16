@@ -338,11 +338,6 @@ main_compute_fd_limit(opts_t *opts)
 	int num_fds_per_thr = 3 + dns;
 	fd_count += num_thr * num_fds_per_thr;
 
-	/* reserve an extra fd per thread, because the conn is attached after the
-	 * src fd is allocated, which is before we compare the sum of thread loads
-	 * against fd_limit */
-	fd_count += num_thr;
-
 	if (opts->certgendir) {
 		fd_count++;
 	}
@@ -364,9 +359,12 @@ main_compute_fd_limit(opts_t *opts)
 	}
 #endif /* !WITHOUT_MIRROR */
 
-	/* each proxyspec = 1 fd */
+	/* each proxyspec = 1 fd, but reserve an extra fd per proxyspec, otherwise
+	 * if all fds have been used up, a new conn would bring us down, because
+	 * conns are attached after src fd is allocated, which is before we compare
+	 * the sum of thread loads against fd_limit */
 	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
-		fd_count++;
+		fd_count += 2;
 	}
 
 	fd_limit = getdtablesize() - fd_count;
