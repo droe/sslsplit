@@ -267,6 +267,7 @@ START_TEST(fd_usage_04)
 	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with certgendir_writeall");
 
 	opts_set_certgendir_writegencerts(opts, "sslsplit", ".");
+	proxy_compute_fd_limit(opts);
 	fail_unless(fd_limit == expected_fd_limit, "certgendir_writegencerts changes fd_limit");
 }
 END_TEST
@@ -309,12 +310,10 @@ START_TEST(fd_usage_06)
 
 	opts_set_contentlogdir(opts, "sslsplit", ".");
 	proxy_compute_fd_limit(opts);
-
 	fail_unless(fd_limit == expected_fd_limit, "contentlogdir changes fd_limit");
 
 	opts_set_contentlogpathspec(opts, "sslsplit", "%s-%d-%T.log");
 	proxy_compute_fd_limit(opts);
-
 	fail_unless(fd_limit == expected_fd_limit, "contentlogpathspec changes fd_limit");
 }
 END_TEST
@@ -338,12 +337,10 @@ START_TEST(fd_usage_07)
 
 	opts_set_pcaplogdir(opts, "sslsplit", ".");
 	proxy_compute_fd_limit(opts);
-
 	fail_unless(fd_limit == expected_fd_limit, "pcaplogdir changes fd_limit");
 
 	opts_set_pcaplogpathspec(opts, "sslsplit", "%s-%d-%T.pcap");
 	proxy_compute_fd_limit(opts);
-
 	fail_unless(fd_limit == expected_fd_limit, "pcaplogpathspec changes fd_limit");
 }
 END_TEST
@@ -386,6 +383,7 @@ START_TEST(fd_usage_09)
 	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with mirrortarget");
 
 	opts_set_mirrorif(opts, "sslsplit", "lo");
+	proxy_compute_fd_limit(opts);
 	fail_unless(fd_limit == expected_fd_limit, "mirrorif changes fd_limit");
 }
 END_TEST
