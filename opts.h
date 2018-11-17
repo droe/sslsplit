@@ -123,6 +123,7 @@ typedef struct opts {
 	char *crlurl;
 	unsigned int verify_peer: 1;
 	unsigned int allow_wrong_host: 1;
+	unsigned int enable_websocket: 1;
 } opts_t;
 
 void NORET oom_die(const char *) NONNULL(1);

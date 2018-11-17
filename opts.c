@@ -1291,6 +1291,18 @@ opts_unset_allow_wrong_host(opts_t *opts)
 	opts->allow_wrong_host = 0;
 }
 
+void
+opts_set_enable_websocket(opts_t *opts)
+{
+	opts->enable_websocket = 1;
+}
+
+void
+opts_unset_enable_websocket(opts_t *opts)
+{
+	opts->enable_websocket = 0;
+}
+
 static int
 check_value_yesno(const char *value, const char *name, int line_num)
 {
@@ -1488,6 +1500,16 @@ set_option(opts_t *opts, const char *argv0,
 #ifdef DEBUG_OPTS
 		log_dbg_printf("AddSNIToCertificate: %u\n",
 		               opts->allow_wrong_host);
+#endif /* DEBUG_OPTS */
+	} else if (!strncasecmp(name, "EnableWebSocket", 16)) {
+		yes = check_value_yesno(value, "EnableWebSocket", line_num);
+		if (yes == -1) {
+			goto leave;
+		}
+		yes ? opts_set_enable_websocket(opts)
+		    : opts_unset_enable_websocket(opts);
+#ifdef DEBUG_OPTS
+		log_dbg_printf("EnableWebSocket: %u\n", opts->enable_websocket);
 #endif /* DEBUG_OPTS */
 	} else {
 		fprintf(stderr, "Error in conf: Unknown option "
