@@ -109,6 +109,107 @@ START_TEST(fd_usage_01)
 	int expected_fd_limit = dtable_size - fd_count;
 
 	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with one proxyspec");
+
+	opts->conffile = strdup("sslsplit.conf");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "conffile changes fd_limit");
+
+	opts_set_clientcrt(opts, "sslsplit", "extra/pki/rsa.crt");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "clientcrt changes fd_limit");
+
+	opts_set_clientkey(opts, "sslsplit", "extra/pki/rsa.key");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "clientkey changes fd_limit");
+
+	opts_set_cacrt(opts, "sslsplit", "extra/pki/rsa.crt");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "cacrt changes fd_limit");
+
+	opts_set_cakey(opts, "sslsplit", "extra/pki/rsa.key");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "cakey changes fd_limit");
+
+	opts_set_key(opts, "sslsplit", "extra/pki/rsa.key");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "key changes fd_limit");
+
+#if 0
+#ifndef OPENSSL_NO_DH
+	/* TODO: Need a dh.pem to enable this test */
+	opts_set_dh(opts, "sslsplit", "dh.pem");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "dh changes fd_limit");
+#endif /* !OPENSSL_NO_DH */
+#endif
+
+#ifndef OPENSSL_NO_ECDH
+	opts->ecdhcurve = strdup("prime256v1");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "ecdhcurve changes fd_limit");
+#endif /* !OPENSSL_NO_ECDH */
+
+	opts->ciphers = strdup("ALL:-aNULL");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "ciphers changes fd_limit");
+
+	opts->tgcrtdir = strdup("target");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "tgcrtdir changes fd_limit");
+
+	opts->crlurl = strdup("http://example.com/example.crl");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "crlurl changes fd_limit");
+
+#ifndef OPENSSL_NO_ENGINE
+	opts->openssl_engine = strdup("cloudhsm");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "openssl_engine changes fd_limit");
+#endif /* !OPENSSL_NO_ENGINE */
+
+	opts->dropuser = strdup("sslsplit");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "dropuser changes fd_limit");
+
+	opts->dropgroup = strdup("sslsplit");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "dropgroup changes fd_limit");
+
+	opts->jaildir = strdup(".");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "jaildir changes fd_limit");
+
+	opts->pidfile = strdup("sslsplit.pid");
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "pidfile changes fd_limit");
+	
+	opts->deny_ocsp = 1;
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "deny_ocsp changes fd_limit");
+
+	opts->passthrough = 1;
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "passthrough changes fd_limit");
+
+	opts->sslcomp = 1;
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "sslcomp changes fd_limit");
+
+	opts->detach = 1;
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "detach changes fd_limit");
+
+	opts_set_debug(opts);
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "debug changes fd_limit");
+
+	opts->verify_peer = 1;
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "verify_peer changes fd_limit");
+
+	opts->allow_wrong_host = 1;
+	proxy_compute_fd_limit(opts);
+	fail_unless(fd_limit == expected_fd_limit, "allow_wrong_host changes fd_limit");
 }
 END_TEST
 
@@ -156,14 +257,17 @@ START_TEST(fd_usage_04)
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	opts->spec = spec;
-	opts_set_certgendir_writeall(opts, "sslsplit", "/var/log/sslsplit");
+	opts_set_certgendir_writeall(opts, "sslsplit", ".");
 	proxy_compute_fd_limit(opts);
 
 	/* +1 for certgendir */
 	fd_count += 3 + 3 * num_thr + 2 + 1;
 	int expected_fd_limit = dtable_size - fd_count;
 
-	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with certgendir");
+	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with certgendir_writeall");
+
+	opts_set_certgendir_writegencerts(opts, "sslsplit", ".");
+	fail_unless(fd_limit == expected_fd_limit, "certgendir_writegencerts changes fd_limit");
 }
 END_TEST
 
@@ -280,6 +384,9 @@ START_TEST(fd_usage_09)
 	int expected_fd_limit = dtable_size - fd_count;
 
 	fail_unless(fd_limit == expected_fd_limit, "wrong fd_limit with mirrortarget");
+
+	opts_set_mirrorif(opts, "sslsplit", "lo");
+	fail_unless(fd_limit == expected_fd_limit, "mirrorif changes fd_limit");
 }
 END_TEST
 #endif /* !WITHOUT_MIRROR */
