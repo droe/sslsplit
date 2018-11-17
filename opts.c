@@ -71,6 +71,9 @@ opts_new(void)
 void
 opts_free(opts_t *opts)
 {
+	if (opts->conffile) {
+		free(opts->conffile);
+	}
 	sk_X509_pop_free(opts->chain, X509_free);
 	if (opts->clientcrt) {
 		X509_free(opts->clientcrt);
