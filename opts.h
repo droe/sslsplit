@@ -37,6 +37,7 @@
 typedef struct proxyspec {
 	unsigned int ssl : 1;
 	unsigned int http : 1;
+	unsigned int ws : 1;
 	unsigned int upgrade: 1;
 	unsigned int dns : 1;		/* set if spec needs DNS lookups */
 	struct sockaddr_storage listen_addr;
@@ -123,7 +124,6 @@ typedef struct opts {
 	char *crlurl;
 	unsigned int verify_peer: 1;
 	unsigned int allow_wrong_host: 1;
-	unsigned int enable_websocket: 1;
 } opts_t;
 
 void NORET oom_die(const char *) NONNULL(1);

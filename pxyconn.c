@@ -1338,8 +1338,7 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 			}
 		/* Connection line may include Upgrade and keep-alive if WebSocket is
 		 * enabled, so pass it unmodified */
-		} else if (!strncasecmp(line, "Connection:", 11) &&
-				ctx->opts->enable_websocket) {
+		} else if (!strncasecmp(line, "Connection:", 11) && ctx->spec->ws) {
 			ctx->sent_http_conn_close = 1;
 			goto out;
 		/* Override Connection: keepalive and Connection: upgrade */
@@ -1352,11 +1351,11 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 			return newhdr;
 		/* Upgrade: websocket */
 		} else if (!strncasecmp(line, "Upgrade:", 8) &&
-				strcasestr(line, "websocket") && ctx->opts->enable_websocket) {
+				strcasestr(line, "websocket") && ctx->spec->ws) {
 			goto out;
 		/* Do not modify encoding if WebSocket is enabled */
 		} else if (!strncasecmp(line, "Accept-Encoding:", 16) &&
-				ctx->opts->enable_websocket) {
+				ctx->spec->ws) {
 			goto out;
 		/* Suppress upgrading to SSL/TLS, WebSockets or HTTP/2,
 		 * unsupported encodings, and keep-alive */
@@ -1436,7 +1435,7 @@ pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 			}
 		/* Upgrade: websocket */
 		} else if (!strncasecmp(line, "Upgrade:", 8) &&
-				strcasestr(line, "websocket") && ctx->opts->enable_websocket) {
+				strcasestr(line, "websocket") && ctx->spec->ws) {
 			goto out;
 		} else if (
 		    /* HPKP: Public Key Pinning Extension for HTTP

@@ -271,7 +271,7 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine,
 		switch (state) {
 			default:
 			case 0:
-				/* tcp | ssl | http | https | autossl */
+				/* tcp | ssl | http | https | ws | wss | autossl */
 				spec = malloc(sizeof(proxyspec_t));
 				memset(spec, 0, sizeof(proxyspec_t));
 				spec->next = *opts_spec;
@@ -293,6 +293,15 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine,
 				if (!strcmp(**argv, "https")) {
 					spec->ssl = 1;
 					spec->http = 1;
+				} else
+				if (!strcmp(**argv, "ws")) {
+					spec->http = 1;
+					spec->ws = 1;
+				} else
+				if (!strcmp(**argv, "wss")) {
+					spec->ssl = 1;
+					spec->http = 1;
+					spec->ws = 1;
 				} else
 				if (!strcmp(**argv, "autossl")) {
 					spec->upgrade = 1;
@@ -337,6 +346,8 @@ proxyspec_parse(int *argc, char **argv[], const char *natengine,
 				    !strcmp(**argv, "ssl") ||
 				    !strcmp(**argv, "http") ||
 				    !strcmp(**argv, "https") ||
+				    !strcmp(**argv, "ws") ||
+				    !strcmp(**argv, "wss") ||
 				    !strcmp(**argv, "autossl")) {
 					/* implicit default natengine */
 					(*argv)--; (*argc)++; /* rewind */
@@ -452,10 +463,11 @@ proxyspec_str(proxyspec_t *spec)
 			return NULL;
 		}
 	}
-	if (asprintf(&s, "[%s]:%s %s%s%s %s", lhbuf, lpbuf,
+	if (asprintf(&s, "[%s]:%s %s%s%s%s %s", lhbuf, lpbuf,
 	             (spec->ssl ? "ssl" : "tcp"),
 	             (spec->upgrade ? "|upgrade" : ""),
 	             (spec->http ? "|http" : ""),
+	             (spec->ws ? "|ws" : ""),
 	             (spec->natengine ? spec->natengine : cbuf)) < 0) {
 		s = NULL;
 	}
@@ -1291,18 +1303,6 @@ opts_unset_allow_wrong_host(opts_t *opts)
 	opts->allow_wrong_host = 0;
 }
 
-void
-opts_set_enable_websocket(opts_t *opts)
-{
-	opts->enable_websocket = 1;
-}
-
-void
-opts_unset_enable_websocket(opts_t *opts)
-{
-	opts->enable_websocket = 0;
-}
-
 static int
 check_value_yesno(const char *value, const char *name, int line_num)
 {
@@ -1500,16 +1500,6 @@ set_option(opts_t *opts, const char *argv0,
 #ifdef DEBUG_OPTS
 		log_dbg_printf("AddSNIToCertificate: %u\n",
 		               opts->allow_wrong_host);
-#endif /* DEBUG_OPTS */
-	} else if (!strncasecmp(name, "EnableWebSocket", 16)) {
-		yes = check_value_yesno(value, "EnableWebSocket", line_num);
-		if (yes == -1) {
-			goto leave;
-		}
-		yes ? opts_set_enable_websocket(opts)
-		    : opts_unset_enable_websocket(opts);
-#ifdef DEBUG_OPTS
-		log_dbg_printf("EnableWebSocket: %u\n", opts->enable_websocket);
 #endif /* DEBUG_OPTS */
 	} else {
 		fprintf(stderr, "Error in conf: Unknown option "
