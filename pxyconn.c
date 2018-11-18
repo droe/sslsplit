@@ -28,7 +28,6 @@
 
 #include "pxyconn.h"
 
-#include "pxysslshut.h"
 #include "cachemgr.h"
 #include "ssl.h"
 #include "opts.h"
@@ -1217,13 +1216,9 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 static void
 bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 {
-	evutil_socket_t fd = bufferevent_getfd(bev);
-	struct bufferevent *ubev = bufferevent_get_underlying(bev);
-	SSL *ssl = NULL;
-
-	if ((ctx->spec->ssl || ctx->clienthello_found) && !ctx->passthrough) {
-		ssl = bufferevent_openssl_get_ssl(bev); /* does not inc refc */
-	}
+	struct bufferevent *ubev;
+	evutil_socket_t fd;
+	SSL *ssl;
 
 #ifdef DEBUG_PROXY
 	if (OPTS_DEBUG(ctx->opts)) {
@@ -1232,19 +1227,51 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 	}
 #endif /* DEBUG_PROXY */
 
+	ubev = bufferevent_get_underlying(bev);
+	ssl = bufferevent_openssl_get_ssl(bev); /* does not inc refc */
+
 	if (ubev) {
+		fd = bufferevent_getfd(ubev);
+		bufferevent_disable(ubev, EV_READ|EV_WRITE);
 		bufferevent_setfd(ubev, -1);
+		bufferevent_setcb(ubev, NULL, NULL, NULL, NULL);
+	} else {
+		fd = bufferevent_getfd(bev);
+	}
+	bufferevent_disable(bev, EV_READ|EV_WRITE);
+	bufferevent_setcb(bev, NULL, NULL, NULL, NULL);
+
+	if (ssl) {
+		/*
+		 * From the libevent book:
+		 *
+		 * SSL_RECEIVED_SHUTDOWN tells SSL_shutdown to act as if we had
+		 * already received a close notify from the other end.
+		 * SSL_shutdown will then send the final close notify in reply.
+		 * The other end will receive the close notify and send theirs.
+		 * By this time, we will have already closed the socket and the
+		 * other end's real close notify will never be received.  In
+		 * effect, both sides will think that they have completed a
+		 * clean shutdown and keep their sessions valid.  This strategy
+		 * will fail if the socket is not ready for writing, in which
+		 * case this hack will lead to an unclean shutdown and lost
+		 * session on the other end.
+		 */
+		SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
+		SSL_shutdown(ssl);
+	}
+
+	if (ubev) {
 		bufferevent_free(ubev);
 	}
-	bufferevent_free(bev); /* does not free SSL unless the option
-	                          BEV_OPT_CLOSE_ON_FREE was set */
-	if (ssl) {
-		pxy_ssl_shutdown(ctx->opts, ctx->evbase, ssl, fd,
-		                 ctx->dst.bev == bev ?
-		                 ctx->clienthello_found : 0);
-	} else {
-		evutil_closesocket(fd);
+	bufferevent_free(bev);
+	if (OPTS_DEBUG(ctx->opts)) {
+		log_dbg_printf("SSL_free() in state ");
+		log_dbg_print_free(ssl_ssl_state_to_str(ssl));
+		log_dbg_printf("\n");
 	}
+	SSL_free(ssl);
+	evutil_closesocket(fd);
 }
 
 /*
