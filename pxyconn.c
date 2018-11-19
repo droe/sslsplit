@@ -1232,36 +1232,37 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 
 	if (ubev) {
 		fd = bufferevent_getfd(ubev);
-		bufferevent_disable(ubev, EV_READ|EV_WRITE);
-		bufferevent_setfd(ubev, -1);
-		bufferevent_setcb(ubev, NULL, NULL, NULL, NULL);
 	} else {
 		fd = bufferevent_getfd(bev);
 	}
-	bufferevent_disable(bev, EV_READ|EV_WRITE);
 	bufferevent_setcb(bev, NULL, NULL, NULL, NULL);
 
 	if (ssl) {
 		/*
-		 * From the libevent book:
+		 * From the libevent book:  SSL_RECEIVED_SHUTDOWN tells
+		 * SSL_shutdown to act as if we had already received a close
+		 * notify from the other end.  SSL_shutdown will then send the
+		 * final close notify in reply.  The other end will receive the
+		 * close notify and send theirs.  By this time, we will have
+		 * already closed the socket and the other end's real close
+		 * notify will never be received.  In effect, both sides will
+		 * think that they have completed a clean shutdown and keep
+		 * their sessions valid.  This strategy will fail if the socket
+		 * is not ready for writing, in which case this hack will lead
+		 * to an unclean shutdown and lost session on the other end.
 		 *
-		 * SSL_RECEIVED_SHUTDOWN tells SSL_shutdown to act as if we had
-		 * already received a close notify from the other end.
-		 * SSL_shutdown will then send the final close notify in reply.
-		 * The other end will receive the close notify and send theirs.
-		 * By this time, we will have already closed the socket and the
-		 * other end's real close notify will never be received.  In
-		 * effect, both sides will think that they have completed a
-		 * clean shutdown and keep their sessions valid.  This strategy
-		 * will fail if the socket is not ready for writing, in which
-		 * case this hack will lead to an unclean shutdown and lost
-		 * session on the other end.
+		 * Note that in the case of autossl, the SSL object operates on
+		 * a BIO wrapper around the underlying bufferevent.
 		 */
 		SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
 		SSL_shutdown(ssl);
 	}
 
+	bufferevent_disable(bev, EV_READ|EV_WRITE);
 	if (ubev) {
+		bufferevent_disable(ubev, EV_READ|EV_WRITE);
+		bufferevent_setfd(ubev, -1);
+		bufferevent_setcb(ubev, NULL, NULL, NULL, NULL);
 		bufferevent_free(ubev);
 	}
 	bufferevent_free(bev);
