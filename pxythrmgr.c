@@ -238,18 +238,20 @@ pxy_thrmgr_free(pxy_thrmgr_ctx_t *ctx)
  * Attach a new connection to a thread.  Chooses the thread with the fewest
  * currently active connections, returns the appropriate event bases.
  * Returns the index of the chosen thread (for passing to _detach later).
- * This function cannot fail.
+ * This function can fail if we reach max number of connections.
  */
 int
 pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
                   struct evdns_base **dnsbase)
 {
 	int thridx;
-	size_t minload;
+	size_t minload, conn_count;
 
 	thridx = 0;
+	conn_count = 0;
 	pthread_mutex_lock(&ctx->mutex);
 	minload = ctx->thr[thridx]->load;
+	conn_count = minload;
 #ifdef DEBUG_THREAD
 	log_dbg_printf("===> Proxy connection handler thread status:\n"
 	               "thr[%d]: %zu\n", thridx, minload);
@@ -262,10 +264,16 @@ pxy_thrmgr_attach(pxy_thrmgr_ctx_t *ctx, struct event_base **evbase,
 			minload = ctx->thr[idx]->load;
 			thridx = idx;
 		}
+		conn_count += ctx->thr[idx]->load;
+	}
+	if (conn_count + 1 > ctx->opts->conn_limit) {
+		thridx = -1;
+		goto out;
 	}
 	*evbase = ctx->thr[thridx]->evbase;
 	*dnsbase = ctx->thr[thridx]->dnsbase;
 	ctx->thr[thridx]->load++;
+out:
 	pthread_mutex_unlock(&ctx->mutex);
 
 #ifdef DEBUG_THREAD

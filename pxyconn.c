@@ -222,6 +222,11 @@ pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
 	ctx->clienthello_search = spec->upgrade;
 	ctx->fd = fd;
 	ctx->thridx = pxy_thrmgr_attach(thrmgr, &ctx->evbase, &ctx->dnsbase);
+	if (ctx->thridx == -1) {
+		log_err_printf("Reached max number of connections\n");
+		free(ctx);
+		return NULL;
+	}
 	ctx->thrmgr = thrmgr;
 #ifdef HAVE_LOCAL_PROCINFO
 	ctx->lproc.pid = -1;

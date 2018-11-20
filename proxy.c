@@ -33,6 +33,7 @@
 #include "pxyconn.h"
 #include "cachemgr.h"
 #include "opts.h"
+#include "sys.h"
 #include "log.h"
 #include "attrib.h"
 
@@ -428,6 +429,82 @@ proxy_free(proxy_ctx_t *ctx)
 		event_base_free(ctx->evbase);
 	}
 	free(ctx);
+}
+
+void
+proxy_compute_conn_limit(opts_t *opts)
+{
+	/* TODO: Check if fd sum here is correct for all possible cases */
+	/* stdin, stdout, and stderr = 3 fds */
+	size_t proxy_fd_count = 3;
+
+	int dns = opts_has_dns_spec(opts);
+
+	/* proxy = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	proxy_fd_count += 3 + dns;
+
+	/* connection handling threads */
+	int num_thr = 2 * sys_get_cpu_cores();
+	/* each thread = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	int num_fds_per_thr = 3 + dns;
+	proxy_fd_count += num_thr * num_fds_per_thr;
+
+	/* -w/-W = 1 fd */
+	if (opts->certgendir) {
+		proxy_fd_count++;
+	}
+	/* -l = 1 fd */
+	if (opts->connectlog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+	/* -L = 1 fd */
+	if (opts->contentlog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+	/* -X = 1 fd */
+	if (opts->pcaplog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+	/* -M = 1 fd */
+	if (opts->masterkeylog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+#ifndef WITHOUT_MIRROR
+	/* -T and -I = 1 fd */
+	if (opts->mirrortarget) {
+		proxy_fd_count++;
+	}
+#endif /* !WITHOUT_MIRROR */
+
+	/* each proxyspec = 1 fd, for connection listener, but reserve an extra fd
+	 * per proxyspec, otherwise if all fds have been used up, a new conn would
+	 * bring us down, because conns are attached after src fd is allocated,
+	 * which is before we compare the sum of thread loads against fd_limit */
+	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
+		proxy_fd_count += 2;
+	}
+
+	/* src and dst = 2 fds */
+	size_t conn_fd_count = 2;
+
+	/* -w/-W = 1 fd */
+	if (opts->certgendir) {
+		conn_fd_count++;
+	}
+	/* -S/-F = 1 fd */
+	if (opts->contentlog_isdir || opts->contentlog_isspec) {
+		conn_fd_count++;
+	}
+	/* -Y/-y = 1 fd */
+	if (opts->pcaplog_isdir || opts->pcaplog_isspec) {
+		conn_fd_count++;
+	}
+
+	opts->conn_limit = (getdtablesize() - proxy_fd_count) / conn_fd_count;
 }
 
 /* vim: set noet ft=c: */

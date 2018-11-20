@@ -872,6 +872,8 @@ main(int argc, char *argv[])
 	}
 	rv = EXIT_SUCCESS;
 
+	proxy_compute_conn_limit(opts);
+	
 	proxy_run(proxy);
 	proxy_free(proxy);
 	nat_fini();
