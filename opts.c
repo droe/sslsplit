@@ -64,6 +64,7 @@ opts_new(void)
 	opts->chain = sk_X509_new_null();
 	opts->sslmethod = SSLv23_method;
 	opts->allow_wrong_host = 1;
+	opts->conn_limit = MAX_CONNS;
 
 	return opts;
 }
@@ -1492,6 +1493,18 @@ set_option(opts_t *opts, const char *argv0,
 		log_dbg_printf("AddSNIToCertificate: %u\n",
 		               opts->allow_wrong_host);
 #endif /* DEBUG_OPTS */
+	} else if (!strncasecmp(name, "ConnLimit", 10)) {
+		size_t i = atoi(value);
+		if (i >= 1 && i <= MAX_CONNS) {
+			opts->conn_limit = i;
+		} else {
+			fprintf(stderr, "Invalid ConnLimit %s at line %d, use an integer "
+					"greater than 0\n", value, line_num);
+			goto leave;
+		}
+#ifdef DEBUG_OPTS
+		log_dbg_printf("ConnLimit: %zu\n", opts->conn_limit);
+#endif /* DEBUG_OPTS */
 	} else {
 		fprintf(stderr, "Error in conf: Unknown option "
 		                "'%s' at line %d\n", name, line_num);
@@ -1597,7 +1610,7 @@ opts_set_option(opts_t *opts, const char *argv0, const char *optarg,
 }
 
 int
-load_conffile(opts_t *opts, const char *argv0, char **natengine)
+opts_load_conffile(opts_t *opts, const char *argv0, char **natengine)
 {
 	int retval, line_num;
 	char *line, *name, *value;
@@ -1648,6 +1661,85 @@ leave:
 		free(line);
 	}
 	return retval;
+}
+
+void
+opts_compute_conn_limit(opts_t *opts)
+{
+	/* TODO: Check if fd sum here is correct for all possible cases */
+	/* stdin, stdout, and stderr = 3 fds */
+	size_t proxy_fd_count = 3;
+
+	int dns = opts_has_dns_spec(opts);
+
+	/* proxy = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	proxy_fd_count += 3 + dns;
+
+	/* connection handling threads */
+	int num_thr = 2 * sys_get_cpu_cores();
+	/* each thread = 3 fds for eventbase + 1 fd for dns if we have dns spec */
+	int num_fds_per_thr = 3 + dns;
+	proxy_fd_count += num_thr * num_fds_per_thr;
+
+	/* -w/-W = 1 fd */
+	if (opts->certgendir) {
+		proxy_fd_count++;
+	}
+	/* -l = 2 fds */
+	if (opts->connectlog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+	/* -L = 2 fds */
+	if (opts->contentlog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+	/* -X = 2 fds */
+	if (opts->pcaplog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+	/* -M = 2 fds */
+	if (opts->masterkeylog) {
+		/* TODO: Check why proxy consumes 2 fds */
+		proxy_fd_count += 2;
+	}
+#ifndef WITHOUT_MIRROR
+	/* -T and -I = 1 fd */
+	if (opts->mirrortarget) {
+		proxy_fd_count++;
+	}
+#endif /* !WITHOUT_MIRROR */
+
+	/* each proxyspec = 1 fd, for connection listener, but reserve an extra fd
+	 * per proxyspec, otherwise if all fds have been used up, a new conn would
+	 * bring us down, because conns are attached after src fd is allocated,
+	 * which is before we compare the sum of thread loads against fd_limit */
+	for (proxyspec_t *spec = opts->spec; spec; spec = spec->next) {
+		proxy_fd_count += 2;
+	}
+
+	/* src and dst = 2 fds */
+	size_t conn_fd_count = 2;
+
+	/* -w/-W = 1 fd */
+	if (opts->certgendir) {
+		conn_fd_count++;
+	}
+	/* -S/-F = 1 fd */
+	if (opts->contentlog_isdir || opts->contentlog_isspec) {
+		conn_fd_count++;
+	}
+	/* -Y/-y = 1 fd */
+	if (opts->pcaplog_isdir || opts->pcaplog_isspec) {
+		conn_fd_count++;
+	}
+
+	size_t conn_limit = (getdtablesize() - proxy_fd_count) / conn_fd_count;
+	if (conn_limit < opts->conn_limit) {
+		opts->conn_limit = conn_limit;
+	}
 }
 
 /* vim: set noet ft=c: */

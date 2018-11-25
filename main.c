@@ -353,7 +353,7 @@ main(int argc, char *argv[])
 				opts->conffile = strdup(optarg);
 				if (!opts->conffile)
 					oom_die(argv0);
-				if (load_conffile(opts, argv0, &natengine) == -1) {
+				if (opts_load_conffile(opts, argv0, &natengine) == -1) {
 					exit(EXIT_FAILURE);
 				}
 #ifdef DEBUG_OPTS
@@ -872,7 +872,7 @@ main(int argc, char *argv[])
 	}
 	rv = EXIT_SUCCESS;
 
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	
 	proxy_run(proxy);
 	proxy_free(proxy);

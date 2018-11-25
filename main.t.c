@@ -110,108 +110,108 @@ START_TEST(fd_usage_01)
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	opts->spec = spec;
 
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with one proxyspec");
 
 	opts->conffile = strdup("sslsplit.conf");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "conffile changes conn_limit");
 
 	opts_set_clientcrt(opts, "sslsplit", "extra/pki/rsa.crt");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "clientcrt changes conn_limit");
 
 	opts_set_clientkey(opts, "sslsplit", "extra/pki/rsa.key");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "clientkey changes conn_limit");
 
 	opts_set_cacrt(opts, "sslsplit", "extra/pki/rsa.crt");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "cacrt changes conn_limit");
 
 	opts_set_cakey(opts, "sslsplit", "extra/pki/rsa.key");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "cakey changes conn_limit");
 
 	opts_set_key(opts, "sslsplit", "extra/pki/rsa.key");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "key changes conn_limit");
 
 #if 0
 #ifndef OPENSSL_NO_DH
 	/* TODO: Need a dh.pem to enable this test */
 	opts_set_dh(opts, "sslsplit", "dh.pem");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "dh changes conn_limit");
 #endif /* !OPENSSL_NO_DH */
 #endif
 
 #ifndef OPENSSL_NO_ECDH
 	opts->ecdhcurve = strdup("prime256v1");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "ecdhcurve changes conn_limit");
 #endif /* !OPENSSL_NO_ECDH */
 
 	opts->ciphers = strdup("ALL:-aNULL");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "ciphers changes conn_limit");
 
 	opts->tgcrtdir = strdup("target");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "tgcrtdir changes conn_limit");
 
 	opts->crlurl = strdup("http://example.com/example.crl");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "crlurl changes conn_limit");
 
 #ifndef OPENSSL_NO_ENGINE
 	opts->openssl_engine = strdup("cloudhsm");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "openssl_engine changes conn_limit");
 #endif /* !OPENSSL_NO_ENGINE */
 
 	opts->dropuser = strdup("sslsplit");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "dropuser changes conn_limit");
 
 	opts->dropgroup = strdup("sslsplit");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "dropgroup changes conn_limit");
 
 	opts->jaildir = strdup(".");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "jaildir changes conn_limit");
 
 	opts->pidfile = strdup("sslsplit.pid");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "pidfile changes conn_limit");
 	
 	opts->deny_ocsp = 1;
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "deny_ocsp changes conn_limit");
 
 	opts->passthrough = 1;
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "passthrough changes conn_limit");
 
 	opts->sslcomp = 1;
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "sslcomp changes conn_limit");
 
 	opts->detach = 1;
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "detach changes conn_limit");
 
 	opts_set_debug(opts);
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "debug changes conn_limit");
 
 	opts->verify_peer = 1;
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "verify_peer changes conn_limit");
 
 	opts->allow_wrong_host = 1;
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "allow_wrong_host changes conn_limit");
 }
 END_TEST
@@ -229,7 +229,7 @@ START_TEST(fd_usage_02)
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	opts->spec = spec;
 
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with two proxyspecs");
 }
 END_TEST
@@ -247,7 +247,7 @@ START_TEST(fd_usage_03)
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
 	opts->spec = spec;
 
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with dns");
 }
 END_TEST
@@ -267,11 +267,11 @@ START_TEST(fd_usage_04)
 	opts->spec = spec;
 
 	opts_set_certgendir_writeall(opts, "sslsplit", ".");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with certgendir_writeall");
 
 	opts_set_certgendir_writegencerts(opts, "sslsplit", ".");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "certgendir_writegencerts changes conn_limit");
 }
 END_TEST
@@ -290,7 +290,7 @@ START_TEST(fd_usage_05)
 	opts->spec = spec;
 
 	opts_set_connectlog(opts, "sslsplit", "connect.log");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with connectlog");
 }
 END_TEST
@@ -309,18 +309,18 @@ START_TEST(fd_usage_06)
 	opts->spec = spec;
 
 	opts_set_contentlog(opts, "sslsplit", "content.log");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with contentlog");
 
 	conn_fd_count += 1;
 	expected_conn_limit = (dtable_size - proxy_fd_count) / conn_fd_count;
 
 	opts_set_contentlogdir(opts, "sslsplit", ".");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with contentlog_isdir");
 
 	opts_set_contentlogpathspec(opts, "sslsplit", "%s-%d-%T.log");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with contentlog_isspec");
 }
 END_TEST
@@ -339,18 +339,18 @@ START_TEST(fd_usage_07)
 	opts->spec = spec;
 
 	opts_set_pcaplog(opts, "sslsplit", "content.pcap");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with pcaplog");
 
 	conn_fd_count += 1;
 	expected_conn_limit = (dtable_size - proxy_fd_count) / conn_fd_count;
 
 	opts_set_pcaplogdir(opts, "sslsplit", ".");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with pcaplog_isdir");
 
 	opts_set_pcaplogpathspec(opts, "sslsplit", "%s-%d-%T.pcap");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with pcaplog_isspec");
 }
 END_TEST
@@ -369,7 +369,7 @@ START_TEST(fd_usage_08)
 	opts->spec = spec;
 
 	opts_set_masterkeylog(opts, "sslsplit", "masterkeys.log");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with masterkeylog");
 }
 END_TEST
@@ -389,11 +389,11 @@ START_TEST(fd_usage_09)
 	opts->spec = spec;
 
 	opts_set_mirrortarget(opts, "sslsplit", "192.0.2.1");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "wrong conn_limit with mirrortarget");
 
 	opts_set_mirrorif(opts, "sslsplit", "lo");
-	proxy_compute_conn_limit(opts);
+	opts_compute_conn_limit(opts);
 	fail_unless(opts->conn_limit == expected_conn_limit, "mirrorif changes conn_limit");
 }
 END_TEST

@@ -34,6 +34,8 @@
 #include "ssl.h"
 #include "attrib.h"
 
+#define MAX_CONNS 65535
+
 typedef struct proxyspec {
 	unsigned int ssl : 1;
 	unsigned int http : 1;
@@ -193,7 +195,8 @@ void opts_set_debug(opts_t *) NONNULL(1);
 int opts_set_option(opts_t *, const char *, const char *, char **)
     NONNULL(1,2,3);
 
-int load_conffile(opts_t *, const char *, char **) NONNULL(1,2);
+int opts_load_conffile(opts_t *, const char *, char **) NONNULL(1,2);
+void opts_compute_conn_limit(opts_t *) NONNULL(1);
 #endif /* !OPTS_H */
 
 /* vim: set noet ft=c: */
