@@ -1499,7 +1499,7 @@ set_option(opts_t *opts, const char *argv0,
 			opts->conn_limit = i;
 		} else {
 			fprintf(stderr, "Invalid ConnLimit %s at line %d, use an integer "
-					"greater than 0\n", value, line_num);
+					"between 1 and %d\n", value, line_num, MAX_CONNS);
 			goto leave;
 		}
 #ifdef DEBUG_OPTS
