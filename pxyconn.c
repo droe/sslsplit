@@ -1272,7 +1272,9 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 		log_dbg_printf("\n");
 	}
 	SSL_free(ssl);
-	evutil_closesocket(fd);
+	if (fd > -1) {
+		evutil_closesocket(fd);
+	}
 }
 
 /*
@@ -2323,9 +2325,7 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 {
 	if (!ctx->dstaddrlen) {
 		log_err_printf("No target address; aborting connection\n");
-		evutil_closesocket(ctx->fd);
-		pxy_conn_ctx_free(ctx, 1);
-		return;
+		goto errout;
 	}
 
 	/* create server-side socket and eventbuffer */
@@ -2333,20 +2333,12 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 		ctx->dst.ssl = pxy_dstssl_create(ctx);
 		if (!ctx->dst.ssl) {
 			log_err_printf("Error creating SSL\n");
-			evutil_closesocket(ctx->fd);
-			pxy_conn_ctx_free(ctx, 1);
-			return;
+			goto errout;
 		}
 	}
 	ctx->dst.bev = pxy_bufferevent_setup(ctx, -1, ctx->dst.ssl);
 	if (!ctx->dst.bev) {
-		if (ctx->dst.ssl) {
-			SSL_free(ctx->dst.ssl);
-			ctx->dst.ssl = NULL;
-		}
-		evutil_closesocket(ctx->fd);
-		pxy_conn_ctx_free(ctx, 1);
-		return;
+		goto errout;
 	}
 
 	if (OPTS_DEBUG(ctx->opts)) {
@@ -2365,15 +2357,21 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 	if (bufferevent_socket_connect(ctx->dst.bev,
 	                           (struct sockaddr *)&ctx->dstaddr,
 	                           ctx->dstaddrlen) == -1) {
+		goto errout;
+	}
+	return;
+
+errout:
+	if (ctx->dst.bev) {
 		bufferevent_free(ctx->dst.bev);
 		ctx->dst.bev = NULL;
-		if (ctx->dst.ssl) {
-			SSL_free(ctx->dst.ssl);
-			ctx->dst.ssl = NULL;
-		}
-		evutil_closesocket(ctx->fd);
-		pxy_conn_ctx_free(ctx, 1);
 	}
+	if (ctx->dst.ssl) {
+		SSL_free(ctx->dst.ssl);
+		ctx->dst.ssl = NULL;
+	}
+	evutil_closesocket(ctx->fd);
+	pxy_conn_ctx_free(ctx, 1);
 }
 
 #ifndef OPENSSL_NO_TLSEXT
@@ -2430,15 +2428,11 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 		if (n == -1) {
 			log_err_printf("Error peeking on fd, aborting "
 			               "connection\n");
-			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx, 1);
-			return;
+			goto errout;
 		}
 		if (n == 0) {
 			/* socket got closed while we were waiting */
-			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx, 1);
-			return;
+			goto errout;
 		}
 
 		rv = ssl_tls_clienthello_parse(buf, n, 0, &chello, &ctx->sni);
@@ -2446,9 +2440,7 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 			log_err_printf("Peeking did not yield a (truncated) "
 			               "ClientHello message, "
 			               "aborting connection\n");
-			evutil_closesocket(fd);
-			pxy_conn_ctx_free(ctx, 1);
-			return;
+			goto errout;
 		}
 		if (OPTS_DEBUG(ctx->opts)) {
 			log_dbg_printf("SNI peek: [%s] [%s]\n",
@@ -2474,11 +2466,11 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 				log_err_printf("Error creating retry "
 				               "event, aborting "
 				               "connection\n");
-				evutil_closesocket(fd);
-				pxy_conn_ctx_free(ctx, 1);
-				return;
+				goto errout;
 			}
-			event_add(ctx->ev, &retry_delay);
+			if (event_add(ctx->ev, &retry_delay) == -1) {
+				goto errout;
+			}
 			return;
 		}
 		event_free(ctx->ev);
@@ -2496,13 +2488,24 @@ pxy_fd_readcb(MAYBE_UNUSED evutil_socket_t fd, UNUSED short what, void *arg)
 		hints.ai_protocol = IPPROTO_TCP;
 
 		snprintf(sniport, sizeof(sniport), "%i", ctx->spec->sni_port);
-		evdns_getaddrinfo(ctx->dnsbase, ctx->sni, sniport, &hints,
-		                  pxy_sni_resolve_cb, ctx);
+		if (!evdns_getaddrinfo(ctx->dnsbase, ctx->sni, sniport, &hints,
+		                  pxy_sni_resolve_cb, ctx)) {
+			goto errout;
+		}
 		return;
 	}
 #endif /* !OPENSSL_NO_TLSEXT */
 
 	pxy_conn_connect(ctx);
+	return;
+
+errout:
+	if (ctx->ev) {
+		event_free(ctx->ev);
+		ctx->ev = NULL;
+	}
+	evutil_closesocket(fd);
+	pxy_conn_ctx_free(ctx, 1);
 }
 
 /*
