@@ -136,6 +136,11 @@ proxy_listener_errorcb(struct evconnlistener *listener, UNUSED void *ctx)
 	int err = EVUTIL_SOCKET_ERROR();
 	log_err_printf("Error %d on listener: %s\n", err,
 	               evutil_socket_error_to_string(err));
+	/* Do not break the event loop if out of fds:
+	 * Too many open files (24) */
+	if (err == 24) {
+		return;
+	}
 	event_base_loopbreak(evbase);
 }
 

@@ -62,6 +62,12 @@ static proxy_ctx_t *proxy_ctx = NULL;
 void
 log_exceptcb(void)
 {
+	log_err_printf("Error %d on logger: %s\n", errno, strerror(errno));
+	/* Do not break the event loop if out of fds:
+	 * Bad file descriptor (9) or Message too long (40) */
+	if (errno == 9 || errno == 40) {
+		return;
+	}
 	if (proxy_ctx) {
 		proxy_loopbreak(proxy_ctx);
 		proxy_ctx = NULL;

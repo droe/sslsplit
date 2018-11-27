@@ -2362,9 +2362,18 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 	}
 
 	/* initiate connection */
-	bufferevent_socket_connect(ctx->dst.bev,
+	if (bufferevent_socket_connect(ctx->dst.bev,
 	                           (struct sockaddr *)&ctx->dstaddr,
-	                           ctx->dstaddrlen);
+	                           ctx->dstaddrlen) == -1) {
+		bufferevent_free(ctx->dst.bev);
+		ctx->dst.bev = NULL;
+		if (ctx->dst.ssl) {
+			SSL_free(ctx->dst.ssl);
+			ctx->dst.ssl = NULL;
+		}
+		evutil_closesocket(ctx->fd);
+		pxy_conn_ctx_free(ctx, 1);
+	}
 }
 
 #ifndef OPENSSL_NO_TLSEXT
@@ -2579,7 +2588,10 @@ pxy_conn_setup(evutil_socket_t fd,
 		                    ctx);
 		if (!ctx->ev)
 			goto memout;
-		event_add(ctx->ev, NULL);
+		if (event_add(ctx->ev, NULL) == -1) {
+			event_free(ctx->ev);
+			goto memout;
+		}
 	} else {
 		pxy_fd_readcb(fd, 0, ctx);
 	}
