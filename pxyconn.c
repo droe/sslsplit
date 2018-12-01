@@ -1266,12 +1266,14 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 		bufferevent_free(ubev);
 	}
 	bufferevent_free(bev);
-	if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("SSL_free() in state ");
-		log_dbg_print_free(ssl_ssl_state_to_str(ssl));
-		log_dbg_printf("\n");
+	if (ssl) {
+		if (OPTS_DEBUG(ctx->opts)) {
+			log_dbg_printf("SSL_free() in state ");
+			log_dbg_print_free(ssl_ssl_state_to_str(ssl));
+			log_dbg_printf("\n");
+		}
+		SSL_free(ssl);
 	}
-	SSL_free(ssl);
 	evutil_closesocket(fd);
 }
 
