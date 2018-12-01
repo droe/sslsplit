@@ -547,7 +547,7 @@ ssl_sha1_to_str(unsigned char *rawhash, int colons)
 	int rv;
 
 	rv = asprintf(&str, colons ?
-	              "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X"
+	              "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:"
 	              "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X" :
 	              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
 	              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
