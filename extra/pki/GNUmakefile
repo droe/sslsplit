@@ -5,7 +5,7 @@ MKDIR?=		mkdir
 
 # OpenSSL settings
 CA_SUBJECT?=	'/C=CH/O=SSLsplit Root CA/CN=SSLsplit Root CA/'
-CA_DAYS?=	3650
+CA_DAYS?=	1095
 CA_EXT:=	v3_ca
 CRT_SUBJECT?=	'/C=CH/O=SSLsplit Test Certificate/CN=daniel.roe.ch/'
 CRT_DAYS?=	365
