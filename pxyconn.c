@@ -2359,6 +2359,16 @@ pxy_conn_connect(pxy_conn_ctx_t *ctx)
 	if (bufferevent_socket_connect(ctx->dst.bev,
 	                           (struct sockaddr *)&ctx->dstaddr,
 	                           ctx->dstaddrlen) == -1) {
+		// XXX: Trying to close a connection and free its data structures 
+		// here on the thrmgr thread after setting its dst callbacks above is 
+		// bound to cause a signal 6 crash. Because callbacks are running on 
+		// conn handling threads, and the eventcb too may try to close the 
+		// conn in case of errors, causing a race condition.
+		// TODO: Never terminate conns on the thrmgr thread after setting
+		// their callback functions. But this was the purpose of checking all
+		// return values from libevent functions in case we run out of fds.
+		// Back to square one. We really need to manage fds ourselves: 
+		// getdtablecount()?
 		goto errout;
 	}
 	return;
