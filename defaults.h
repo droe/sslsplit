@@ -80,11 +80,7 @@
  * OpenSSL 1.1.1a and up does not accept key size of 1024 bit, giving a "key
  * too small" error while loading forged cert into SSL ctx.
  */
-#if (OPENSSL_VERSION_NUMBER < 0x10101000L) || defined(LIBRESSL_VERSION_NUMBER)
 #define DFLT_LEAFKEY_RSABITS 1024
-#else /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
-#define DFLT_LEAFKEY_RSABITS 2048
-#endif /* OPENSSL_VERSION_NUMBER >= 0x10101000L */
 
 #endif /* !DEFAULTS_H */
 
