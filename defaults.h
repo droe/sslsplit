@@ -77,8 +77,8 @@
  * will need to make this value bigger, and/or configurable.
  * Until then, users who want a different size can always use their own
  * pre-generated leaf key instead of generating one automatically.
- * OpenSSL 1.1.1a and up does not accept key size of 1024 bit, giving a "key
- * too small" error while loading forged cert into SSL ctx.
+ * OpenSSL security level of 2+ does not accept key size of 1024 bits, giving 
+ * a "key too small" error while loading forged cert into SSL ctx.
  */
 #define DFLT_LEAFKEY_RSABITS 1024
 
