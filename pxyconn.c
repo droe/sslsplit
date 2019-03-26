@@ -726,6 +726,12 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 #endif /* SSL_OP_NO_COMPRESSION */
 
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
+
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+	/* If the security level of OpenSSL is set to 2+ in system configuration, 
+	 * our forged certificates with 1024-bit RSA key size will be rejected */
+	SSL_CTX_set_security_level(sslctx, 1);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 }
 
 /*
@@ -785,13 +791,6 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 		EC_KEY_free(ecdh);
 	}
 #endif /* !OPENSSL_NO_ECDH */
-
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
-	/* If the security level of OpenSSL is set to 2+ in system configuration, 
-	 * our forged certificates with 1024-bit RSA key size will be rejected */
-	SSL_CTX_set_security_level(sslctx, 1);
-#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
-
 	if (SSL_CTX_use_certificate(sslctx, crt) != 1) {
 		log_dbg_printf("loading src server certificate failed\n");
 		SSL_CTX_free(sslctx);
