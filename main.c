@@ -357,7 +357,7 @@ main(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 #ifdef DEBUG_OPTS
-				fprintf(stderr, "Conf file: %s\n", opts->conffile);
+				log_dbg_printf("Conf file: %s\n", opts->conffile);
 #endif /* DEBUG_OPTS */
 				break;
 			case 'o':
