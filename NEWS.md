@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   No longer create /var/log/sslsplit and /var/run/sslsplit directories as
+    part of `make install` (issue #251).
 -   Minor bugfixes and improvements.
 
 

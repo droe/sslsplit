@@ -528,10 +528,6 @@ install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man5 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
-	test -d $(DESTDIR)/var/log/$(TARGET) || \
-		$(MKDIR) -p $(DESTDIR)/var/log/$(TARGET)
-	test -d $(DESTDIR)/var/run/$(TARGET) || \
-		$(MKDIR) -p $(DESTDIR)/var/run/$(TARGET)
 	$(INSTALL) $(BINOWNERFLAGS) -m $(BINMODE) \
 		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
 	$(INSTALL) $(CNFOWNERFLAGS) -m $(CNFMODE) \
