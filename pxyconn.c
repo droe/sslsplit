@@ -1522,7 +1522,7 @@ pxy_ocsp_is_valid_uri(const char *uri, pxy_conn_ctx_t *ctx)
 	 * -   There should be no query string in OCSP GET requests.
 	 * -   Encoded OCSP request ASN.1 blobs are longer than 32 bytes.
 	 */
-	if (buf_url[0] != 'M' || buf_url[0] != '%')
+	if (buf_url[0] != 'M' && buf_url[0] != '%')
 		return 0;
 	if (strchr(uri, '?'))
 		return 0;
