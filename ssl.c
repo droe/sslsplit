@@ -1230,9 +1230,9 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 			goto leave3;
 	}
 
-#if (OPENSSL_VERSION_NUMBER < 0x1000200fL) || defined(LIBRESSL_VERSION_NUMBER)
+#if (OPENSSL_VERSION_NUMBER < 0x1000200fL) || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20902000L)
 	tmpchain = tmpctx->extra_certs;
-#else /* OpenSSL >= 1.0.2 */
+#else /* OpenSSL >= 1.0.2 || LIBRESSL_VERSION_NUMBER >= 0x20902000L */
 	rv = SSL_CTX_get0_chain_certs(tmpctx, &tmpchain);
 	if (rv != 1)
 		goto leave3;
