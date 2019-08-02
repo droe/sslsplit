@@ -882,8 +882,11 @@ main(int argc, char *argv[])
 		 * should be considered abnormal terminations, we want to
 		 * return an exit status of 128 + signal number.
 		 */
-		if (proxy_rv != SIGTERM && proxy_rv != SIGINT)
+		if (proxy_rv == SIGTERM || proxy_rv == SIGINT) {
+			rv = EXIT_SUCCESS;
+		} else {
 			rv = 128 + proxy_rv;
+		}
 	}
 	proxy_free(proxy);
 	nat_fini();
