@@ -876,7 +876,7 @@ main(int argc, char *argv[])
 		rv = EXIT_SUCCESS;
 	} else if (proxy_rv > 0) {
 		/*
-		 * We terminated because of receving a signal.  For our normal
+		 * We terminated because of receiving a signal.  For our normal
 		 * termination signals as documented in the man page, we want
 		 * to return with EXIT_SUCCESS.  For other signals, which
 		 * should be considered abnormal terminations, we want to
