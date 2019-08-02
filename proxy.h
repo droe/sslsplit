@@ -35,8 +35,8 @@
 typedef struct proxy_ctx proxy_ctx_t;
 
 proxy_ctx_t * proxy_new(opts_t *, int) NONNULL(1) MALLOC;
-void proxy_run(proxy_ctx_t *) NONNULL(1);
-void proxy_loopbreak(proxy_ctx_t *) NONNULL(1);
+int proxy_run(proxy_ctx_t *) NONNULL(1);
+void proxy_loopbreak(proxy_ctx_t *, int) NONNULL(1);
 void proxy_free(proxy_ctx_t *) NONNULL(1);
 
 #endif /* !PROXY_H */
