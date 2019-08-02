@@ -1,6 +1,8 @@
 
 ### SSLsplit develop
 
+-   Propagate the exit status of the privsep child process to the parent
+    process and use 128+signal convention (issue #252).
 -   No longer create /var/log/sslsplit and /var/run/sslsplit directories as
     part of `make install` (issue #251).
 -   Minor bugfixes and improvements.
@@ -82,9 +84,9 @@ This release includes work sponsored by HackerOne.
 -   Fix data processing when EOF is received before all incoming data has been
     processed.
 -   Fix multiple signal handling issues in the privilege separation parent
-    which led to the parent process being killed ungracefully (SIGTERM) or
-    being stuck in wait() while still having signals (SIGQUIT etc) queued up
-    for forwarding to the child process (issue #137).
+    which led to the parent process being killed ungracefully or being stuck
+    in wait() while still having signals queued up for forwarding to the child
+    process (issue #137).
 -   No longer assume an out of memory condition when a certificate contains
     neither a CN nor a subjectAltName extension.
 -   Fix parallel make build (-j) for the test target (issue #140).
