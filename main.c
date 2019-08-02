@@ -819,7 +819,7 @@ main(int argc, char *argv[])
 	 * remaining slots are passed down to log subsystem. */
 	int clisock[6];
 	if (privsep_fork(opts, clisock,
-	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
+	                 sizeof(clisock)/sizeof(clisock[0]), &rv) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
 		 * or an error occurred */
 		if (opts->pidfile) {

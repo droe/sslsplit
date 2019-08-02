@@ -873,7 +873,7 @@ privsep_client_close(int clisock)
  * will not be touched.
  */
 int
-privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
+privsep_fork(opts_t *opts, int clisock[], size_t nclisock, int *parent_rv)
 {
 	int selfpipev[2]; /* self-pipe trick: signal handler -> select */
 	int chldpipev[2]; /* el cheapo interprocess sync early after fork */
@@ -1032,10 +1032,13 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock)
 			log_dbg_printf("Child proc %lld exited with status %d\n",
 			               (long long)pid, WEXITSTATUS(status));
 		}
+		*parent_rv = WEXITSTATUS(status);
 	} else if (WIFSIGNALED(status)) {
 		log_err_printf("Child proc %lld killed by signal %d\n",
 		               (long long)pid, WTERMSIG(status));
+		*parent_rv = 128 + WTERMSIG(status);
 	} else {
+		/* can only happen with WUNTRACED option or active tracing */
 		log_err_printf("Child proc %lld neither exited nor killed\n",
 		               (long long)pid);
 	}
