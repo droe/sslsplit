@@ -393,7 +393,8 @@ proxy_run(proxy_ctx_t *ctx)
 	}
 	event_base_dispatch(ctx->evbase);
 	if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("Main event loop stopped.\n");
+		log_dbg_printf("Main event loop stopped (reason=%i).\n",
+		               ctx->loopbreak_reason);
 	}
 	return ctx->loopbreak_reason;
 }

@@ -1023,24 +1023,30 @@ privsep_fork(opts_t *opts, int clisock[], size_t nclisock, int *parent_rv)
 	close(selfpipev[1]);
 
 	int status;
-	wait(&status);
+	pid_t wpid;
+	wpid = wait(&status);
+	if (wpid != pid) {
+		/* should never happen, warn if it does anyway */
+		log_err_printf("Child pid %lld != expected %lld from wait(2)\n",
+		               (long long)wpid, (long long)pid);
+	}
 	if (WIFEXITED(status)) {
 		if (WEXITSTATUS(status) != 0) {
-			log_err_printf("Child proc %lld exited with status %d\n",
-			               (long long)pid, WEXITSTATUS(status));
+			log_err_printf("Child pid %lld exited with status %d\n",
+			               (long long)wpid, WEXITSTATUS(status));
 		} else {
-			log_dbg_printf("Child proc %lld exited with status %d\n",
-			               (long long)pid, WEXITSTATUS(status));
+			log_dbg_printf("Child pid %lld exited with status %d\n",
+			               (long long)wpid, WEXITSTATUS(status));
 		}
 		*parent_rv = WEXITSTATUS(status);
 	} else if (WIFSIGNALED(status)) {
-		log_err_printf("Child proc %lld killed by signal %d\n",
-		               (long long)pid, WTERMSIG(status));
+		log_err_printf("Child pid %lld killed by signal %d\n",
+		               (long long)wpid, WTERMSIG(status));
 		*parent_rv = 128 + WTERMSIG(status);
 	} else {
 		/* can only happen with WUNTRACED option or active tracing */
-		log_err_printf("Child proc %lld neither exited nor killed\n",
-		               (long long)pid);
+		log_err_printf("Child pid %lld neither exited nor killed\n",
+		               (long long)wpid);
 	}
 
 	return 1;
