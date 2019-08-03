@@ -695,7 +695,8 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 		if (OPTS_DEBUG(opts)) {
-			log_dbg_printf("Generated RSA key for leaf certs.\n");
+			log_dbg_printf("Generated %i bit RSA key for leaf "
+			               "certs.\n", DFLT_LEAFKEY_RSABITS);
 		}
 	}
 	if (opts->certgendir) {
