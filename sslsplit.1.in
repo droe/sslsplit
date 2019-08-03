@@ -484,15 +484,6 @@ no supported NAT engine or when running \fBsslsplit\fP on a different system
 than the NAT rules redirecting the actual connections.
 Note that when using \fB-j\fP with \fBsni\fP, you may need to prepare
 \fIjaildir\fP to make name resolution work from within the chroot directory.
-.SH SIGNALS
-A running \fBsslsplit\fP accepts SIGINT and SIGQUIT for a clean shutdown and
-SIGUSR1 to re-open the single-file log files (such as \fB-l\fP, \fB-L\fP and
-\fB-X\fP).  The canonical way to rotate or post-process logs is to rename the
-active log file, send SIGUSR1 to the PID in the PID file given by \fB-p\fP,
-give SSLsplit some time to flush buffers after closing the old file, and then
-post-process the renamed log file.
-Per-connection log files (such as \fB-S\fP and \fB-F\fP) are not re-opened
-because their filename is specific to the connection.
 .SH "LOG SPECIFICATIONS"
 Log specifications are composed of zero or more printf-style directives;
 ordinary characters are included directly in the output path.
@@ -689,6 +680,20 @@ Fully supported, including IPv6.
 Note that return path filtering (rp_filter) also needs to be disabled on
 interfaces which handle TPROXY redirected traffic.
 .RE
+.SH SIGNALS
+A running \fBsslsplit\fP accepts SIGINT and SIGTERM for a clean shutdown and
+SIGUSR1 to re-open the single-file log files (such as \fB-l\fP, \fB-L\fP and
+\fB-X\fP).  The canonical way to rotate or post-process logs is to rename the
+active log file, send SIGUSR1 to the PID in the PID file given by \fB-p\fP,
+give SSLsplit some time to flush buffers after closing the old file, and then
+post-process the renamed log file.
+Per-connection log files (such as \fB-S\fP and \fB-F\fP) are not re-opened
+because their filename is specific to the connection.
+.SH "EXIT STATUS"
+The \fBsslsplit\fP process will exit with 0 on regular shutdown
+(SIGINT, SIGTERM), and 128 + signal number on controlled shutdown based on
+receiving a different signal such as SIGHUP.  Exit status in the range 1..127
+indicates error conditions.
 .SH EXAMPLES
 Matching the above NAT engine configuration samples, intercept HTTP and HTTPS
 over IPv4 and IPv6 using forged certificates with CA private key \fBca.key\fP

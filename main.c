@@ -819,7 +819,7 @@ main(int argc, char *argv[])
 	 * remaining slots are passed down to log subsystem. */
 	int clisock[6];
 	if (privsep_fork(opts, clisock,
-	                 sizeof(clisock)/sizeof(clisock[0])) != 0) {
+	                 sizeof(clisock)/sizeof(clisock[0]), &rv) != 0) {
 		/* parent has exited the monitor loop after waiting for child,
 		 * or an error occurred */
 		if (opts->pidfile) {
@@ -870,9 +870,24 @@ main(int argc, char *argv[])
 		log_err_printf("Failed to init NAT state table lookup.\n");
 		goto out_nat_failed;
 	}
-	rv = EXIT_SUCCESS;
 
-	proxy_run(proxy);
+	int proxy_rv = proxy_run(proxy);
+	if (proxy_rv == 0) {
+		rv = EXIT_SUCCESS;
+	} else if (proxy_rv > 0) {
+		/*
+		 * We terminated because of receiving a signal.  For our normal
+		 * termination signals as documented in the man page, we want
+		 * to return with EXIT_SUCCESS.  For other signals, which
+		 * should be considered abnormal terminations, we want to
+		 * return an exit status of 128 + signal number.
+		 */
+		if (proxy_rv == SIGTERM || proxy_rv == SIGINT) {
+			rv = EXIT_SUCCESS;
+		} else {
+			rv = 128 + proxy_rv;
+		}
+	}
 	proxy_free(proxy);
 	nat_fini();
 out_nat_failed:
