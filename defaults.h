@@ -80,7 +80,7 @@
  * OpenSSL security level of 2+ does not accept key size of 1024 bits, giving 
  * a "key too small" error while loading forged cert into SSL ctx.
  */
-#define DFLT_LEAFKEY_RSABITS 1024
+#define DFLT_LEAFKEY_RSABITS 2048
 
 #endif /* !DEFAULTS_H */
 
