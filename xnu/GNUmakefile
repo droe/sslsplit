@@ -79,6 +79,10 @@ XNU_RELS+=	4570.51.1	# 10.13.4
 XNU_RELS+=	4570.61.1	# 10.13.5
 XNU_RELS+=	4570.71.2	# 10.13.6
 
+# macOS Mojave
+#XNU_RELS+=	4903.201.2	# 10.14
+XNU_RELS+=	4903.221.2	# 10.14.1
+
 # defaults
 XNURL?=		https://opensource.apple.com/source/xnu/
 XNU_IDIRS?=	libkern net

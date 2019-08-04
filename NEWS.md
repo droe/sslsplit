@@ -13,6 +13,7 @@
     common name.
 -   Fix TCP ports in packet mirroring mode (issue #247).
 -   Fix certificate loading with LibreSSL 2.9.2 and later.
+-   Add XNU headers for macOS Mojave 10.14.1.
 -   Minor bugfixes and improvements.
 
 
