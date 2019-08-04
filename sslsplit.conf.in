@@ -23,19 +23,23 @@ CAKey /usr/local/etc/sslsplit/ca.key
 # Equivalent to -C command line option.
 #CAChain /usr/local/etc/sslsplit/chain.crt
 
-# Use key from pemfile for leaf certs.
+# Use key from pemfile for generated leaf certs.
 # Equivalent to -K command line option.
 # (default: generate)
-#LeafCerts /usr/local/etc/sslsplit/leaf.key
+#LeafKey /usr/local/etc/sslsplit/leaf.key
 
 # Use URL as CRL distribution point for all forged certs.
 # Equivalent to -q command line option.
-#CRL http://example.com/example.crl
+#LeafCRLURL http://example.com/example.crl
 
 # Use cert+chain+key PEM files from certdir to target all sites matching the
 # common names (non-matching: generate if CA).
 # Equivalent to -t command line option.
-#TargetCertDir /usr/local/etc/sslsplit/target
+#LeafCertDir /usr/local/etc/sslsplit/leaf.d
+
+# Use cert+chain+key from PEM file instead of generating leaf keys on the fly.
+# Equivalent to -A command line option.
+#DefaultLeafCert /usr/local/etc/sslsplit/leaf.pem
 
 # Write leaf key and only generated certificates to gendir.
 # Equivalent to -w command line option.

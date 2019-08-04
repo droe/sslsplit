@@ -116,6 +116,16 @@ reconfiguration or route injection, /etc/hosts modification and so on.
 .B \-a \fIpemfile\fP
 Use client certificate from \fIpemfile\fP when destination server requests a
 client certificate.
+.B \-A \fIpemfile\fP
+Use private key, certificate and certificate chain from PEM file \fIpemfile\fP
+as leaf certificate instead of generating a leaf certificate on the fly.
+The PEM file must contain a single private key, a single certificate and
+optionally intermediate and root CA certificates to use as certificate chain.
+When using \fB-t\fP, SSLsplit will first attempt to use a matching certificate
+loaded from \fIcertdir\fP.
+If \fB-t\fP is also used and a connection matches any certificate in the
+directory specified with the \fB-t\fP option, that matching certificate is used
+instead, taking precedence over the certificate specified with \fB-A\fP.
 .TP
 .B \-b \fIpemfile\fP
 Use client private key from \fIpemfile\fP when destination server requests a
@@ -334,7 +344,10 @@ A single PEM file must contain a single private key, a single certificate and
 optionally intermediate and root CA certificates to use as certificate chain.
 When using \fB-t\fP, SSLsplit will first attempt to use a matching certificate
 loaded from \fIcertdir\fP.
-If \fB-c\fP and \fB-k\fP are also given, certificates will be forged
+If \fB-A\fP is also given, when there is no match in \fIcertdir\fP, the default
+key, certificate and certificate chain from the PEM file specified with the
+\fB-A\fP option is used instead.
+Otherwise, if \fB-c\fP and \fB-k\fP are also given, certificates will be forged
 on-the-fly for sites matching none of the common names in the certificates
 loaded from \fIcertdir\fP.
 Otherwise, connections matching no certificate will be dropped, or if

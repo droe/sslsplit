@@ -52,6 +52,36 @@ oom_die(const char *argv0)
 	exit(EXIT_FAILURE);
 }
 
+/*
+ * Load a cert/chain/key combo from a single PEM file.
+ * Returns NULL on failure.
+ */
+cert_t *
+opts_load_cert_chain_key(const char *filename)
+{
+	cert_t *cert;
+
+	cert = cert_new_load(filename);
+	if (!cert) {
+		log_err_printf("Failed to load cert and key from PEM file "
+		                "'%s'\n", filename);
+		return NULL;
+	}
+	if (X509_check_private_key(cert->crt, cert->key) != 1) {
+		log_err_printf("Cert does not match key in PEM file "
+		                "'%s':\n", filename);
+		ERR_print_errors_fp(stderr);
+		return NULL;
+	}
+
+#ifdef DEBUG_CERTIFICATE
+	log_dbg_printf("Loaded '%s':\n", filename);
+	log_dbg_print_free(ssl_x509_to_str(cert->crt));
+	log_dbg_print_free(ssl_x509_to_pem(cert->crt));
+#endif /* DEBUG_CERTIFICATE */
+	return cert;
+}
+
 opts_t *
 opts_new(void)
 {
@@ -61,7 +91,7 @@ opts_new(void)
 	memset(opts, 0, sizeof(opts_t));
 
 	opts->sslcomp = 1;
-	opts->chain = sk_X509_new_null();
+	opts->cachain = sk_X509_new_null();
 	opts->sslmethod = SSLv23_method;
 	opts->allow_wrong_host = 1;
 
@@ -71,7 +101,6 @@ opts_new(void)
 void
 opts_free(opts_t *opts)
 {
-	sk_X509_pop_free(opts->chain, X509_free);
 	if (opts->clientcrt) {
 		X509_free(opts->clientcrt);
 	}
@@ -84,8 +113,18 @@ opts_free(opts_t *opts)
 	if (opts->cakey) {
 		EVP_PKEY_free(opts->cakey);
 	}
-	if (opts->key) {
-		EVP_PKEY_free(opts->key);
+	sk_X509_pop_free(opts->cachain, X509_free);
+	if (opts->leafkey) {
+		EVP_PKEY_free(opts->leafkey);
+	}
+	if (opts->leafcertdir) {
+		free(opts->leafcertdir);
+	}
+	if (opts->defaultleafcert) {
+		cert_free(opts->defaultleafcert);
+	}
+	if (opts->leafcrlurl) {
+		free(opts->leafcrlurl);
 	}
 #ifndef OPENSSL_NO_DH
 	if (opts->dh) {
@@ -108,12 +147,6 @@ opts_free(opts_t *opts)
 		free(opts->openssl_engine);
 	}
 #endif /* !OPENSSL_NO_ENGINE */
-	if (opts->tgcrtdir) {
-		free(opts->tgcrtdir);
-	}
-	if (opts->crlurl) {
-		free(opts->crlurl);
-	}
 	if (opts->dropuser) {
 		free(opts->dropuser);
 	}
@@ -483,7 +516,7 @@ opts_set_cacrt(opts_t *opts, const char *argv0, const char *optarg)
 		exit(EXIT_FAILURE);
 	}
 	ssl_x509_refcount_inc(opts->cacrt);
-	sk_X509_insert(opts->chain, opts->cacrt, 0);
+	sk_X509_insert(opts->cachain, opts->cacrt, 0);
 	if (!opts->cakey) {
 		opts->cakey = ssl_key_load(optarg);
 	}
@@ -517,7 +550,7 @@ opts_set_cakey(opts_t *opts, const char *argv0, const char *optarg)
 		opts->cacrt = ssl_x509_load(optarg);
 		if (opts->cacrt) {
 			ssl_x509_refcount_inc(opts->cacrt);
-			sk_X509_insert(opts->chain, opts->cacrt, 0);
+			sk_X509_insert(opts->cachain, opts->cacrt, 0);
 		}
 	}
 #ifndef OPENSSL_NO_DH
@@ -531,10 +564,10 @@ opts_set_cakey(opts_t *opts, const char *argv0, const char *optarg)
 }
 
 void
-opts_set_chain(opts_t *opts, const char *argv0, const char *optarg)
+opts_set_cachain(opts_t *opts, const char *argv0, const char *optarg)
 {
-	if (ssl_x509chain_load(NULL, &opts->chain, optarg) == -1) {
-		fprintf(stderr, "%s: error loading chain from '%s':\n",
+	if (ssl_x509chain_load(NULL, &opts->cachain, optarg) == -1) {
+		fprintf(stderr, "%s: error loading CA chain from '%s':\n",
 		        argv0, optarg);
 		if (errno) {
 			fprintf(stderr, "%s\n", strerror(errno));
@@ -549,12 +582,12 @@ opts_set_chain(opts_t *opts, const char *argv0, const char *optarg)
 }
 
 void
-opts_set_key(opts_t *opts, const char *argv0, const char *optarg)
+opts_set_leafkey(opts_t *opts, const char *argv0, const char *optarg)
 {
-	if (opts->key)
-		EVP_PKEY_free(opts->key);
-	opts->key = ssl_key_load(optarg);
-	if (!opts->key) {
+	if (opts->leafkey)
+		EVP_PKEY_free(opts->leafkey);
+	opts->leafkey = ssl_key_load(optarg);
+	if (!opts->leafkey) {
 		fprintf(stderr, "%s: error loading leaf key from '%s':\n",
 		        argv0, optarg);
 		if (errno) {
@@ -570,36 +603,57 @@ opts_set_key(opts_t *opts, const char *argv0, const char *optarg)
 	}
 #endif /* !OPENSSL_NO_DH */
 #ifdef DEBUG_OPTS
-	log_dbg_printf("LeafCerts: %s\n", optarg);
+	log_dbg_printf("LeafKey: %s\n", optarg);
 #endif /* DEBUG_OPTS */
 }
 
 void
-opts_set_crl(opts_t *opts, const char *optarg)
+opts_set_leafcrlurl(opts_t *opts, const char *optarg)
 {
-	if (opts->crlurl)
-		free(opts->crlurl);
-	opts->crlurl = strdup(optarg);
+	if (opts->leafcrlurl)
+		free(opts->leafcrlurl);
+	opts->leafcrlurl = strdup(optarg);
 #ifdef DEBUG_OPTS
-	log_dbg_printf("CRL: %s\n", opts->crlurl);
+	log_dbg_printf("LeafCRLURL: %s\n", opts->leafcrlurl);
 #endif /* DEBUG_OPTS */
 }
 
 void
-opts_set_tgcrtdir(opts_t *opts, const char *argv0, const char *optarg)
+opts_set_leafcertdir(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (!sys_isdir(optarg)) {
 		fprintf(stderr, "%s: '%s' is not a directory\n",
 		        argv0, optarg);
 		exit(EXIT_FAILURE);
 	}
-	if (opts->tgcrtdir)
-		free(opts->tgcrtdir);
-	opts->tgcrtdir = strdup(optarg);
-	if (!opts->tgcrtdir)
+	if (opts->leafcertdir)
+		free(opts->leafcertdir);
+	opts->leafcertdir = strdup(optarg);
+	if (!opts->leafcertdir)
 		oom_die(argv0);
 #ifdef DEBUG_OPTS
-	log_dbg_printf("TargetCertDir: %s\n", opts->tgcrtdir);
+	log_dbg_printf("LeafCertDir: %s\n", opts->leafcertdir);
+#endif /* DEBUG_OPTS */
+}
+
+void
+opts_set_defaultleafcert(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->defaultleafcert)
+		cert_free(opts->defaultleafcert);
+	opts->defaultleafcert = opts_load_cert_chain_key(optarg);
+	if (!opts->defaultleafcert) {
+		fprintf(stderr, "%s: error loading default leaf cert/chain/key"
+		                " from '%s':\n", argv0, optarg);
+		if (errno) {
+			fprintf(stderr, "%s\n", strerror(errno));
+		} else {
+			ERR_print_errors_fp(stderr);
+		}
+		exit(EXIT_FAILURE);
+	}
+#ifdef DEBUG_OPTS
+	log_dbg_printf("DefaultLeafCert: %s\n", optarg);
 #endif /* DEBUG_OPTS */
 }
 
@@ -1323,13 +1377,18 @@ set_option(opts_t *opts, const char *argv0,
 	} else if (!strncmp(name, "ClientKey", 10)) {
 		opts_set_clientkey(opts, argv0, value);
 	} else if (!strncmp(name, "CAChain", 8)) {
-		opts_set_chain(opts, argv0, value);
-	} else if (!strncmp(name, "LeafCerts", 10)) {
-		opts_set_key(opts, argv0, value);
-	} else if (!strncmp(name, "CRL", 4)) {
-		opts_set_crl(opts, value);
-	} else if (!strncmp(name, "TargetCertDir", 14)) {
-		opts_set_tgcrtdir(opts, argv0, value);
+		opts_set_cachain(opts, argv0, value);
+	} else if (!strncmp(name, "LeafCerts", 10) ||   /* compat <= 0.5.4 */
+	           !strncmp(name, "LeafKey", 8)) {
+		opts_set_leafkey(opts, argv0, value);
+	} else if (!strncmp(name, "CRL", 4) ||          /* compat <= 0.5.4 */
+	           !strncmp(name, "LeafCRLURL", 11)) {
+		opts_set_leafcrlurl(opts, value);
+	} else if (!strncmp(name, "TargetCertDir", 14) || /* compat <= 0.5.4 */
+	           !strncmp(name, "LeafCertDir", 12)) {
+		opts_set_leafcertdir(opts, argv0, value);
+	} else if (!strncmp(name, "DefaultLeafCert", 16)) {
+		opts_set_defaultleafcert(opts, argv0, value);
 	} else if (!strncmp(name, "WriteGenCertsDir", 17)) {
 		opts_set_certgendir_writegencerts(opts, argv0, value);
 	} else if (!strncmp(name, "WriteAllCertsDir", 17)) {
