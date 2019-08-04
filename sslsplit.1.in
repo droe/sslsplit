@@ -216,7 +216,7 @@ no matching certificate in the provided certificate directory.
 .TP
 .B \-K \fIpemfile\fP
 Use private key from \fIpemfile\fP for the leaf certificates forged on-the-fly.
-If \fB-K\fP is not given, SSLsplit will generate a random 1024-bit RSA key.
+If \fB-K\fP is not given, SSLsplit will generate a random 2048 bit RSA key.
 .TP
 .B \-l \fIlogfile\fP
 Log connections to \fIlogfile\fP in a single line per connection format,

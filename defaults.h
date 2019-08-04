@@ -72,13 +72,23 @@
 /*
  * Default leaf key RSA keysize in bits.
  *
- * While browsers still generally accept it, use a leaf key size of 1024 bit
- * for leaf keys.  When browsers start to sunset 1024 bit RSA in leaf keys, we
- * will need to make this value bigger, and/or configurable.
- * Until then, users who want a different size can always use their own
- * pre-generated leaf key instead of generating one automatically.
- * OpenSSL security level of 2+ does not accept key size of 1024 bits, giving 
- * a "key too small" error while loading forged cert into SSL ctx.
+ * While implementations still generally accepted leaf keys of 1024 bits in
+ * size, we used 1024 for leaf keys.  As implementations are starting to sunset
+ * 1024 bit RSA not only for CA keys, but also for leaf keys, we now use a 2048
+ * bit key size for the leaf cert key in order to maximize interoperability in
+ * default config.
+ *
+ * Users who want a different size, for example 1024 bit RSA for performance,
+ * can always use their own pre-generated leaf key using the -K option instead
+ * of generating one automatically.
+ *
+ * Refer to the following resources on key sizes accepted by different
+ * implementations.  Note that OpenSSL security level restrictions potentially
+ * apply to both sslsplit and all of the clients and servers using OpenSSL.
+ *
+ * OpenSSL:
+ * https://www.openssl.org/docs/man1.1.0/man3/SSL_CTX_get_security_level.html
+ * https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_get_security_level.html
  */
 #define DFLT_LEAFKEY_RSABITS 2048
 

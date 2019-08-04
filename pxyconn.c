@@ -728,9 +728,17 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
-	/* If the security level of OpenSSL is set to 2+ in system configuration, 
-	 * our forged certificates with 1024-bit RSA key size will be rejected */
-	SSL_CTX_set_security_level(sslctx, 1);
+	/*
+	 * For maximum interoperability, force the security level to 0, meaning
+	 * all algorithms are permitted.  If we don't set the security level,
+	 * the level is taken from OpenSSL system configuration or library
+	 * compile-time defaults.  Security levels above 0 will reject weak
+	 * algorithms and key sizes both locally at load time and when they are
+	 * encountered from peers we receive connections from or connect to.
+	 * Specifically, our prevous default RSA leaf key size of 1024 bits
+	 * was rejected by a security level of 2 or higher (issue #248).
+	 */
+	SSL_CTX_set_security_level(sslctx, 0);
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 }
 
