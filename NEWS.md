@@ -1,10 +1,18 @@
 
 ### SSLsplit develop
 
+-   Increase the default RSA leaf key size to 2048 bits and force an OpenSSL
+    security level of 0 in order to maximize interoperability in the default
+    configuration.  OpenSSL with a security level of 2 or higher was rejecting
+    our old default leaf key size of 1024 bits (issue #248).
 -   Propagate the exit status of the privsep child process to the parent
     process and use 128+signal convention (issue #252).
 -   No longer create /var/log/sslsplit and /var/run/sslsplit directories as
     part of `make install` (issue #251).
+-   Fix unexpected connection termination for certificates without a subject
+    common name.
+-   Fix TCP ports in packet mirroring mode (issue #247).
+-   Fix certificate loading with LibreSSL 2.9.2 and later.
 -   Minor bugfixes and improvements.
 
 
