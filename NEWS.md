@@ -1,6 +1,13 @@
 
 ### SSLsplit develop
 
+-   Add -A option for specifying a default leaf certificate instead of
+    generating it on the fly (issue #139).
+-   Rename the following config file options for clarity and consistency:
+    -   LeafCerts to LeafKey
+    -   TargetCertDir to LeafCertDir
+    -   CRL to LeafCRLURL
+    The old syntax is still accepted for backwards compatibility.
 -   Increase the default RSA leaf key size to 2048 bits and force an OpenSSL
     security level of 0 in order to maximize interoperability in the default
     configuration.  OpenSSL with a security level of 2 or higher was rejecting

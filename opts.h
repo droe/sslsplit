@@ -32,6 +32,7 @@
 #include "proc.h"
 #include "nat.h"
 #include "ssl.h"
+#include "cert.h"
 #include "attrib.h"
 
 typedef struct proxyspec {
@@ -87,7 +88,8 @@ typedef struct opts {
 #endif /* !OPENSSL_NO_ENGINE */
 	char *ciphers;
 	char *certgendir;
-	char *tgcrtdir;
+	char *leafcertdir;
+	char *leafcrlurl;
 	char *dropuser;
 	char *dropgroup;
 	char *jaildir;
@@ -109,8 +111,9 @@ typedef struct opts {
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	X509 *cacrt;
 	EVP_PKEY *cakey;
-	EVP_PKEY *key;
-	STACK_OF(X509) *chain;
+	STACK_OF(X509) *cachain;
+	EVP_PKEY *leafkey;
+	cert_t *defaultleafcert;
 	X509 *clientcrt;
 	EVP_PKEY *clientkey;
 #ifndef OPENSSL_NO_DH
@@ -120,12 +123,12 @@ typedef struct opts {
 	char *ecdhcurve;
 #endif /* !OPENSSL_NO_ECDH */
 	proxyspec_t *spec;
-	char *crlurl;
 	unsigned int verify_peer: 1;
 	unsigned int allow_wrong_host: 1;
 } opts_t;
 
 void NORET oom_die(const char *) NONNULL(1);
+cert_t *opts_load_cert_chain_key(const char *) NONNULL(1);
 
 opts_t *opts_new(void) MALLOC;
 void opts_free(opts_t *) NONNULL(1);
@@ -140,10 +143,12 @@ char *proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
 
 void opts_set_cacrt(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_cakey(opts_t *, const char *, const char *) NONNULL(1,2,3);
-void opts_set_chain(opts_t *, const char *, const char *) NONNULL(1,2,3);
-void opts_set_key(opts_t *, const char *, const char *) NONNULL(1,2,3);
-void opts_set_crl(opts_t *, const char *) NONNULL(1,2);
-void opts_set_tgcrtdir(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_cachain(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_leafkey(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_leafcrlurl(opts_t *, const char *) NONNULL(1,2);
+void opts_set_leafcertdir(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_defaultleafcert(opts_t *, const char *, const char *)
+     NONNULL(1,2,3);
 void opts_set_certgendir_writeall(opts_t *, const char *, const char *)
      NONNULL(1,2,3);
 void opts_set_certgendir_writegencerts(opts_t *, const char *, const char *)

@@ -63,16 +63,19 @@ Use key from pemfile when destination requests client certs. Equivalent to -b co
 \fBCAChain STRING\fR
 Use CA chain from pemfile (intermediate and root CA certs). Equivalent to -C command line option.
 .TP
-\fBLeafCerts STRING\fR
-Use key from pemfile for leaf certs. Equivalent to -K command line option.
+\fBLeafKey STRING\fR
+Use key from pemfile for generating leaf certs. Equivalent to -K command line option.
 .br
 Default: generate
 .TP
-\fBCRL STRING\fR
-Use URL as CRL distribution point for all forged certs. Equivalent to -q command line option.
+\fBLeafCRLURL STRING\fR
+Use URL as CRL distribution point for all forged leaf certs. Equivalent to -q command line option.
 .TP
-\fBTargetCertDir STRING\fR
+\fBLeafCertDir STRING\fR
 Use cert+chain+key PEM files from certdir to target all sites matching the common names (non-matching: generate if CA). Equivalent to -t command line option.
+.TP
+\fBDefaultLeafCert STRING\fR
+Use cert+chain+key from PEM file for leaf certificates if there is no match in \fBLeafCertDir\fR. Equivalent to -A command line option.
 .TP
 \fBWriteGenCertsDir STRING\fR
 Write leaf key and only generated certificates to gendir. Equivalent to -w command line option.

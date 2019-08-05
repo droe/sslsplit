@@ -884,7 +884,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 {
 	cert_t *cert = NULL;
 
-	if (ctx->opts->tgcrtdir) {
+	if (ctx->opts->leafcertdir) {
 		if (ctx->sni) {
 			cert = cachemgr_tgcrt_get(ctx->sni);
 			if (!cert) {
@@ -912,6 +912,7 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 					if (!wildcarded) {
 						ctx->enomem = 1;
 					} else {
+						/* increases ref count */
 						cert = cachemgr_tgcrt_get(
 						       wildcarded);
 						free(wildcarded);
@@ -933,26 +934,37 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 		}
 	}
 
-	if (!cert && ctx->origcrt && ctx->opts->key) {
+	if (!cert && ctx->opts->defaultleafcert) {
+		cert = ctx->opts->defaultleafcert;
+		cert_refcount_inc(cert);
+		ctx->immutable_cert = 1;
+		if (OPTS_DEBUG(ctx->opts)) {
+			log_dbg_printf("Using default leaf certificate\n");
+		}
+	}
+
+	if (!cert && ctx->origcrt && ctx->opts->leafkey) {
 		cert = cert_new();
 
 		cert->crt = cachemgr_fkcrt_get(ctx->origcrt);
 		if (cert->crt) {
-			if (OPTS_DEBUG(ctx->opts))
+			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Certificate cache: HIT\n");
+			}
 		} else {
-			if (OPTS_DEBUG(ctx->opts))
+			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Certificate cache: MISS\n");
+			}
 			cert->crt = ssl_x509_forge(ctx->opts->cacrt,
 			                           ctx->opts->cakey,
 			                           ctx->origcrt,
-			                           ctx->opts->key,
+			                           ctx->opts->leafkey,
 			                           NULL,
-			                           ctx->opts->crlurl);
+			                           ctx->opts->leafcrlurl);
 			cachemgr_fkcrt_set(ctx->origcrt, cert->crt);
 		}
-		cert_set_key(cert, ctx->opts->key);
-		cert_set_chain(cert, ctx->opts->chain);
+		cert_set_key(cert, ctx->opts->leafkey);
+		cert_set_chain(cert, ctx->opts->cachain);
 		ctx->generated_cert = 1;
 	}
 
@@ -1093,8 +1105,8 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			               "(SNI mismatch)\n");
 		}
 		newcrt = ssl_x509_forge(ctx->opts->cacrt, ctx->opts->cakey,
-		                        sslcrt, ctx->opts->key,
-		                        sn, ctx->opts->crlurl);
+		                        sslcrt, ctx->opts->leafkey,
+		                        sn, ctx->opts->leafcrlurl);
 		if (!newcrt) {
 			ctx->enomem = 1;
 			return SSL_TLSEXT_ERR_NOACK;
@@ -1125,8 +1137,9 @@ pxy_ossl_servername_cb(SSL *ssl, UNUSED int *al, void *arg)
 			}
 		}
 
-		newsslctx = pxy_srcsslctx_create(ctx, newcrt, ctx->opts->chain,
-		                                 ctx->opts->key);
+		newsslctx = pxy_srcsslctx_create(ctx, newcrt,
+		                                 ctx->opts->cachain,
+		                                 ctx->opts->leafkey);
 		if (!newsslctx) {
 			X509_free(newcrt);
 			return SSL_TLSEXT_ERR_NOACK;

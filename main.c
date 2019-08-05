@@ -153,7 +153,9 @@ main_usage(void)
 "  -K pemfile  use key from pemfile for leaf certs (default: generate)\n"
 "  -q crlurl   use URL as CRL distribution point for all forged certs\n"
 "  -t certdir  use cert+chain+key PEM files from certdir to target all sites\n"
-"              matching the common names (non-matching: generate if CA)\n"
+"              matching the common names (non-matching: -T or generate if CA)\n"
+"  -A pemfile  use cert+chain+key PEM file as fallback leaf cert when none of\n"
+"              those given by -t match, instead of generating one on the fly\n"
 "  -w gendir   write leaf key and only generated certificates to gendir\n"
 "  -W gendir   write leaf key and all certificates to gendir\n"
 "  -O          deny all OCSP requests on all proxyspecs\n"
@@ -266,34 +268,19 @@ main_usage(void)
 }
 
 /*
- * Callback to load a cert/chain/key combo from a single PEM file.
+ * Callback to load a cert/chain/key combo from a single PEM file for -t.
  * A return value of -1 indicates a fatal error to the file walker.
  */
 static int
-main_loadtgcrt(const char *filename, void *arg)
+main_load_leafcert(const char *filename, void *arg)
 {
 	opts_t *opts = arg;
 	cert_t *cert;
 	char **names;
 
-	cert = cert_new_load(filename);
-	if (!cert) {
-		log_err_printf("Failed to load cert and key from PEM file "
-		                "'%s'\n", filename);
+	cert = opts_load_cert_chain_key(filename);
+	if (!cert)
 		return -1;
-	}
-	if (X509_check_private_key(cert->crt, cert->key) != 1) {
-		log_err_printf("Cert does not match key in PEM file "
-		                "'%s':\n", filename);
-		ERR_print_errors_fp(stderr);
-		return -1;
-	}
-
-#ifdef DEBUG_CERTIFICATE
-	log_dbg_printf("Loaded '%s':\n", filename);
-	log_dbg_print_free(ssl_x509_to_str(cert->crt));
-	log_dbg_print_free(ssl_x509_to_pem(cert->crt));
-#endif /* DEBUG_CERTIFICATE */
 
 	if (OPTS_DEBUG(opts)) {
 		log_dbg_printf("Targets for '%s':", filename);
@@ -344,7 +331,7 @@ main(int argc, char *argv[])
 
 	while ((ch = getopt(argc, argv,
 	                    OPT_g OPT_G OPT_Z OPT_i OPT_x OPT_T OPT_I
-	                    "k:c:C:K:t:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
+	                    "k:c:C:K:t:A:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
 	                    "dDVhW:w:q:f:o:X:Y:y:")) != -1) {
 		switch (ch) {
 			case 'f':
@@ -372,16 +359,19 @@ main(int argc, char *argv[])
 				opts_set_cakey(opts, argv0, optarg);
 				break;
 			case 'C':
-				opts_set_chain(opts, argv0, optarg);
+				opts_set_cachain(opts, argv0, optarg);
 				break;
 			case 'K':
-				opts_set_key(opts, argv0, optarg);
+				opts_set_leafkey(opts, argv0, optarg);
 				break;
 			case 't':
-				opts_set_tgcrtdir(opts, argv0, optarg);
+				opts_set_leafcertdir(opts, argv0, optarg);
+				break;
+			case 'A':
+				opts_set_defaultleafcert(opts, argv0, optarg);
 				break;
 			case 'q':
-				opts_set_crl(opts, optarg);
+				opts_set_leafcrlurl(opts, optarg);
 				break;
 			case 'O':
 				opts_set_deny_ocsp(opts);
@@ -566,7 +556,7 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 #endif /* !OPENSSL_NO_ENGINE */
-		if ((opts->cacrt || !opts->tgcrtdir) && !opts->cakey) {
+		if (opts->cacrt && !opts->cakey) {
 			fprintf(stderr, "%s: no CA key specified (-k).\n",
 			                argv0);
 			exit(EXIT_FAILURE);
@@ -581,6 +571,13 @@ main(int argc, char *argv[])
 			fprintf(stderr, "%s: CA cert does not match key.\n",
 			                argv0);
 			ERR_print_errors_fp(stderr);
+			exit(EXIT_FAILURE);
+		}
+		if (!opts->cakey &&
+		    !opts->leafcertdir &&
+		    !opts->defaultleafcert) {
+			fprintf(stderr, "%s: at least one of -c/-k, -t or -A "
+			                "must be specified\n", argv0);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -686,9 +683,9 @@ main(int argc, char *argv[])
 	}
 
 	/* generate leaf key */
-	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->key) {
-		opts->key = ssl_key_genrsa(DFLT_LEAFKEY_RSABITS);
-		if (!opts->key) {
+	if (opts_has_ssl_spec(opts) && opts->cakey && !opts->leafkey) {
+		opts->leafkey = ssl_key_genrsa(DFLT_LEAFKEY_RSABITS);
+		if (!opts->leafkey) {
 			fprintf(stderr, "%s: error generating RSA key:\n",
 			                argv0);
 			ERR_print_errors_fp(stderr);
@@ -704,7 +701,7 @@ main(int argc, char *argv[])
 		int prv;
 		FILE *keyf;
 
-		keyid = ssl_key_identifier(opts->key, 0);
+		keyid = ssl_key_identifier(opts->leafkey, 0);
 		if (!keyid) {
 			fprintf(stderr, "%s: error generating key id\n", argv0);
 			exit(EXIT_FAILURE);
@@ -723,8 +720,8 @@ main(int argc, char *argv[])
 			                strerror(errno), errno);
 			exit(EXIT_FAILURE);
 		}
-		if (!PEM_write_PrivateKey(keyf, opts->key, NULL, 0, 0,
-		                                           NULL, NULL)) {
+		if (!PEM_write_PrivateKey(keyf, opts->leafkey,
+		                          NULL, 0, 0, NULL, NULL)) {
 			fprintf(stderr, "%s: Failed to write key to '%s': "
 			                "%s (%i)\n", argv0, keyfn,
 			                strerror(errno), errno);
@@ -763,6 +760,20 @@ main(int argc, char *argv[])
 		} else {
 			log_dbg_printf("No CA loaded.\n");
 		}
+		log_dbg_printf("SSL/TLS leaf certificates taken from:\n");
+		if (opts->leafcertdir) {
+			log_dbg_printf("- Matching PEM file in %s\n",
+			               opts->leafcertdir);
+		}
+		if (opts->defaultleafcert) {
+			log_dbg_printf("- Default leaf key\n");
+		} else if (opts->cakey) {
+			log_dbg_printf("- Generated on the fly\n");
+		} else if (opts->passthrough) {
+			log_dbg_printf("- Passthrough without decryption\n");
+		} else {
+			log_dbg_printf("- Connection drop\n");
+		}
 	}
 
 	/*
@@ -783,11 +794,11 @@ main(int argc, char *argv[])
 	}
 
 	/* Load certs before dropping privs but after cachemgr_preinit() */
-	if (opts->tgcrtdir) {
-		if (sys_dir_eachfile(opts->tgcrtdir,
-		                     main_loadtgcrt, opts) == -1) {
+	if (opts->leafcertdir) {
+		if (sys_dir_eachfile(opts->leafcertdir,
+		                     main_load_leafcert, opts) == -1) {
 			fprintf(stderr, "%s: failed to load certs from %s\n",
-			                argv0, opts->tgcrtdir);
+			                argv0, opts->leafcertdir);
 			exit(EXIT_FAILURE);
 		}
 	}
