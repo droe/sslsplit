@@ -14,12 +14,17 @@
     our old default leaf key size of 1024 bits (issue #248).
 -   Propagate the exit status of the privsep child process to the parent
     process and use 128+signal convention (issue #252).
--   No longer create /var/log/sslsplit and /var/run/sslsplit directories as
-    part of `make install` (issue #251).
 -   Fix unexpected connection termination for certificates without a subject
     common name.
 -   Fix TCP ports in packet mirroring mode (issue #247).
 -   Fix certificate loading with LibreSSL 2.9.2 and later.
+-   Fix MANDIR make variable semantics to GNU standards and introduce
+    BINDIR and SYSCONFDIR in order to allow better control over where files are
+    installed by the install target (pull request #255 by @arkamar and
+    follow-up work).  Also fixes the sample config file to be installed to
+    $(SYSCONFDIR)/sslsplit/ instead of $(PREFIX)/sslsplit/ by default.
+-   No longer create /var/log/sslsplit and /var/run/sslsplit directories as
+    part of `make install` (issue #251).
 -   Add XNU headers for macOS Mojave 10.14.1.
 -   Minor bugfixes and improvements.
 

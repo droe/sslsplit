@@ -19,7 +19,9 @@
 #
 # PREFIX        Prefix to install under (default /usr/local)
 # DESTDIR       Destination root under which prefix is located (default /)
-# MANDIR        Subdir of PREFIX that contains man section dirs
+# BINDIR        Path to user executables (default $(PREFIX)/bin)
+# MANDIR        Path to man section dirs (default $(PREFIX)/share/man)
+# SYSCONFDIR    Path to system configuration (default $(PREFIX)/etc)
 # INSTALLUID    UID to use for installed files if installing as root
 # INSTALLGID    GID to use for installed files if installing as root
 #
@@ -180,7 +182,9 @@ endif
 ### Variables you might need to override
 
 PREFIX?=	/usr/local
-MANDIR?=	share/man
+BINDIR?=	$(PREFIX)/bin
+SYSCONFDIR?=	$(PREFIX)/etc
+MANDIR?=	$(PREFIX)/share/man
 
 INSTALLUID?=	0
 INSTALLGID?=	0
@@ -507,7 +511,7 @@ clean:
 	$(RM) -f $(TARGET).conf
 	$(RM) -rf *.dSYM
 
-SUBSTITUTIONS:=	-e 's,/usr/local,$(PREFIX),' \
+SUBSTITUTIONS:=	-e 's,/usr/local/etc/sslsplit,$(SYSCONFDIR)/sslsplit,' \
 		-e 's,@@VERSION@@,$(VERSION),' \
 		-e 's,@@DATE@@,$(BUILD_DATE),'
 
@@ -521,26 +525,28 @@ $(TARGET).conf.5: $(TARGET).conf.5.in $(MKFS) FORCE
 	$(SED) $(SUBSTITUTIONS) <$< >$@
 
 install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
-	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
-	test -d $(DESTDIR)$(PREFIX)/$(TARGET) || \
-		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(TARGET)
-	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
-		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
-	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man5 || \
-		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
+	test -d $(DESTDIR)$(BINDIR) || $(MKDIR) -p $(DESTDIR)$(BINDIR)
+	test -d $(DESTDIR)$(SYSCONFDIR)/$(TARGET) || \
+		$(MKDIR) -p $(DESTDIR)$(SYSCONFDIR)/$(TARGET)
+	test -d $(DESTDIR)$(MANDIR)/man1 || \
+		$(MKDIR) -p $(DESTDIR)$(MANDIR)/man1
+	test -d $(DESTDIR)$(MANDIR)/man5 || \
+		$(MKDIR) -p $(DESTDIR)$(MANDIR)/man5
 	$(INSTALL) $(BINOWNERFLAGS) -m $(BINMODE) \
-		$(TARGET) $(DESTDIR)$(PREFIX)/bin/
+		$(TARGET) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) $(CNFOWNERFLAGS) -m $(CNFMODE) \
 		$(TARGET).conf \
-		$(DESTDIR)$(PREFIX)/$(TARGET)/$(TARGET).conf.sample
+		$(DESTDIR)$(SYSCONFDIR)/$(TARGET)/$(TARGET).conf.sample
 	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \
-		$(TARGET).1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
+		$(TARGET).1 $(DESTDIR)$(MANDIR)/man1/
 	$(INSTALL) $(MANOWNERFLAGS) -m $(MANMODE) \
-		$(TARGET).conf.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/
+		$(TARGET).conf.5 $(DESTDIR)$(MANDIR)/man5/
 
 deinstall:
-	$(RM) -f $(DESTDIR)$(PREFIX)/bin/$(TARGET) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/$(TARGET).1 \
-		$(DESTDIR)$(PREFIX)/$(MANDIR)/man5/$(TARGET).conf.5
+	$(RM) -f $(DESTDIR)$(BINDIR)/$(TARGET) \
+		$(DESTDIR)$(MANDIR)/man1/$(TARGET).1 \
+		$(DESTDIR)$(MANDIR)/man5/$(TARGET).conf.5
+	$(RM) -rf $(DESTDIR)$(SYSCONFDIR)/$(TARGET)/
 
 ifdef GITDIR
 lint:
