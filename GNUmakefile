@@ -523,7 +523,7 @@ $(TARGET).conf.5: $(TARGET).conf.5.in $(MKFS) FORCE
 install: $(TARGET) $(TARGET).conf $(TARGET).1 $(TARGET).conf.5
 	test -d $(DESTDIR)$(PREFIX)/bin || $(MKDIR) -p $(DESTDIR)$(PREFIX)/bin
 	test -d $(DESTDIR)$(PREFIX)/$(TARGET) || \
-		$(MKDIR) -p $(DESTDIR)$(PREFIX)/sslsplit
+		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(TARGET)
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1 || \
 		$(MKDIR) -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
 	test -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man5 || \
