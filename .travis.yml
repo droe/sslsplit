@@ -61,7 +61,7 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: linux
       compiler: clang
-      env: SSL=openssl-1.0.2p EVENT=libevent-2.0.22
+      env: SSL=openssl-1.0.2r EVENT=libevent-2.0.22
       cache:
         directories:
           - $HOME/opt
@@ -75,7 +75,7 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: linux
       compiler: clang
-      env: SSL=openssl-1.1.0i EVENT=libevent-2.1.8
+      env: SSL=openssl-1.1.0j EVENT=libevent-2.1.11
       cache:
         directories:
           - $HOME/opt
@@ -89,7 +89,7 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: linux
       compiler: clang
-      env: SSL=openssl-1.1.1 EVENT=libevent-2.1.8
+      env: SSL=openssl-1.1.1c EVENT=libevent-2.1.11
       cache:
         directories:
           - $HOME/opt
@@ -117,7 +117,7 @@ matrix:
         - export LD_LIBRARY_PATH="$HOME/opt/$SSL/lib":"$HOME/opt/$EVENT/lib"
     - os: linux
       compiler: clang
-      env: SSL=libressl-2.7.4 EVENT=libevent-2.1.8
+      env: SSL=libressl-2.7.4 EVENT=libevent-2.1.11
       cache:
         directories:
           - $HOME/opt
@@ -146,6 +146,6 @@ matrix:
       before_install:
         - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
         - test -d /usr/local/opt/libevent/lib || { rmdir /usr/local/opt/libevent; brew install libevent; }
-        - test -d /usr/local/opt/libnet/lib || { rmdir /usr/local/opt/libnet; brew install libnet; }
-        - test -d /usr/local/opt/libpcap/lib || { rmdir /usr/local/opt/libpcap; brew install libpcap; }
+        - test -d /usr/local/opt/libnet/lib   || { rmdir /usr/local/opt/libnet; brew install libnet; }
+        - test -d /usr/local/opt/libpcap/lib  || { rmdir /usr/local/opt/libpcap; brew install libpcap; }
         - test -d /usr/local/opt/check/lib    || { rmdir /usr/local/opt/check; brew install check; }
