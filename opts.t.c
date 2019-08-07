@@ -63,6 +63,7 @@ static char *argv07[] = {
 static char *argv08[] = {
 	"https", "127.0.0.1", "10443", "no_such_engine"
 };
+#ifndef TRAVIS
 static char *argv09[] = {
 	"https", "127.0.0.1", "10443", "127.0.0.2", "443",
 	"https", "::1", "10443", "::2", "443"
@@ -71,6 +72,7 @@ static char *argv10[] = {
 	"https", "127.0.0.1", "10443",
 	"https", "::1", "10443"
 };
+#endif /* !TRAVIS */
 static char *argv11[] = {
 	"autossl", "127.0.0.1", "10025"
 };
