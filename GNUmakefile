@@ -511,7 +511,7 @@ clean:
 	$(RM) -f $(TARGET).conf
 	$(RM) -rf *.dSYM
 
-SUBSTITUTIONS:=	-e 's,/usr/local/etc/sslsplit,$(SYSCONFDIR)/sslsplit,' \
+SUBSTITUTIONS:=	-e 's,/usr/local/etc/sslsplit,$(SYSCONFDIR)/$(TARGET),' \
 		-e 's,@@VERSION@@,$(VERSION),' \
 		-e 's,@@DATE@@,$(BUILD_DATE),'
 
