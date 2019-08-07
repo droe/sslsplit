@@ -36,6 +36,10 @@ libevent-2.1.8)
 	EVENTPATCH=Mk/patches/libevent-2.1.8.diff
 	EVENTOPTS="$EVENTOPTS --disable-libevent-regress --disable-samples"
 	;;
+libevent-2.1.11)
+	EVENTURL=https://github.com/libevent/libevent/releases/download/release-2.1.11-stable/libevent-2.1.11-stable.tar.gz
+	EVENTOPTS="$EVENTOPTS --disable-libevent-regress --disable-samples"
+	;;
 libevent-2.0.22)
 	EVENTURL=https://github.com/libevent/libevent/releases/download/release-2.0.22-stable/libevent-2.0.22-stable.tar.gz
 	;;
