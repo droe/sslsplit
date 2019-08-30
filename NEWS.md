@@ -25,7 +25,7 @@
     $(SYSCONFDIR)/sslsplit/ instead of $(PREFIX)/sslsplit/ by default.
 -   No longer create /var/log/sslsplit and /var/run/sslsplit directories as
     part of `make install` (issue #251).
--   Add XNU headers for macOS Mojave 10.14.1.
+-   Add XNU headers for macOS Mojave 10.14.1 to 10.14.3.
 -   Minor bugfixes and improvements.
 
 

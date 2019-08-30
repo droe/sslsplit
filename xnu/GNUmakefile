@@ -80,8 +80,14 @@ XNU_RELS+=	4570.61.1	# 10.13.5
 XNU_RELS+=	4570.71.2	# 10.13.6
 
 # macOS Mojave
-#XNU_RELS+=	4903.201.2	# 10.14
+#XNU_RELS+=	4903.201.2	# 10.14         # "coming soon!"
 XNU_RELS+=	4903.221.2	# 10.14.1
+XNU_RELS+=	4903.231.4	# 10.14.2
+XNU_RELS+=	4903.241.1	# 10.14.3
+#XNU_RELS+=	4903.251.3	# 10.14.4       # "coming soon!"
+#XNU_RELS+=	4903.261.4	# 10.14.5       # "coming soon!"
+
+# macOS Catalina
 
 # defaults
 XNURL?=		https://opensource.apple.com/source/xnu/
