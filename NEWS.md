@@ -1,4 +1,9 @@
 
+### SSLsplit develop
+
+-   Minor bugfixes and improvements.
+
+
 ### SSLsplit 0.5.5 2019-08-30
 
 -   Add -A option for specifying a default leaf certificate instead of
