@@ -988,8 +988,8 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 	if (!crt)
 		return NULL;
 
-	notBeforeTarget = X509_get_notBefore(origcrt);
-	notAfterTarget = X509_get_notAfter(origcrt);
+	notBeforeTarget = X509_get_notBefore(crt);
+	notAfterTarget = X509_get_notAfter(crt);
 
 	ASN1_TIME_diff(&pday_before, &psec_before, notBeforeSource, notBeforeTarget);
 	ASN1_TIME_diff(&pday_after, &psec_after, notAfterSource, notAfterTarget);
