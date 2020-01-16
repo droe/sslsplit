@@ -998,8 +998,8 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 	    !X509_set_subject_name(crt, subject) ||
 	    !X509_set_issuer_name(crt, issuer) ||
 	    ssl_x509_serial_copyrand(crt, origcrt) == -1 ||
-	    !X509_gmtime_adj(notBeforeTarget, pday_before*60*60*24 + psec_before) ||
-	    !X509_gmtime_adj(notAfterTarget, pday_after*60*60*24 + psec_after) ||
+	    !X509_gmtime_adj(notBeforeTarget, (long) pday_before*60*60*24 + psec_before) ||
+	    !X509_gmtime_adj(notAfterTarget, (long) pday_after*60*60*24 + psec_after) ||
 	    !X509_set_pubkey(crt, key))
 		goto errout;
 
