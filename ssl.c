@@ -967,26 +967,39 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
                const char *extraname, const char *crlurl)
 {
 	X509_NAME *subject, *issuer;
+	ASN1_TIME *notBeforeSource, *notAfterSource;
+	ASN1_TIME *notBeforeTarget, *notAfterTarget;
 	GENERAL_NAMES *names;
 	GENERAL_NAME *gn;
 	X509 *crt;
 	int rv;
+	int pday_before, psec_before;
+	int pday_after, psec_after;
 
 	subject = X509_get_subject_name(origcrt);
 	issuer = X509_get_subject_name(cacrt);
-	if (!subject || !issuer)
+	notBeforeSource = X509_get_notBefore(origcrt);
+	notAfterSource = X509_get_notAfter(origcrt);
+	if (!subject || !issuer || !notBeforeSource || !notAfterSource)
 		return NULL;
 
 	crt = X509_new();
+
 	if (!crt)
 		return NULL;
+
+	notBeforeTarget = X509_get_notBefore(origcrt);
+	notAfterTarget = X509_get_notAfter(origcrt);
+
+	ASN1_TIME_diff(&pday_before, &psec_before, notBeforeSource, notBeforeTarget);
+	ASN1_TIME_diff(&pday_after, &psec_after, notAfterSource, notAfterTarget);
 
 	if (!X509_set_version(crt, 0x02) ||
 	    !X509_set_subject_name(crt, subject) ||
 	    !X509_set_issuer_name(crt, issuer) ||
 	    ssl_x509_serial_copyrand(crt, origcrt) == -1 ||
-	    !X509_gmtime_adj(X509_get_notBefore(crt), (long)-60*60*24) ||
-	    !X509_gmtime_adj(X509_get_notAfter(crt), (long)60*60*24*364) ||
+	    !X509_gmtime_adj(notBeforeTarget, pday_before*60*60*24 + psec_before) ||
+	    !X509_gmtime_adj(notAfterTarget, pday_after*60*60*24 + psec_after) ||
 	    !X509_set_pubkey(crt, key))
 		goto errout;
 
