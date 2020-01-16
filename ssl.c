@@ -991,8 +991,11 @@ ssl_x509_forge(X509 *cacrt, EVP_PKEY *cakey, X509 *origcrt, EVP_PKEY *key,
 	notBeforeTarget = X509_get_notBefore(crt);
 	notAfterTarget = X509_get_notAfter(crt);
 
-	ASN1_TIME_diff(&pday_before, &psec_before, notBeforeSource, notBeforeTarget);
-	ASN1_TIME_diff(&pday_after, &psec_after, notAfterSource, notAfterTarget);
+	X509_gmtime_adj(notBeforeTarget, 0);
+	X509_gmtime_adj(notAfterTarget, 0);
+
+	ASN1_TIME_diff(&pday_before, &psec_before, notBeforeTarget, notBeforeSource);
+	ASN1_TIME_diff(&pday_after, &psec_after, notAfterTarget, notAfterSource);
 
 	if (!X509_set_version(crt, 0x02) ||
 	    !X509_set_subject_name(crt, subject) ||
