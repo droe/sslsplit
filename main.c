@@ -696,7 +696,7 @@ main(int argc, char *argv[])
 			               "certs.\n", DFLT_LEAFKEY_RSABITS);
 		}
 	}
-	if (opts->certgendir) {
+	if (opts->certgendir && opts->leafkey) {
 		char *keyid, *keyfn;
 		int prv;
 		FILE *keyf;
