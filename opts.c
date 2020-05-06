@@ -162,6 +162,9 @@ opts_free(opts_t *opts)
 	if (opts->connectlog) {
 		free(opts->connectlog);
 	}
+	if (opts->conffile) {
+		free(opts->conffile);
+	}
 	if (opts->contentlog) {
 		free(opts->contentlog);
 	}
@@ -1644,9 +1647,8 @@ opts_set_option(opts_t *opts, const char *argv0, const char *optarg,
 		retval = set_option(opts, argv0, name, value, natengine, 0);
 	}
 
-	if (line) {
+	if (line)
 		free(line);
-	}
 	return retval;
 }
 
@@ -1694,13 +1696,14 @@ load_conffile(opts_t *opts, const char *argv0, char **natengine)
 		if (retval == -1) {
 			goto leave;
 		}
+		free(line);
+		line = NULL;
 	}
 
 leave:
 	fclose(f);
-	if (line) {
+	if (line)
 		free(line);
-	}
 	return retval;
 }
 

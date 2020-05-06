@@ -1301,7 +1301,10 @@ bufferevent_free_and_close_fd(struct bufferevent *bev, pxy_conn_ctx_t *ctx)
 		}
 		SSL_free(ssl);
 	}
-	evutil_closesocket(fd);
+	/* bufferevent_getfd() returns -1 if no file descriptor is associated
+	 * with the bufferevent */
+	if (fd >= 0)
+		evutil_closesocket(fd);
 }
 
 /*

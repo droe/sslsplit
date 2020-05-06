@@ -911,6 +911,8 @@ out_log_failed:
 out_parent:
 	opts_free(opts);
 	ssl_fini();
+	if (natengine)
+		free(natengine);
 	return rv;
 }
 
