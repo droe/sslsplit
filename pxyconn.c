@@ -718,6 +718,11 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
 	}
 #endif /* HAVE_TLSV12 */
+#ifdef HAVE_TLSV13
+	if (ctx->opts->no_tls13) {
+		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_3);
+	}
+#endif /* HAVE_TLSV13 */
 
 #ifdef SSL_OP_NO_COMPRESSION
 	if (!ctx->opts->sslcomp) {
@@ -735,7 +740,7 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 	 * compile-time defaults.  Security levels above 0 will reject weak
 	 * algorithms and key sizes both locally at load time and when they are
 	 * encountered from peers we receive connections from or connect to.
-	 * Specifically, our prevous default RSA leaf key size of 1024 bits
+	 * Specifically, our previous default RSA leaf key size of 1024 bits
 	 * was rejected by a security level of 2 or higher (issue #248).
 	 */
 	SSL_CTX_set_security_level(sslctx, 0);
