@@ -154,13 +154,14 @@ typedef struct __attribute__((packed)) {
 	}
 #define CHKSUM_ADD_RANGE(C,B,S) \
 	{ \
-		uint16_t *p = (uint16_t *)(B); \
+		char *p = (char *)(B); \
 		size_t words = (S) >> 1; \
 		while (words--) { \
-			(C) += *p++; \
+			(C) += *(uint16_t *)p; \
+			p += 2; \
 		} \
 		if ((S) & 1) { \
-			(C) += htons(*((char *)p) << 8); \
+			(C) += htons(*p << 8); \
 		} \
 	}
 #define CHKSUM_ADD_UINT32(C,U) \
