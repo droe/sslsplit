@@ -142,6 +142,9 @@ opts_free(opts_t *opts)
 	if (opts->ciphers) {
 		free(opts->ciphers);
 	}
+	if (opts->ciphersuites) {
+		free(opts->ciphersuites);
+	}
 #ifndef OPENSSL_NO_ENGINE
 	if (opts->openssl_engine) {
 		free(opts->openssl_engine);
@@ -838,6 +841,19 @@ opts_set_ciphers(opts_t *opts, const char *argv0, const char *optarg)
 #endif /* DEBUG_OPTS */
 }
 
+void
+opts_set_ciphersuites(opts_t *opts, const char *argv0, const char *optarg)
+{
+	if (opts->ciphersuites)
+		free(opts->ciphersuites);
+	opts->ciphersuites = strdup(optarg);
+	if (!opts->ciphersuites)
+		oom_die(argv0);
+#ifdef DEBUG_OPTS
+	log_dbg_printf("CipherSuites: %s\n", opts->ciphersuites);
+#endif /* DEBUG_OPTS */
+}
+
 #ifndef OPENSSL_NO_ENGINE
 void
 opts_set_openssl_engine(opts_t *opts, const char *argv0, const char *optarg)
@@ -1458,6 +1474,8 @@ set_option(opts_t *opts, const char *argv0,
 		opts_disable_proto(opts, argv0, value);
 	} else if (!strcmp(name, "Ciphers")) {
 		opts_set_ciphers(opts, argv0, value);
+	} else if (!strcmp(name, "CipherSuites")) {
+		opts_set_ciphersuites(opts, argv0, value);
 #ifndef OPENSSL_NO_ENGINE
 	} else if (!strcmp(name, "OpenSSLEngine")) {
 		opts_set_openssl_engine(opts, argv0, value);

@@ -88,17 +88,17 @@ Deny all OCSP requests on all proxyspecs. Equivalent to -O command line option.
 .TP
 \fBPassthrough BOOL\fR
 Passthrough SSL connections if they cannot be split because of client cert auth or no matching cert and no CA. Equivalent to -P command line option.
-.br 
+.br
 Default: drop
 .TP
 \fBDHGroupParams STRING\fR
 Use DH group params from pemfile. Equivalent to -g command line option.
-.br 
+.br
 Default: keyfiles or auto
 .TP
 \fBECDHCurve STRING\fR
 Use ECDH named curve. Equivalent to -G command line option.
-.br 
+.br
 Default: prime256v1
 .TP
 \fBSSLCompression BOOL\fR
@@ -106,19 +106,25 @@ Enable/disable SSL/TLS compression on all connections. Equivalent to -Z command 
 .TP
 \fBForceSSLProto STRING\fR
 Force SSL/TLS protocol version only. Equivalent to -r command line option.
-.br 
+.br
 Default: all
 .TP
 \fBDisableSSLProto STRING\fR
 Disable SSL/TLS protocol version. Equivalent to -R command line option.
-.br 
+.br
 Default: none
 .TP
 \fBCiphers STRING\fR
-Use the given OpenSSL cipher suite spec. Equivalent to -s command line option.
-.br 
+Use the given OpenSSL ciphers spec. Equivalent to -s command line option.
+.br
 Default: ALL:-aNULL
-.TP 
+.TP
+\fBCipherSuites STRING\fR
+Use the given OpenSSL ciphersuites spec. The ciphersuites spec is for TLS 1.3.
+Equivalent to -U command line option.
+.br
+Default: TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256
+.TP
 \fBOpenSSLEngine STRING\fR
 The OpenSSL engine to activate, either the ID or the full path to the shared
 library implementing the engine.  If an ID is given, the engine needs to be
@@ -131,7 +137,7 @@ Specify default NAT engine to use. Equivalent to -e command line option.
 .TP 
 \fBUser STRING\fR
 Drop privileges to user. Equivalent to -u command line option.
-.br 
+.br
 Default: nobody, if run as root
 .TP
 \fBGroup STRING\fR

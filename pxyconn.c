@@ -731,6 +731,9 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 #endif /* SSL_OP_NO_COMPRESSION */
 
 	SSL_CTX_set_cipher_list(sslctx, ctx->opts->ciphers);
+#ifdef HAVE_TLSV13
+	SSL_CTX_set_ciphersuites(sslctx, ctx->opts->ciphersuites);
+#endif /* HAVE_TLSV13 */
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 	/*

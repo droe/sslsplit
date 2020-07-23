@@ -83,10 +83,16 @@ CAKey /usr/local/etc/sslsplit/ca.key
 # (default: none)
 #DisableSSLProto tls10
 
-# Use the given OpenSSL cipher suite spec.
+# Use the given OpenSSL ciphers spec.
 # Equivalent to -s command line option.
 # (default: ALL:-aNULL)
 #Ciphers MEDIUM:HIGH
+
+# Use the given OpenSSL ciphersuites spec.
+# The ciphersuites spec is for TLS 1.3.
+# Equivalent to -U command line option.
+# (default: TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256)
+#CipherSuites TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256
 
 # The OpenSSL engine to activate, either the ID or the full path to the shared
 # library implementing the engine. If an ID is given, the engine needs to be

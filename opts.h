@@ -90,6 +90,7 @@ typedef struct opts {
 	char *openssl_engine;
 #endif /* !OPENSSL_NO_ENGINE */
 	char *ciphers;
+	char *ciphersuites;
 	char *certgendir;
 	char *leafcertdir;
 	char *leafcrlurl;
@@ -170,6 +171,7 @@ void opts_unset_sslcomp(opts_t *) NONNULL(1);
 void opts_force_proto(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_disable_proto(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_ciphers(opts_t *, const char *, const char *) NONNULL(1,2,3);
+void opts_set_ciphersuites(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_openssl_engine(opts_t *, const char *, const char *)
      NONNULL(1,2,3);
 void opts_set_user(opts_t *, const char *, const char *) NONNULL(1,2,3);

@@ -183,7 +183,9 @@ main_usage(void)
 #endif /* !SSL_OP_NO_COMPRESSION */
 "  -r proto    only support one of " SSL_PROTO_SUPPORT_S "(default: all)\n"
 "  -R proto    disable one of " SSL_PROTO_SUPPORT_S "(default: none)\n"
-"  -s ciphers  use the given OpenSSL cipher suite spec (default: " DFLT_CIPHERS ")\n"
+"  -s ciphers  use the given OpenSSL ciphers spec (default: " DFLT_CIPHERS ")\n"
+"  -U ciphersuites use the given OpenSSL ciphersuites spec with TLS 1.3\n"
+"  (default: " DFLT_CIPHERSUITES ")\n"
 #ifndef OPENSSL_NO_ENGINE
 "  -x engine   load OpenSSL engine with the given identifier\n"
 #define OPT_x "x:"
@@ -331,7 +333,7 @@ main(int argc, char *argv[])
 
 	while ((ch = getopt(argc, argv,
 	                    OPT_g OPT_G OPT_Z OPT_i OPT_x OPT_T OPT_I
-	                    "k:c:C:K:t:A:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
+	                    "k:c:C:K:t:A:OPa:b:s:U:r:R:e:Eu:m:j:p:l:L:S:F:M:"
 	                    "dDVhW:w:q:f:o:X:Y:y:")) != -1) {
 		switch (ch) {
 			case 'f':
@@ -402,6 +404,9 @@ main(int argc, char *argv[])
 #endif /* SSL_OP_NO_COMPRESSION */
 			case 's':
 				opts_set_ciphers(opts, argv0, optarg);
+				break;
+			case 'U':
+				opts_set_ciphersuites(opts, argv0, optarg);
 				break;
 			case 'r':
 				opts_force_proto(opts, argv0, optarg);
@@ -605,6 +610,11 @@ main(int argc, char *argv[])
 	if (!opts->ciphers) {
 		opts->ciphers = strdup(DFLT_CIPHERS);
 		if (!opts->ciphers)
+			oom_die(argv0);
+	}
+	if (!opts->ciphersuites) {
+		opts->ciphersuites = strdup(DFLT_CIPHERSUITES);
+		if (!opts->ciphersuites)
 			oom_die(argv0);
 	}
 	if (!opts->dropuser && !geteuid() && !getuid() &&
