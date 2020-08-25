@@ -220,6 +220,13 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 			log_dbg_printf("Reopened log files\n");
 		}
 		break;
+#ifdef WITH_CONTENT_FILTER
+	case SIGUSR2:
+		if (opts_load_content_filter(ctx->opts) == -1) {
+			log_err_printf("Warning: broken content filter cfg\n");
+		}
+		break;
+#endif /* WITH_CONTENT_FILTER */
 	case SIGPIPE:
 		log_err_printf("Warning: Received SIGPIPE; ignoring.\n");
 		break;

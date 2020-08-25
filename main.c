@@ -60,6 +60,9 @@
 #include <libnet.h>
 #include <pcap.h>
 #endif /* !WITHOUT_MIRROR */
+#ifdef WITH_CONTENT_FILTER
+#include <json-c/json.h>
+#endif /* WITH_CONTENT_FILTER */
 
 #if __APPLE__
 #undef daemon
@@ -133,6 +136,10 @@ main_version(void)
 		lpv += 16;
 	fprintf(stderr, "rtlinked against libpcap %s\n", lpv);
 #endif /* !WITHOUT_MIRROR */
+#ifdef WITH_CONTENT_FILTER
+	fprintf(stderr, "compiled against libjson-c %s\n", JSON_C_VERSION);
+	fprintf(stderr, "rtlinked against libjson-c %s\n", json_c_version());
+#endif /* WITH_CONTENT_FILTER */
 	fprintf(stderr, "%d CPU cores detected\n", sys_get_cpu_cores());
 }
 
@@ -232,6 +239,12 @@ main_usage(void)
 #define OPT_I 
 #define OPT_T 
 #endif /* WITHOUT_MIRROR */
+#ifdef WITH_CONTENT_FILTER
+"  -J conffile use conffile to load content filter configuration from\n"
+#define OPT_J "J:"
+#else /* !WITH_CONTENT_FILTER */
+#define OPT_J
+#endif /* WITH_CONTENT_FILTER */
 "  -M logfile  log master keys to logfile in SSLKEYLOGFILE format\n"
 #ifdef HAVE_LOCAL_PROCINFO
 "  -i          look up local process owning each connection for logging\n"
@@ -330,7 +343,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv,
-	                    OPT_g OPT_G OPT_Z OPT_i OPT_x OPT_T OPT_I
+	                    OPT_g OPT_G OPT_Z OPT_i OPT_x OPT_T OPT_I OPT_J
 	                    "k:c:C:K:t:A:OPa:b:s:r:R:e:Eu:m:j:p:l:L:S:F:M:"
 	                    "dDVhW:w:q:f:o:X:Y:y:")) != -1) {
 		switch (ch) {
@@ -466,6 +479,11 @@ main(int argc, char *argv[])
 				opts_set_mirrortarget(opts, argv0, optarg);
 				break;
 #endif /* !WITHOUT_MIRROR */
+#ifdef WITH_CONTENT_FILTER
+			case 'J':
+				opts_set_ctf_cfg(opts, optarg);
+				break;
+#endif /* WITH_CONTENT_FILTER */
 			case 'W':
 				opts_set_certgendir_writeall(opts, argv0, optarg);
 				break;

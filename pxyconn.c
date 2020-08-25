@@ -59,6 +59,21 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+#ifdef WITH_CONTENT_FILTER
+#include "build.h"
+/*
+ * Size of HTTP header allocated memory.
+ */
+#define HEADER_LEN 8192
+
+#define RESPONSE_HEADER_FMT     \
+	"HTTP/1.0 200 OK\r\n"         \
+	"Content-Type: text/html\r\n" \
+	"Content-Length: %zu\r\n"     \
+	"Connection: close\r\n"       \
+	"Via: %s %s\r\n"              \
+	"\r\n"
+#endif /* WITH_CONTENT_FILTER */
 
 /*
  * libevent compatibility
@@ -158,6 +173,9 @@ typedef struct pxy_conn_ctx {
 	char *http_uri;
 	char *http_host;
 	char *http_content_type;
+#ifdef WITH_CONTENT_FILTER
+	char *http_url;
+#endif /* WITH_CONTENT_FILTER */
 
 	/* log strings from HTTP response */
 	char *http_status_code;
@@ -274,6 +292,11 @@ pxy_conn_ctx_free(pxy_conn_ctx_t *ctx, int by_requestor)
 	if (ctx->http_content_type) {
 		free(ctx->http_content_type);
 	}
+#ifdef WITH_CONTENT_FILTER
+	if (ctx->http_url) {
+		free(ctx->http_url);
+	}
+#endif /* WITH_CONTENT_FILTER */
 	if (ctx->http_status_code) {
 		free(ctx->http_status_code);
 	}
@@ -1438,6 +1461,15 @@ pxy_http_reqhdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 			}
 		}
 	}
+#if WITH_CONTENT_FILTER
+	if (!ctx->http_url && ctx->http_host && ctx->http_uri) {
+		if (asprintf(&ctx->http_url, "%s%s",
+					ctx->http_host, ctx->http_uri) < 0) {
+			ctx->enomem = 1;
+			return NULL;
+		}
+	}
+#endif /* WITH_CONTENT_FILTER */
 
 	return (char*)line;
 }
@@ -1453,6 +1485,22 @@ static char *
 pxy_http_resphdr_filter_line(const char *line, pxy_conn_ctx_t *ctx)
 {
 	/* parse information for connect log */
+#ifdef WITH_CONTENT_FILTER
+	if (!ctx->http_content_type) {
+		if (!strncasecmp(line, "Content-Type:", 13)) {
+			char *cs = NULL;
+			ctx->http_content_type = strdup(util_skipws(line + 13));
+			if (!ctx->http_content_type) {
+				ctx->enomem = 1;
+				return NULL;
+			}
+			/* leave only content-type data, remove charset for example. */
+			if ((cs = strchr(ctx->http_content_type, ';')) != NULL) {
+				*cs = '\0';
+			}
+		}
+	}
+#endif /* WITH_CONTENT_FILTER */
 	if (!ctx->http_status_code) {
 		/* first line */
 		char *space1, *space2;
@@ -1575,6 +1623,345 @@ pxy_ocsp_is_valid_uri(const char *uri, pxy_conn_ctx_t *ctx)
 	free(buf_b64);
 	return ret;
 }
+
+#ifdef WITH_CONTENT_FILTER
+char *
+pxy_build_response(const char *tmpl, const char *response)
+{
+	char *resp;
+	size_t tmpl_len, header_len, content_len;
+	const char header[] = RESPONSE_HEADER_FMT;
+	char *header_fmt;
+
+	tmpl_len = strlen(tmpl);
+	header_len = strlen(header);
+	header_fmt = calloc(1, header_len + tmpl_len + 1);
+	if (!header_fmt) {
+		return NULL;
+	}
+	content_len = tmpl_len + strlen(response) - 2; /* -2 for "%s" */
+	memcpy(header_fmt, header, header_len);
+	memcpy(header_fmt + header_len, tmpl, tmpl_len);
+
+	if (asprintf(&resp, header_fmt, content_len, PKGLABEL,
+				build_version, response) == -1) {
+		resp = NULL;
+	}
+
+	free(header_fmt);
+
+	return resp;
+}
+
+/*
+ * Called after a request header was completely read.
+ * If the request uri or|and method is forbidden,
+ * deny the request by sending a
+ * text message and close the connection to the server.
+ */
+static int
+pxy_check_req_forbidden(pxy_conn_ctx_t *ctx)
+{
+	typedef enum {
+		MATCH_NONE,
+		MATCH_PASS,
+		MATCH_DROP
+	} match_t;
+
+	struct evbuffer *inbuf, *outbuf;
+	char *resp;
+	char *deny_msg = NULL;
+	ctfilter_t *ctf = ctx->opts->ctf;
+
+	/* content filter is disabled */
+	if (!ctf) {
+		return 0;
+	}
+
+	for (size_t n = 0; n < ctf->rules.count; n++) {
+		ct_rule_t *rule = &(*ctf->rules.data)[n];
+		char **urls = rule->urls;
+		char **methods = rule->methods;
+		char **content = rule->content;
+		match_t url_match, method_match;
+
+		url_match = method_match = MATCH_NONE;
+
+		while (*urls) {
+			if ((*urls)[strlen(*urls) - 1] == '*') {
+				if (!strncasecmp(ctx->http_url, *urls, strlen(*urls) - 1)) {
+					if (rule->action) {
+						url_match = MATCH_PASS;
+					} else {
+						url_match = MATCH_DROP;
+					}
+					break;
+				}
+			} else {
+				if (!strcasecmp(ctx->http_url, *urls)) {
+					if (rule->action) {
+						url_match = MATCH_PASS;
+					} else {
+						url_match = MATCH_DROP;
+					}
+					break;
+				}
+			}
+			urls++;
+		}
+
+		while (*methods) {
+			if (!strcasecmp(ctx->http_method, *methods)) {
+				if (rule->action) {
+					method_match = MATCH_PASS;
+				} else {
+					method_match = MATCH_DROP;
+				}
+				break;
+			}
+			methods++;
+		}
+
+		if (*content && !rule->action) {
+			/* This rule will be checked in response action */
+			continue;
+		}
+
+		if (url_match == MATCH_PASS && method_match == MATCH_PASS) {
+			return 0;
+		} else if (url_match == MATCH_PASS && !*rule->methods) {
+			return 0;
+		} else if (method_match == MATCH_PASS && !*rule->urls) {
+			return 0;
+		} else if (rule->action && !*rule->methods && !*rule->urls) {
+			return 0;
+		} else if (url_match == MATCH_DROP && method_match == MATCH_DROP) {
+			if (asprintf(&deny_msg,
+						"req:\"%s\" is blocked by \"url and method\" [rule #%lu]",
+						ctx->http_url, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		} else if (method_match == MATCH_DROP && !*rule->urls) {
+			if (asprintf(&deny_msg,
+						"req:\"%s\" is blocked by \"method:%s\" [rule #%lu]",
+						ctx->http_url, *methods, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		} else if (url_match == MATCH_DROP && !*rule->methods) {
+			if (asprintf(&deny_msg,
+						"req:\"%s\" is blocked by \"url\" [rule #%lu]",
+						ctx->http_url, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		} else if (!rule->action && !*rule->methods && !*rule->urls) {
+			if (asprintf(&deny_msg,
+						"req:\"%s\" is blocked by [rule #%lu]",
+						ctx->http_url, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		}
+	}
+
+	if (!ctf->default_action && !deny_msg) {
+		if (asprintf(&deny_msg,
+					"req:\"%s\" is blocked by default_action", ctx->http_url) == -1) {
+			return -1;
+		}
+		goto deny;
+	}
+
+	return 0;
+
+deny:
+	/* build response: header + content template + blocked request */
+	resp = pxy_build_response(ctf->http_deny_tmpl, deny_msg);
+
+	inbuf = bufferevent_get_input(ctx->src.bev);
+	outbuf = bufferevent_get_output(ctx->src.bev);
+
+	if (evbuffer_get_length(inbuf) > 0) {
+		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
+	}
+
+	if (WANT_CONNECT_LOG(ctx)) {
+		pxy_log_connect_http(ctx);
+	}
+
+	bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
+	ctx->dst.bev = NULL;
+	ctx->dst.closed = 1;
+	if (resp) {
+		evbuffer_add_printf(outbuf, "%s", resp);
+	} else {
+		log_err_printf("Warning: cannot build response\n");
+	}
+
+	free(resp);
+	free(deny_msg);
+
+	return 1;
+}
+
+/*
+ * Called after a response header was completely read.
+ * If the content-type is forbidden,
+ * deny the request by sending a
+ * text message and close the connection to the server.
+ */
+static int
+pxy_check_resp_forbidden(pxy_conn_ctx_t *ctx)
+{
+	typedef enum {
+		MATCH_NONE,
+		MATCH_PASS,
+		MATCH_DROP
+	} match_t;
+
+	struct evbuffer *inbuf, *outbuf;
+	char *resp;
+	ctfilter_t *ctf = ctx->opts->ctf;
+	char *deny_msg = NULL;
+
+	/* content filter is disabled */
+	if (!ctf) {
+		return 0;
+	}
+
+	for (size_t n = 0; n < ctf->rules.count; n++) {
+		ct_rule_t *rule = &(*ctf->rules.data)[n];
+		char **urls = rule->urls;
+		char **content = rule->content;
+		match_t url_match, content_match;
+
+		url_match = content_match = MATCH_NONE;
+
+		while (*urls) {
+			if ((*urls)[strlen(*urls) - 1] == '*') {
+				if (!strncasecmp(ctx->http_url, *urls, strlen(*urls) - 1)) {
+					if (rule->action) {
+						url_match = MATCH_PASS;
+					} else {
+						url_match = MATCH_DROP;
+					}
+					break;
+				}
+			} else {
+				if (!strcasecmp(ctx->http_url, *urls)) {
+					if (rule->action) {
+						url_match = MATCH_PASS;
+					} else {
+						url_match = MATCH_DROP;
+					}
+					break;
+				}
+			}
+			urls++;
+		}
+
+		while (*content) {
+			if ((*content)[strlen(*content) - 1] == '*') {
+				if (!strncasecmp(ctx->http_content_type, *content, strlen(*content) - 1)) {
+					if (rule->action) {
+						content_match = MATCH_PASS;
+					} else {
+						content_match = MATCH_DROP;
+					}
+					break;
+				}
+			} else {
+				if (!strcasecmp(ctx->http_content_type, *content)) {
+					if (rule->action) {
+						content_match = MATCH_PASS;
+					} else {
+						content_match = MATCH_DROP;
+					}
+					break;
+				}
+			}
+			content++;
+		}
+
+		if (url_match == MATCH_PASS && content_match == MATCH_PASS) {
+			return 0;
+		} else if (url_match == MATCH_PASS && !*rule->content) {
+			return 0;
+		} else if (content_match == MATCH_PASS && !*rule->urls) {
+			return 0;
+		} else if (rule->action && !*rule->content && !*rule->urls) {
+			return 0;
+		} else if (url_match == MATCH_DROP && content_match == MATCH_DROP) {
+			if (asprintf(&deny_msg,
+						"resp:\"%s\" is blocked by \"url and content\" [rule #%lu]",
+						ctx->http_url, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		} else if (url_match == MATCH_DROP && !*rule->content) {
+			if (asprintf(&deny_msg,
+						"resp:\"%s\" is blocked by \"url\" [rule #%lu]",
+						ctx->http_url, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		} else if (content_match == MATCH_DROP && !*rule->urls) {
+			if (asprintf(&deny_msg,
+						"resp:\"%s\" is blocked by \"content:%s\" [rule #%lu]",
+						ctx->http_url, *content, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		} else if (!rule->action && !*rule->content && !*rule->urls) {
+			if (asprintf(&deny_msg,
+						"resp:\"%s\" is blocked by [rule #%lu]",
+						ctx->http_url, rule->id) == -1) {
+				return -1;
+			}
+			goto deny;
+		}
+	}
+
+	if (!ctf->default_action && !deny_msg) {
+		if (asprintf(&deny_msg,
+					"resp:\"%s [%s]\" is blocked by default_action",
+					ctx->http_url, ctx->http_content_type) == -1) {
+			return -1;
+		}
+		goto deny;
+	}
+
+	return 0;
+
+deny:
+	/* build response: header + content template + blocked request */
+	resp = pxy_build_response(ctf->http_deny_tmpl, deny_msg);
+
+	inbuf = bufferevent_get_input(ctx->src.bev);
+	outbuf = bufferevent_get_output(ctx->src.bev);
+
+	if (evbuffer_get_length(inbuf) > 0) {
+		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
+	}
+
+	bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
+	ctx->dst.bev = NULL;
+	ctx->dst.closed = 1;
+
+	if (resp) {
+		evbuffer_add_printf(outbuf, "%s", resp);
+	} else {
+		log_err_printf("Warning: cannot build response\n");
+	}
+
+	free(resp);
+	free(deny_msg);
+
+	return 1;
+}
+#endif /* WITH_CONTENT_FILTER */
 
 /*
  * Called after a request header was completely read.
@@ -1779,6 +2166,16 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	    && !ctx->passthrough) {
 		logbuf_t *lb = NULL, *tail = NULL;
 		char *line;
+#ifdef WITH_CONTENT_FILTER
+		char  *header_it, *header;
+		size_t header_len = 0, header_mem = HEADER_LEN;
+
+		if ((header = calloc(1, HEADER_LEN)) == NULL) {
+			ctx->enomem = 1;
+			goto skip_response;
+		}
+		header_it = header;
+#endif /* WITH_CONTENT_FILTER */
 		while ((line = evbuffer_readln(inbuf, NULL,
 		                               EVBUFFER_EOL_CRLF))) {
 			char *replace;
@@ -1796,9 +2193,43 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 			replace = pxy_http_reqhdr_filter_line(line, ctx);
 			if (replace == line) {
+#ifdef WITH_CONTENT_FILTER
+				size_t shift = strlen(line) + 2;
+				header_len += shift;
+				if (header_len > header_mem) {
+					char *tmp = realloc(header, header_len * 2);
+					if (!tmp) {
+						free(header);
+						ctx->enomem = 1;
+						goto skip_response;
+					}
+					header_mem = header_len * 2;
+					header = tmp;
+				}
+				sprintf(header_it, "%s\r\n", line);
+				header_it = header + header_len;
+#else /* !WITH_CONTENT_FILTER */
 				evbuffer_add_printf(outbuf, "%s\r\n", line);
+#endif /* WITH_CONTENT_FILTER */
 			} else if (replace) {
+#ifdef WITH_CONTENT_FILTER
+				size_t shift = strlen(replace) + 2;
+				header_len += shift;
+				if (header_len > header_mem) {
+					char *tmp = realloc(header, header_len * 2);
+					if (!tmp) {
+						free(header);
+						ctx->enomem = 1;
+						goto skip_response;
+					}
+					header_mem = header_len * 2;
+					header = tmp;
+				}
+				sprintf(header_it, "%s\r\n", replace);
+				header_it = header + header_len;
+#else /* !WITH_CONTENT_FILTER */
 				evbuffer_add_printf(outbuf, "%s\r\n", replace);
+#endif /* WITH_CONTENT_FILTER */
 				free(replace);
 			}
 			free(line);
@@ -1807,6 +2238,20 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 				if (ctx->opts->deny_ocsp) {
 					pxy_ocsp_deny(ctx);
 				}
+#ifdef WITH_CONTENT_FILTER
+				int req_rc = pxy_check_req_forbidden(ctx);
+				if (req_rc == 1) {
+					return;
+				} else if (req_rc == -1) {
+					free(header);
+					ctx->enomem = 1;
+					goto skip_response;
+				} else if (req_rc == 0) {
+					evbuffer_add_printf(outbuf, "%s", header);
+				}
+
+				free(header);
+#endif /* WITH_CONTENT_FILTER */
 				break;
 			}
 		}
@@ -1826,6 +2271,16 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	    && !ctx->passthrough) {
 		logbuf_t *lb = NULL, *tail = NULL;
 		char *line;
+#ifdef WITH_CONTENT_FILTER
+		char  *header_it, *header;
+		size_t header_len = 0, header_mem = HEADER_LEN;
+
+		if ((header = calloc(1, HEADER_LEN)) == NULL) {
+			ctx->enomem = 1;
+			goto skip_response;
+		}
+		header_it = header;
+#endif /* WITH_CONTENT_FILTER */
 		while ((line = evbuffer_readln(inbuf, NULL,
 		                               EVBUFFER_EOL_CRLF))) {
 			char *replace;
@@ -1843,9 +2298,43 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 			replace = pxy_http_resphdr_filter_line(line, ctx);
 			if (replace == line) {
+#ifdef WITH_CONTENT_FILTER
+				size_t shift = strlen(line) + 2;
+				header_len += shift;
+				if (header_len > header_mem) {
+					char *tmp = realloc(header, header_len * 2);
+					if (!tmp) {
+						free(header);
+						ctx->enomem = 1;
+						goto skip_response;
+					}
+					header_mem = header_len * 2;
+					header = tmp;
+				}
+				sprintf(header_it, "%s\r\n", line);
+				header_it = header + header_len;
+#else /* !WITH_CONTENT_FILTER */
 				evbuffer_add_printf(outbuf, "%s\r\n", line);
+#endif /* WITH_CONTENT_FILTER */
 			} else if (replace) {
+#ifdef WITH_CONTENT_FILTER
+				size_t shift = strlen(replace) + 2;
+				header_len += shift;
+				if (header_len > header_mem) {
+					char *tmp = realloc(header, header_len * 2);
+					if (!tmp) {
+						free(header);
+						ctx->enomem = 1;
+						goto skip_response;
+					}
+					header_mem = header_len * 2;
+					header = tmp;
+				}
+				sprintf(header_it, "%s\r\n", replace);
+				header_it = header + header_len;
+#else /* !WITH_CONTENT_FILTER */
 				evbuffer_add_printf(outbuf, "%s\r\n", replace);
+#endif /* WITH_CONTENT_FILTER */
 				free(replace);
 			}
 			free(line);
@@ -1854,6 +2343,20 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 				if (WANT_CONNECT_LOG(ctx)) {
 					pxy_log_connect_http(ctx);
 				}
+#ifdef WITH_CONTENT_FILTER
+				int resp_rc = pxy_check_resp_forbidden(ctx);
+				if (resp_rc == 1) {
+					return;
+				} else if (resp_rc == -1) {
+					free(header);
+					ctx->enomem = 1;
+					goto skip_response;
+				} else if (resp_rc == 0) {
+					evbuffer_add_printf(outbuf, "%s", header);
+				}
+
+				free(header);
+#endif /* WITH_CONTENT_FILTER */
 				break;
 			}
 		}
@@ -1868,7 +2371,9 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		if (!ctx->seen_resp_header)
 			return;
 	}
-
+#ifdef WITH_CONTENT_FILTER
+skip_response:
+#endif /* WITH_CONTENT_FILTER */
 	/* out of memory condition? */
 	if (ctx->enomem) {
 		pxy_conn_terminate_free(ctx, (bev == ctx->src.bev));

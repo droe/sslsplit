@@ -40,6 +40,10 @@
 #endif /* !OPENSSL_NO_DH */
 #include <openssl/x509.h>
 
+#ifdef WITH_CONTENT_FILTER
+#include <json-c/json.h>
+#endif /* WITH_CONTENT_FILTER */
+
 /*
  * Handle out of memory conditions in early stages of main().
  * Print error message and exit with failure status code.
@@ -191,9 +195,338 @@ opts_free(opts_t *opts)
 		free(opts->mirrortarget);
 	}
 #endif /* !WITHOUT_MIRROR */
+#ifdef WITH_CONTENT_FILTER
+	if (opts->ctf) {
+		ctfilter_free(opts->ctf);
+	}
+#endif /* WITH_CONTENT_FILTER */
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }
+
+#ifdef WITH_CONTENT_FILTER
+/*
+ * Create content filter.
+ */
+void
+ctfilter_new(ctfilter_t **opts_ctf)
+{
+	ctfilter_t *ctf = calloc(1, sizeof(ctfilter_t));
+
+	if (!ctf) {
+		log_err_printf("%s: enomem\n", __func__);
+		exit(EXIT_FAILURE);
+	}
+
+	*opts_ctf = ctf;
+}
+
+/*
+ * Clean content filter.
+ */
+void
+ctfilter_free(ctfilter_t *ctf)
+{
+	char **sp;
+
+	free(ctf->cfg_path);
+
+	for (size_t n = 0; n < ctf->rules.count; n++) {
+		if ((*ctf->rules.data)[n].urls) {
+			sp = (*ctf->rules.data)[n].urls;
+			while (*sp) {
+				free(*sp);
+				sp++;
+			}
+			free((*ctf->rules.data)[n].urls);
+		}
+
+		if ((*ctf->rules.data)[n].methods) {
+			sp = (*ctf->rules.data)[n].methods;
+			while (*sp) {
+				free(*sp);
+				sp++;
+			}
+			free((*ctf->rules.data)[n].methods);
+		}
+
+		if ((*ctf->rules.data)[n].content) {
+			sp = (*ctf->rules.data)[n].content;
+			while (*sp) {
+				free(*sp);
+				sp++;
+			}
+			free((*ctf->rules.data)[n].content);
+		}
+	}
+
+	if (ctf->rules.data) {
+		free(*ctf->rules.data);
+		free(ctf->rules.data);
+	}
+
+	if (ctf->http_deny_tmpl) {
+		free(ctf->http_deny_tmpl);
+	}
+
+	free(ctf);
+}
+
+void
+opts_set_ctf_cfg(opts_t *opts, const char *optarg)
+{
+	ctfilter_new(&opts->ctf);
+	opts->ctf->cfg_path = strdup(optarg);
+
+	if (!opts->ctf->cfg_path) {
+		fprintf(stderr, "%s: enomem\n", __func__);
+		exit(EXIT_FAILURE);
+	}
+
+	if (opts_load_content_filter(opts) == -1) {
+		exit(EXIT_FAILURE);
+	}
+}
+
+static char *
+opts_validate_tmpl(const char *tmpl)
+{
+	char *fo, *res;
+
+	if (!tmpl || strlen(tmpl) < 2) {
+		return NULL;
+	}
+
+	/* find '%s' specifier */
+	if ((fo = strchr(tmpl, '%')) == NULL) {
+		return NULL;
+	}
+
+	if (*(fo + 1) != 's') {
+		return NULL;
+	}
+
+	/* only one % accepted in template */
+	if (strchr(fo + 1, '%')) {
+		return NULL;
+	}
+
+	res = strdup(tmpl);
+
+	return res;
+}
+
+static char **
+opts_parse_json_array(json_object *jso)
+{
+	char **res = NULL;
+
+	size_t n_obj = json_object_array_length(jso);
+
+	res = calloc(n_obj + 1, sizeof(char *));
+	if (!res) {
+		return NULL;
+	}
+
+	for (size_t n = 0; n < n_obj; n++) {
+		json_object *obj = json_object_array_get_idx(jso, n);
+		res[n] = strdup(json_object_get_string(obj));
+		if (!res[n]) {
+			goto clean;
+		}
+	}
+
+	res[n_obj] = NULL;
+	return res;
+
+clean:
+	for (size_t n = 0; n < n_obj; n++) {
+		if (res[n]) {
+			free(res[n]);
+		}
+	}
+	free(res);
+
+	return NULL;
+}
+
+static int
+rules_sort_cb(const void *j1, const void *j2)
+{
+	uint64_t id1, id2;
+	json_object *const *jso1, *const *jso2;
+	json_object *cur;
+
+	id1 = id2 = 0;
+	jso1 = j1;
+	jso2 = j2;
+
+	if (!*jso1 && !*jso2) {
+		return 0;
+	}
+
+	if (!*jso1) {
+		return -1;
+	}
+
+	if (!*jso2) {
+		return 1;
+	}
+
+	if (json_object_object_get_ex(*jso1, "id", &cur)) {
+		id1 = json_object_get_int64(cur);
+	}
+
+	if (json_object_object_get_ex(*jso2, "id", &cur)) {
+		id2 = json_object_get_int64(cur);
+	}
+
+	return id1 - id2;
+}
+
+int
+opts_load_content_filter(opts_t *opts)
+{
+	ctfilter_t *ctf = opts->ctf;
+	json_object *root, *cur;
+
+	/* clear old filters while reconfiguring */
+	if (ctf != NULL) {
+		char *cfg = strdup(ctf->cfg_path);
+		ctfilter_free(ctf);
+		ctfilter_new(&ctf);
+		ctf->cfg_path = cfg;
+		opts->ctf = ctf;
+	}
+
+	root = json_object_from_file(ctf->cfg_path);
+
+	if (!root) {
+		log_err_printf("Cannot load JSON from '%s'\n", opts->ctf->cfg_path);
+		return -1;
+	}
+
+	if (json_object_object_get_ex(root, "http_deny_tmpl", &cur)) {
+		if (!(ctf->http_deny_tmpl = opts_validate_tmpl(json_object_get_string(cur)))) {
+			log_err_printf("content_filter: invalid \"http_deny_tmpl\"\n");
+			return -1;
+		}
+	} else {
+		log_err_printf("content_filter: missing \"http_deny_tmpl\" parameter\n");
+		return -1;
+	}
+
+	if (json_object_object_get_ex(root, "default_action", &cur)) {
+		const char *str = json_object_get_string(cur);
+		if (str) {
+			if (!strcmp(str, "pass")) {
+				ctf->default_action = 1;
+			} else if (!strcmp(str, "drop")) {
+				ctf->default_action = 0;
+			} else {
+				log_err_printf("content_filter: invalid \"default_action\" value\n");
+				return -1;
+			}
+		}
+	} else {
+		log_err_printf("content_filter: missing \"default_action\" parameter\n");
+		return -1;
+	}
+
+	if (json_object_object_get_ex(root, "rules", &cur)) {
+		json_object *jo = cur;
+
+		ctf->rules.count = json_object_array_length(jo);
+
+		if (!ctf->rules.count) {
+			/* no user rules defined */
+			goto out;
+		}
+
+		/* sort rules by id */
+		json_object_array_sort(jo, rules_sort_cb);
+
+		/* get rules */
+		ctf->rules.data = calloc(ctf->rules.count, sizeof(ct_rule_t *));
+		if (!ctf->rules.data) {
+			log_err_printf("content_filter: cannot allocate memory for rules\n");
+			return -1;
+		}
+		*ctf->rules.data = calloc(ctf->rules.count, sizeof(ct_rule_t));
+		if (!*ctf->rules.data) {
+			log_err_printf("content_filter: cannot allocate memory for rules\n");
+			return -1;
+		}
+
+		for (size_t n = 0; n < ctf->rules.count; n++) {
+			json_object *obj = json_object_array_get_idx(jo, n);
+			const char *str = NULL;
+
+			if (json_object_object_get_ex(obj, "id", &cur)) {
+				(*ctf->rules.data)[n].id = json_object_get_int64(cur);
+			} else {
+				log_err_printf("content_filter: missing \"id\" parameter in \"rules\"\n");
+				return -1;
+			}
+
+			if (json_object_object_get_ex(obj, "action", &cur)) {
+				str = json_object_get_string(cur);
+				if (str) {
+					if (!strcmp(str, "pass")) {
+						(*ctf->rules.data)[n].action = 1;
+					} else if (!strcmp(str, "drop")) {
+						(*ctf->rules.data)[n].action = 0;
+					} else {
+						log_err_printf("content_filter: invalid \"action\" value in \"rules\"\n");
+						return -1;
+					}
+				}
+			} else {
+				log_err_printf("content_filter: missing \"action\" parameter in \"rules\"\n");
+				return -1;
+			}
+
+			if (json_object_object_get_ex(obj, "url", &cur)) {
+				if (((*ctf->rules.data)[n].urls = opts_parse_json_array(cur)) == NULL) {
+					log_err_printf("content_filter: cannot allocate memory for rules\n");
+					return -1;
+				}
+			} else {
+				log_err_printf("content_filter: missing \"url\" parameter in \"rules\"\n");
+				return -1;
+			}
+
+			if (json_object_object_get_ex(obj, "method", &cur)) {
+				if (((*ctf->rules.data)[n].methods = opts_parse_json_array(cur)) == NULL) {
+					log_err_printf("content_filter: cannot allocate memory for rules\n");
+					return -1;
+				}
+			} else {
+				log_err_printf("content_filter: missing \"method\" parameter in \"rules\"\n");
+				return -1;
+			}
+
+			if (json_object_object_get_ex(obj, "content", &cur)) {
+				if (((*ctf->rules.data)[n].content = opts_parse_json_array(cur)) == NULL) {
+					log_err_printf("content_filter: cannot allocate memory for rules\n");
+					return -1;
+				}
+			} else {
+				log_err_printf("content_filter: missing \"content\" parameter in \"rules\"\n");
+				return -1;
+			}
+		}
+	} else {
+		log_err_printf("content_filter: missing \"rules\" section\n");
+		return -1;
+	}
+
+out:
+	json_object_put(root);
+
+	return 0;
+}
+#endif /* WITH_CONTENT_FILTER */
 
 /*
  * Return 1 if opts_t contains a proxyspec that (eventually) uses SSL/TLS,

@@ -9,6 +9,7 @@
 # LIBEVENT_BASE Prefix of libevent library and headers to build against
 # LIBPCAP_BASE  Prefix of libpcap library and headers to build against
 # LIBNET_BASE   Prefix of libnet library and headers to build against
+# LIBJSON_BASE  Prefix of libjson-c library and headers to build against
 # CHECK_BASE    Prefix of check library and headers to build against (optional)
 # PKGCONFIG     Name/path of pkg-config program to use for auto-detection
 # PCFLAGS       Additional pkg-config flags
@@ -64,6 +65,18 @@
 # PCAP files will remain fully functional (-X/-Y/-y options) as it does not
 # make use of libnet and libpcap.
 #FEATURES+=	-DWITHOUT_MIRROR
+
+### Content filtering
+# Define to enable HTTP content filtering. This feature requires json-c library.
+# File with filtering rules can be applied with -J option. Example:
+# {"rules" : [
+# { "id" : "1",
+#   "action" : "drop",
+#   "method" : "GET",
+#   "url" : "example.com/",
+#   "content" : "text/html"}
+# ], "default" : "pass", "http_deny_tmpl" : "<h2>%s</h2>" }
+FEATURES+=	-DWITH_CONTENT_FILTER
 
 
 ### OpenSSL tweaking
@@ -283,6 +296,12 @@ PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists libpcap \
 		&& echo libpcap)
 endif
 endif
+ifeq ($(filter -DWITH_CONTENT_FILTER,$(FEATURES)),-DWITH_CONTENT_FILTER)
+ifndef LIBJSON_BASE
+PKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists json-c \
+		&& echo json-c)
+endif
+endif
 TPKGS:=		
 ifndef CHECK_BASE
 TPKGS+=		$(shell $(PKGCONFIG) $(PCFLAGS) --exists check \
@@ -323,6 +342,15 @@ LIBPCAP_FOUND:=	$(call locate,libpcap,include/pcap.h,$(LIBPCAP_BASE))
 ifndef LIBPCAP_FOUND
 $(error dependency 'libpcap' not found; \
 	install it or point LIBPCAP_BASE to base path)
+endif
+endif
+endif
+ifeq ($(filter -DWITH_CONTENT_FILTER,$(FEATURES)),-DWITH_CONTENT_FILTER)
+ifeq (,$(filter json-c,$(PKGS)))
+LIBJSON_FOUND:=	$(call locate,json-c,include/json-c/json.h,$(LIBJSON_BASE))
+ifndef LIBJSON_FOUND
+$(error dependency 'json-c' not found; \
+	install it or point LIBJSON_BASE to base path)
 endif
 endif
 endif
@@ -374,6 +402,13 @@ ifdef LIBPCAP_FOUND
 PKG_CPPFLAGS+=	-I$(LIBPCAP_FOUND)/include
 PKG_LDFLAGS+=	-L$(LIBPCAP_FOUND)/lib
 PKG_LIBS+=	-lpcap
+endif
+endif
+ifeq ($(filter -DWITH_CONTENT_FILTER,$(FEATURES)),-DWITH_CONTENT_FILTER)
+ifdef LIBJSON_FOUND
+PKG_CPPFLAGS+=	-I$(LIBNET_FOUND)/include
+PKG_LDFLAGS+=	-L$(LIBJSON_FOUND)/lib
+PKG_LIBS+=	-ljson-c
 endif
 endif
 ifdef CHECK_FOUND
@@ -454,6 +489,9 @@ $(info LIBPCAP_BASE:   $(strip $(LIBPCAP_FOUND)))
 endif
 ifdef LIBNET_FOUND
 $(info LIBNET_BASE:    $(strip $(LIBNET_FOUND)))
+endif
+ifdef LIBJSON_FOUND
+$(info LIBJSON_BASE:   $(strip $(LIBJSON_FOUND)))
 endif
 ifdef CHECK_FOUND
 $(info CHECK_BASE:     $(strip $(CHECK_FOUND)))

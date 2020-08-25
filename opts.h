@@ -54,6 +54,28 @@ typedef struct proxyspec {
 	struct proxyspec *next;
 } proxyspec_t;
 
+#ifdef WITH_CONTENT_FILTER
+typedef struct ct_rule {
+	uint64_t id;
+	char **methods;
+	char **urls;
+	char **content;
+	unsigned int action : 1; /* 0 - drop, 1 - pass */
+} ct_rule_t;
+
+typedef struct ct_rules {
+	uint64_t count;
+	ct_rule_t **data;
+} ct_rules_t;
+
+typedef struct ctfilter {
+	char *cfg_path;
+	char *http_deny_tmpl;
+	ct_rules_t rules;
+	unsigned int default_action : 1; /* 0 - drop, 1 - pass */
+} ctfilter_t;
+#endif /* WITH_CONTENT_FILTER */
+
 typedef struct opts {
 	unsigned int debug : 1;
 	unsigned int detach : 1;
@@ -123,6 +145,9 @@ typedef struct opts {
 	char *ecdhcurve;
 #endif /* !OPENSSL_NO_ECDH */
 	proxyspec_t *spec;
+#ifdef WITH_CONTENT_FILTER
+	ctfilter_t *ctf;
+#endif /* WITH_CONTENT_FILTER */
 	unsigned int verify_peer: 1;
 	unsigned int allow_wrong_host: 1;
 } opts_t;
@@ -140,6 +165,13 @@ void opts_proto_dbg_dump(opts_t *) NONNULL(1);
 void proxyspec_parse(int *, char **[], const char *, proxyspec_t **);
 void proxyspec_free(proxyspec_t *) NONNULL(1);
 char *proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
+
+#ifdef WITH_CONTENT_FILTER
+void ctfilter_new(ctfilter_t **) NONNULL(1);
+void ctfilter_free(ctfilter_t *) NONNULL(1);
+void opts_set_ctf_cfg(opts_t *, const char *) NONNULL(1,2);
+int opts_load_content_filter(opts_t *) NONNULL(1);
+#endif /* WITH_CONTENT_FILTER */
 
 void opts_set_cacrt(opts_t *, const char *, const char *) NONNULL(1,2,3);
 void opts_set_cakey(opts_t *, const char *, const char *) NONNULL(1,2,3);
