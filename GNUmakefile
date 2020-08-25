@@ -75,7 +75,7 @@
 #   "method" : "GET",
 #   "url" : "example.com/",
 #   "content" : "text/html"}
-# ], "default" : "pass", "http_deny_tmpl" : "<h2>%s</h2>" }
+# ], "default_action" : "pass", "http_deny_tmpl" : "<h2>%s</h2>" }
 #FEATURES+=	-DWITH_CONTENT_FILTER
 
 
