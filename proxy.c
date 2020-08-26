@@ -57,7 +57,11 @@
  * Proxy engine, built around libevent 2.x.
  */
 
-static int signals[] = { SIGTERM, SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
+static int signals[] = { SIGTERM, SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1
+#ifdef WITH_CONTENT_FILTER
+	, SIGUSR2
+#endif
+};
 
 struct proxy_ctx {
 	pxy_thrmgr_ctx_t *thrmgr;
