@@ -1831,6 +1831,11 @@ pxy_check_resp_forbidden(pxy_conn_ctx_t *ctx)
 		return 0;
 	}
 
+	/* response does not contain content type, eg: Location */
+	if (!ctx->http_content_type) {
+		return 0;
+	}
+
 	for (size_t n = 0; n < ctf->rules.count; n++) {
 		ct_rule_t *rule = &(*ctf->rules.data)[n];
 		char **urls = rule->urls;
