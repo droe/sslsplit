@@ -393,6 +393,10 @@ opts_load_content_filter(opts_t *opts)
 	/* clear old filters while reconfiguring */
 	if (ctf != NULL) {
 		char *cfg = strdup(ctf->cfg_path);
+		if (!cfg) {
+			log_err_printf("%s: enomem\n", __func__);
+			return -1;
+		}
 		ctfilter_free(ctf);
 		ctfilter_new(&ctf);
 		ctf->cfg_path = cfg;
