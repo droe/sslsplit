@@ -70,11 +70,11 @@
 # Define to enable HTTP content filtering. This feature requires json-c library.
 # File with filtering rules can be applied with -J option. Example:
 # {"rules" : [
-# { "id" : "1",
-#   "action" : "drop",
-#   "method" : "GET",
-#   "url" : "example.com/",
-#   "content" : "text/html"}
+# { "id"      : "1",
+#   "action"  : "drop",
+#   "method"  : ["GET"],
+#   "url"     : ["1.example.com/", "2.example.com/*]",
+#   "content" : ["text/html", "image/*"]}
 # ], "default_action" : "pass", "http_deny_tmpl" : "<h2>%s</h2>" }
 #FEATURES+=	-DWITH_CONTENT_FILTER
 
