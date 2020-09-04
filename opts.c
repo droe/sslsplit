@@ -283,7 +283,7 @@ opts_set_ctf_cfg(opts_t *opts, const char *optarg)
 		exit(EXIT_FAILURE);
 	}
 
-	if (opts_load_content_filter(opts) == -1) {
+	if (opts_load_content_filter(opts, 1) == -1) {
 		exit(EXIT_FAILURE);
 	}
 }
@@ -385,13 +385,13 @@ rules_sort_cb(const void *j1, const void *j2)
 }
 
 int
-opts_load_content_filter(opts_t *opts)
+opts_load_content_filter(opts_t *opts, int init)
 {
 	ctfilter_t *ctf = opts->ctf;
 	json_object *root, *cur;
 
 	/* clear old filters while reconfiguring */
-	if (ctf != NULL) {
+	if (!init && ctf != NULL) {
 		char *cfg = strdup(ctf->cfg_path);
 		if (!cfg) {
 			log_err_printf("%s: enomem\n", __func__);

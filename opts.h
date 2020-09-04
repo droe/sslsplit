@@ -170,7 +170,7 @@ char *proxyspec_str(proxyspec_t *) NONNULL(1) MALLOC;
 void ctfilter_new(ctfilter_t **) NONNULL(1);
 void ctfilter_free(ctfilter_t *) NONNULL(1);
 void opts_set_ctf_cfg(opts_t *, const char *) NONNULL(1,2);
-int opts_load_content_filter(opts_t *) NONNULL(1);
+int opts_load_content_filter(opts_t *, int init) NONNULL(1);
 #endif /* WITH_CONTENT_FILTER */
 
 void opts_set_cacrt(opts_t *, const char *, const char *) NONNULL(1,2,3);

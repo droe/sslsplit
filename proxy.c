@@ -226,8 +226,9 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 		break;
 #ifdef WITH_CONTENT_FILTER
 	case SIGUSR2:
-		if (opts_load_content_filter(ctx->opts) == -1) {
-			log_err_printf("Warning: broken content filter cfg\n");
+		if (opts_load_content_filter(ctx->opts, 0) == -1) {
+			log_err_printf("Error: broken content filter cfg\n");
+			proxy_loopbreak(ctx, fd);
 		}
 		break;
 #endif /* WITH_CONTENT_FILTER */
