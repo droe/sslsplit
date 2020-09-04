@@ -232,36 +232,35 @@ ctfilter_free(ctfilter_t *ctf)
 	free(ctf->cfg_path);
 
 	for (size_t n = 0; n < ctf->rules.count; n++) {
-		if ((*ctf->rules.data)[n].urls) {
-			sp = (*ctf->rules.data)[n].urls;
+		if (ctf->rules.data[n].urls) {
+			sp = ctf->rules.data[n].urls;
 			while (*sp) {
 				free(*sp);
 				sp++;
 			}
-			free((*ctf->rules.data)[n].urls);
+			free(ctf->rules.data[n].urls);
 		}
 
-		if ((*ctf->rules.data)[n].methods) {
-			sp = (*ctf->rules.data)[n].methods;
+		if (ctf->rules.data[n].methods) {
+			sp = ctf->rules.data[n].methods;
 			while (*sp) {
 				free(*sp);
 				sp++;
 			}
-			free((*ctf->rules.data)[n].methods);
+			free(ctf->rules.data[n].methods);
 		}
 
-		if ((*ctf->rules.data)[n].content) {
-			sp = (*ctf->rules.data)[n].content;
+		if (ctf->rules.data[n].content) {
+			sp = ctf->rules.data[n].content;
 			while (*sp) {
 				free(*sp);
 				sp++;
 			}
-			free((*ctf->rules.data)[n].content);
+			free(ctf->rules.data[n].content);
 		}
 	}
 
 	if (ctf->rules.data) {
-		free(*ctf->rules.data);
 		free(ctf->rules.data);
 	}
 
@@ -451,13 +450,8 @@ opts_load_content_filter(opts_t *opts, int init)
 		json_object_array_sort(jo, rules_sort_cb);
 
 		/* get rules */
-		ctf->rules.data = calloc(ctf->rules.count, sizeof(ct_rule_t *));
+		ctf->rules.data = calloc(ctf->rules.count, sizeof(ct_rule_t));
 		if (!ctf->rules.data) {
-			log_err_printf("content_filter: cannot allocate memory for rules\n");
-			return -1;
-		}
-		*ctf->rules.data = calloc(ctf->rules.count, sizeof(ct_rule_t));
-		if (!*ctf->rules.data) {
 			log_err_printf("content_filter: cannot allocate memory for rules\n");
 			return -1;
 		}
@@ -467,7 +461,7 @@ opts_load_content_filter(opts_t *opts, int init)
 			const char *str = NULL;
 
 			if (json_object_object_get_ex(obj, "id", &cur)) {
-				(*ctf->rules.data)[n].id = json_object_get_int64(cur);
+				ctf->rules.data[n].id = json_object_get_int64(cur);
 			} else {
 				log_err_printf("content_filter: missing \"id\" parameter in \"rules\"\n");
 				return -1;
@@ -477,9 +471,9 @@ opts_load_content_filter(opts_t *opts, int init)
 				str = json_object_get_string(cur);
 				if (str) {
 					if (!strcmp(str, "pass")) {
-						(*ctf->rules.data)[n].action = 1;
+						ctf->rules.data[n].action = 1;
 					} else if (!strcmp(str, "drop")) {
-						(*ctf->rules.data)[n].action = 0;
+						ctf->rules.data[n].action = 0;
 					} else {
 						log_err_printf("content_filter: invalid \"action\" value in \"rules\"\n");
 						return -1;
@@ -491,7 +485,7 @@ opts_load_content_filter(opts_t *opts, int init)
 			}
 
 			if (json_object_object_get_ex(obj, "url", &cur)) {
-				if (((*ctf->rules.data)[n].urls = opts_parse_json_array(cur)) == NULL) {
+				if ((ctf->rules.data[n].urls = opts_parse_json_array(cur)) == NULL) {
 					log_err_printf("content_filter: cannot allocate memory for rules\n");
 					return -1;
 				}
@@ -501,7 +495,7 @@ opts_load_content_filter(opts_t *opts, int init)
 			}
 
 			if (json_object_object_get_ex(obj, "method", &cur)) {
-				if (((*ctf->rules.data)[n].methods = opts_parse_json_array(cur)) == NULL) {
+				if ((ctf->rules.data[n].methods = opts_parse_json_array(cur)) == NULL) {
 					log_err_printf("content_filter: cannot allocate memory for rules\n");
 					return -1;
 				}
@@ -511,7 +505,7 @@ opts_load_content_filter(opts_t *opts, int init)
 			}
 
 			if (json_object_object_get_ex(obj, "content", &cur)) {
-				if (((*ctf->rules.data)[n].content = opts_parse_json_array(cur)) == NULL) {
+				if ((ctf->rules.data[n].content = opts_parse_json_array(cur)) == NULL) {
 					log_err_printf("content_filter: cannot allocate memory for rules\n");
 					return -1;
 				}

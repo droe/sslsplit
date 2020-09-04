@@ -65,7 +65,7 @@ typedef struct ct_rule {
 
 typedef struct ct_rules {
 	uint64_t count;
-	ct_rule_t **data;
+	ct_rule_t *data;
 } ct_rules_t;
 
 typedef struct ctfilter {

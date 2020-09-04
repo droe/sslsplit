@@ -1679,7 +1679,7 @@ pxy_check_req_forbidden(pxy_conn_ctx_t *ctx)
 	}
 
 	for (size_t n = 0; n < ctf->rules.count; n++) {
-		ct_rule_t *rule = &(*ctf->rules.data)[n];
+		ct_rule_t *rule = &ctf->rules.data[n];
 		char **urls = rule->urls;
 		char **methods = rule->methods;
 		char **content = rule->content;
@@ -1837,7 +1837,7 @@ pxy_check_resp_forbidden(pxy_conn_ctx_t *ctx)
 	}
 
 	for (size_t n = 0; n < ctf->rules.count; n++) {
-		ct_rule_t *rule = &(*ctf->rules.data)[n];
+		ct_rule_t *rule = &ctf->rules.data[n];
 		char **urls = rule->urls;
 		char **content = rule->content;
 		match_t url_match, content_match;
