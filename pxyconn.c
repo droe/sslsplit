@@ -2246,6 +2246,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 #ifdef WITH_CONTENT_FILTER
 				int req_rc = pxy_check_req_forbidden(ctx);
 				if (req_rc == 1) {
+					free(header);
 					return;
 				} else if (req_rc == -1) {
 					free(header);
@@ -2351,6 +2352,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 #ifdef WITH_CONTENT_FILTER
 				int resp_rc = pxy_check_resp_forbidden(ctx);
 				if (resp_rc == 1) {
+					free(header);
 					return;
 				} else if (resp_rc == -1) {
 					free(header);
