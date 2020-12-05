@@ -226,6 +226,7 @@ main_usage(void)
 #ifndef WITHOUT_MIRROR
 "  -I if       mirror packets to interface\n"
 "  -T addr     mirror packets to target address (used with -I)\n"
+"              Use \"none\" to blindly send packets out of <if>.\n"
 #define OPT_I "I:"
 #define OPT_T "T:"
 #else /* WITHOUT_MIRROR */
