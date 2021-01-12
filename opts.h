@@ -73,6 +73,9 @@ typedef struct opts {
 #ifdef HAVE_TLSV12
 	unsigned int no_tls12 : 1;
 #endif /* HAVE_TLSV12 */
+#ifdef HAVE_TLSV13
+        unsigned int no_tls13 : 1;
+#endif /* HAVE_TLSV13 */
 	unsigned int passthrough : 1;
 	unsigned int deny_ocsp : 1;
 	unsigned int contentlog_isdir : 1;
