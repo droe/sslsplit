@@ -237,7 +237,7 @@ opts_has_dns_spec(opts_t *opts)
 void
 opts_proto_dbg_dump(opts_t *opts)
 {
-	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
+	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s%s\n",
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 #ifdef HAVE_SSLV2
 	               (opts->sslmethod == SSLv2_method) ? "ssl2" :
