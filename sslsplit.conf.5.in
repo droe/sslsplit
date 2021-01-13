@@ -179,7 +179,7 @@ Pcap log: packets to sep files with % subst (excludes PcapLog/PcapLogDir). Equiv
 Mirror packets to interface. Equivalent to -I command line option.
 .TP 
 \fBMirrorTarget STRING\fR
-Mirror packets to target address (used with MirrorIf). Equivalent to -T command line option.
+Mirror packets to target address (used with MirrorIf). Equivalent to -T command line option. Not used if the target is irrelevant (e.g. mirror to dummy device)
 .TP 
 \fBMasterKeyLog STRING\fR
 Log master keys to logfile in SSLKEYLOGFILE format. Equivalent to -M command line option.

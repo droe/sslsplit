@@ -295,7 +295,7 @@ logger_stop(logger_t *logger) {
  * logger.  This argument is passed to the write handler as-is and is not
  * interpreted or used by the logger itself in any way.
  *
- * All of the functions return 0 on succes, -1 on failure.
+ * All of the functions return 0 on success, -1 on failure.
  */
 int
 logger_printf(logger_t *logger, void *fh, unsigned long prepflags,

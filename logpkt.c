@@ -741,6 +741,17 @@ logpkt_ether_lookup(libnet_t *libnet,
 	int count = 50;
 	logpkt_recv_arp_reply_ctx_t ctx;
 
+	/* handle case of just spitting packets out, not caring about a dest */
+	if (!dst_ip_s) {
+		uint8_t src[ETHER_ADDR_LEN] = {
+			0x1, 0x1, 0x1, 0x1, 0x1, 0x1};
+		uint8_t dst[ETHER_ADDR_LEN] = {
+			0x2, 0x2, 0x2, 0x2, 0x2, 0x2};
+		memcpy(src_ether, &src, ETHER_ADDR_LEN);
+		memcpy(dst_ether, &dst, ETHER_ADDR_LEN);
+		return 0;
+	}
+
 	if (sys_get_af(dst_ip_s) != AF_INET) {
 		log_err_printf("Mirroring target must be an IPv4 address.\n");
 		return -1;

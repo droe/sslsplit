@@ -227,7 +227,7 @@ main_usage(void)
 "              see option -F for pathspec format\n"
 #ifndef WITHOUT_MIRROR
 "  -I if       mirror packets to interface\n"
-"  -T addr     mirror packets to target address (used with -I)\n"
+"  -T addr     mirror packets to target address (optionally used with -I)\n"
 #define OPT_I "I:"
 #define OPT_T "T:"
 #else /* WITHOUT_MIRROR */
@@ -517,10 +517,6 @@ main(int argc, char *argv[])
 #ifndef WITHOUT_MIRROR
 	if (opts->mirrortarget && !opts->mirrorif) {
 		fprintf(stderr, "%s: -T depends on -I.\n", argv0);
-		exit(EXIT_FAILURE);
-	}
-	if (opts->mirrorif && !opts->mirrortarget) {
-		fprintf(stderr, "%s: -I depends on -T.\n", argv0);
 		exit(EXIT_FAILURE);
 	}
 #endif /* !WITHOUT_MIRROR */

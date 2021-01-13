@@ -165,7 +165,8 @@ PidFile /var/run/sslsplit.pid
 #MirrorIf lo
 
 # Mirror packets to target address (used with MirrorIf).
-# Equivalent to -T command line option.
+# Equivalent to -T command line option. Leave commented if the target is
+# irrelevant (e.g. mirror to dummy device)
 #MirrorTarget 192.0.2.1
 
 # Log master keys to logfile in SSLKEYLOGFILE format.
