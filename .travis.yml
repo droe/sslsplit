@@ -147,5 +147,5 @@ matrix:
         - test -d /usr/local/opt/openssl/lib  || { rmdir /usr/local/opt/openssl; brew install openssl; }
         - test -d /usr/local/opt/libevent/lib || { rmdir /usr/local/opt/libevent; brew install libevent; }
         - test -d /usr/local/opt/libnet/lib   || { rmdir /usr/local/opt/libnet; brew install libnet; }
-        - test -d /usr/local/opt/libpcap/lib  || { rmdir /usr/local/opt/libpcap; brew install libpcap; }
+        - test -d /usr/local/opt/libpcap/lib  || { rmdir /usr/local/opt/libpcap; brew install --build-from-source libpcap; }
         - test -d /usr/local/opt/check/lib    || { rmdir /usr/local/opt/check; brew install check; }
