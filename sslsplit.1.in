@@ -116,6 +116,7 @@ reconfiguration or route injection, /etc/hosts modification and so on.
 .B \-a \fIpemfile\fP
 Use client certificate from \fIpemfile\fP when destination server requests a
 client certificate.
+.TP
 .B \-A \fIpemfile\fP
 Use private key, certificate and certificate chain from PEM file \fIpemfile\fP
 as leaf certificate instead of generating a leaf certificate on the fly.
