@@ -237,7 +237,7 @@ opts_has_dns_spec(opts_t *opts)
 void
 opts_proto_dbg_dump(opts_t *opts)
 {
-	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s\n",
+	log_dbg_printf("SSL/TLS protocol: %s%s%s%s%s%s%s\n",
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 #ifdef HAVE_SSLV2
 	               (opts->sslmethod == SSLv2_method) ? "ssl2" :
@@ -267,6 +267,9 @@ opts_proto_dbg_dump(opts_t *opts)
 #ifdef HAVE_TLSV12
 	               (opts->sslversion == TLS1_2_VERSION) ? "tls12" :
 #endif /* HAVE_TLSV12 */
+#ifdef HAVE_TLSV13
+                       (opts->sslversion == TLS1_3_VERSION) ? "tls13" :
+#endif /* HAVE_TLSV13 */
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	               "negotiate",
 #ifdef HAVE_SSLV2
@@ -288,6 +291,10 @@ opts_proto_dbg_dump(opts_t *opts)
 #ifdef HAVE_TLSV12
 	               opts->no_tls12 ? " -tls12" :
 #endif /* HAVE_TLSV12 */
+                       "",
+#ifdef HAVE_TLSV13
+                       opts->no_tls13 ? " -tls13" :
+#endif /* HAVE_TLSV13 */
 	               "");
 }
 
@@ -912,6 +919,11 @@ opts_force_proto(opts_t *opts, const char *argv0, const char *optarg)
 		opts->sslversion = TLS1_2_VERSION;
 	} else
 #endif /* HAVE_TLSV12 */
+#ifdef HAVE_TLSV13
+        if (!strcmp(optarg, "tls13")) {
+                opts->sslversion = TLS1_3_VERSION;
+        } else
+#endif /* HAVE_TLSV13 */
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 	{
 		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
@@ -955,6 +967,11 @@ opts_disable_proto(opts_t *opts, const char *argv0, const char *optarg)
 		opts->no_tls12 = 1;
 	} else
 #endif /* HAVE_TLSV12 */
+#ifdef HAVE_TLSV13
+        if (!strcmp(optarg, "tls13")) {
+                opts->no_tls13 = 1;
+        } else
+#endif /* HAVE_TLSV13 */
 	{
 		fprintf(stderr, "%s: Unsupported SSL/TLS protocol '%s'\n",
 		                argv0, optarg);

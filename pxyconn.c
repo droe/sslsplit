@@ -718,6 +718,11 @@ pxy_sslctx_setoptions(SSL_CTX *sslctx, pxy_conn_ctx_t *ctx)
 		SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_2);
 	}
 #endif /* HAVE_TLSV12 */
+#ifdef HAVE_TLSV13
+        if (ctx->opts->no_tls13) {
+                SSL_CTX_set_options(sslctx, SSL_OP_NO_TLSv1_3);
+        }
+#endif /* HAVE_TLSV13 */
 
 #ifdef SSL_OP_NO_COMPRESSION
 	if (!ctx->opts->sslcomp) {
@@ -1183,6 +1188,18 @@ pxy_dstssl_create(pxy_conn_ctx_t *ctx)
 			return NULL;
 		}
 	}
+#ifdef HAVE_TLSV13
+	// TLS1.3 requires SNI
+	else if (!ctx->sni) {
+		if (OPTS_DEBUG(ctx->opts)) {
+			log_dbg_printf("src lacks SNI name, dst cannot use TLS1.3\n");
+		}
+		if (SSL_CTX_set_max_proto_version(sslctx, TLS1_2_VERSION) == 0) {
+			SSL_CTX_free(sslctx);
+			return NULL;
+		}
+	}
+#endif /* HAVE_TLSV13 */
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 
 	if (ctx->opts->verify_peer) {
