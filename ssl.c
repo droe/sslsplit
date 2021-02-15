@@ -1213,6 +1213,10 @@ ssl_x509chain_load(X509 **crt, STACK_OF(X509) **chain, const char *filename)
 	if (!tmpctx)
 		goto leave1;
 
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+	SSL_CTX_set_security_level(tmpctx, 0);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+
 	rv = SSL_CTX_use_certificate_chain_file(tmpctx, filename);
 	if (rv != 1)
 		goto leave2;
@@ -1303,6 +1307,11 @@ ssl_x509_load(const char *filename)
 	tmpctx = SSL_CTX_new(SSLv23_server_method());
 	if (!tmpctx)
 		goto leave1;
+
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+        SSL_CTX_set_security_level(tmpctx, 0);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+
 	rv = SSL_CTX_use_certificate_file(tmpctx, filename, SSL_FILETYPE_PEM);
 	if (rv != 1)
 		goto leave2;
@@ -1338,6 +1347,11 @@ ssl_key_load(const char *filename)
 	tmpctx = SSL_CTX_new(SSLv23_server_method());
 	if (!tmpctx)
 		goto leave1;
+
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+        SSL_CTX_set_security_level(tmpctx, 0);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+
 	rv = SSL_CTX_use_PrivateKey_file(tmpctx, filename, SSL_FILETYPE_PEM);
 	if (rv != 1)
 		goto leave2;
