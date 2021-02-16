@@ -30,57 +30,61 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import sys
-import os
-import select
 import re
+import select
+import sys
+
 
 def read_line(f):
     """Read a single line from a file stream; return empty string on EOF"""
-    buf = ''
-    while not buf.endswith("\n"):
+    buf = b''
+    while not buf.endswith(b'\n'):
         r, w, e = select.select([f], [], [])
         if r:
             nextbyte = f.read(1)
             if not nextbyte:
-                return ''
+                return b''
             buf += nextbyte
         else:
             break
     return buf
 
+
 def read_count(f, n):
     """Read n bytes from a file stream; return empty string on EOF"""
-    buf = ''
+    buf = b''
     while len(buf) < n:
         nextchunk = f.read(n - len(buf))
         if not nextchunk:
-            return ''
+            return b''
         buf += nextchunk
     return buf
+
 
 class LogSyntaxError(Exception):
     """SSLsplit log file contains unexpected syntax"""
     pass
 
+
 def parse_header(line):
     """Parse the header line into a dict with useful fields"""
     # 2015-09-27 14:55:41 UTC [192.0.2.1]:56721 -> [192.0.2.2]:443 (37):
-    m = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+) \[(.+?)\]:(\d+) -> \[(.+?)\]:(\d+) \((\d+|EOF)\):?', line)
+    m = re.match(rb'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+) \[(.+?)\]:(\d+) -> \[(.+?)\]:(\d+) \((\d+|EOF)\):?', line)
     if not m:
         raise LogSyntaxError(line)
     res = {}
-    res['timestamp'] = m.group(1)
-    res['src_addr'] = m.group(2)
+    res['timestamp'] = m.group(1).decode()
+    res['src_addr'] = m.group(2).decode()
     res['src_port'] = int(m.group(3))
-    res['dst_addr'] = m.group(4)
+    res['dst_addr'] = m.group(4).decode()
     res['dst_port'] = int(m.group(5))
-    if m.group(6) == 'EOF':
+    if m.group(6) == b'EOF':
         res['eof'] = True
     else:
         res['eof'] = False
         res['size'] = int(m.group(6))
     return res
+
 
 def parse_log(f):
     """Read log entries from file stream in blocking mode until EOF"""
@@ -93,7 +97,7 @@ def parse_log(f):
             res['data'] = read_count(f, res['size'])
         yield res
 
-if __name__ == '__main__':
-    for result in parse_log(sys.stdin):
-        print result
 
+if __name__ == '__main__':
+    for result in parse_log(sys.stdin.buffer):
+        print(result)

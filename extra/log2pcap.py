@@ -33,30 +33,37 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import sys
 import datetime
 import random
+import sys
+
 import scapy
-from scapy.utils import PcapWriter
 from scapy.all import Ether, IP, TCP
+from scapy.utils import PcapWriter
 
 import logreader
+
 
 # avoid requiring root and waiting for on-the-wire timeouts (issue #169)
 def getmacbyip(ip, chainCC=0):
     return "11:22:33:44:55:66"
 scapy.layers.l2.getmacbyip = getmacbyip
 
+
 def parse_timestamp(s):
     return datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S %Z')
+
 
 def chunks(s, sz):
     return (s[0+i:sz+i] for i in range(0, len(s), sz))
 
-class NetworkStack():
+
+class NetworkStack:
     """Emulated network stack, processing log entries into network packets"""
-    class ConnState():
+
+    class ConnState:
         """State for a single TCP connection"""
+
         def __init__(self, logentry, tm, ctx):
             self.src_addr = logentry['src_addr']
             self.src_port = logentry['src_port']
@@ -210,13 +217,13 @@ class NetworkStack():
             self.connstate[conn].fin()
         self.pcap.close()
 
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         sys.stderr.write('Usage: %s example.pcap <example.log\n' % sys.argv[0])
         sys.exit(-1)
 
     netemu = NetworkStack(sys.argv[1])
-    for logentry in logreader.parse_log(sys.stdin):
+    for logentry in logreader.parse_log(sys.stdin.buffer):
         netemu.add(logentry)
     netemu.done()
-
