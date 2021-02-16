@@ -57,7 +57,11 @@
  * Proxy engine, built around libevent 2.x.
  */
 
-static int signals[] = { SIGTERM, SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1 };
+static int signals[] = { SIGTERM, SIGQUIT, SIGHUP, SIGINT, SIGPIPE, SIGUSR1
+#ifdef WITH_CONTENT_FILTER
+	, SIGUSR2
+#endif
+};
 
 struct proxy_ctx {
 	pxy_thrmgr_ctx_t *thrmgr;
@@ -220,6 +224,14 @@ proxy_signal_cb(evutil_socket_t fd, UNUSED short what, void *arg)
 			log_dbg_printf("Reopened log files\n");
 		}
 		break;
+#ifdef WITH_CONTENT_FILTER
+	case SIGUSR2:
+		if (opts_load_content_filter(ctx->opts, 0) == -1) {
+			log_err_printf("Error: broken content filter cfg\n");
+			proxy_loopbreak(ctx, fd);
+		}
+		break;
+#endif /* WITH_CONTENT_FILTER */
 	case SIGPIPE:
 		log_err_printf("Warning: Received SIGPIPE; ignoring.\n");
 		break;
