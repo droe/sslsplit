@@ -68,7 +68,7 @@ opts_load_cert_chain_key(const char *filename)
 		return NULL;
 	}
 	if (X509_check_private_key(cert->crt, cert->key) != 1) {
-		log_err_printf("Cert doess not match key in PEM file "
+		log_err_printf("Cert does not match key in PEM file "
 		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
 		return NULL;
