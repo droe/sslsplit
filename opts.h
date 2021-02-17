@@ -54,8 +54,15 @@ typedef struct proxyspec {
 	struct proxyspec *next;
 } proxyspec_t;
 
+// typedef struct passsite {
+// 	char *site;
+// 	struct passsite *next;
+// } passsite_t;
+
 typedef struct passsite {
 	char *site;
+	// Filter definition fields
+	char *ip;
 	struct passsite *next;
 } passsite_t;
 

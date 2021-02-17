@@ -983,71 +983,72 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 	return cert;
 }
 
-// pxy_pass_site: ENTER, *.xiaomi.com, a.gsitrix.com, a.gsitrix.com/a.gsitrix.com, fd=43
+
 static int NONNULL(1,2)
 pxy_pass_site(pxy_conn_ctx_t *ctx, char *site)
 {
-if (OPTS_DEBUG(ctx->opts)) {
-	log_dbg_printf("pxy_pass_site: ENTER, %s, %s, %s, fd=%d\n", site, ctx->sni, ctx->ssl_names, ctx->fd);
-}
+	log_dbg_printf("ENTER, %s, %s, %s", site, STRORDASH(ctx->sni), STRORDASH(ctx->ssl_names));
 
-	if (!strcmp(ctx->sni, site)) {
-if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("pxy_pass_site: Match with sni: %s, fd=%d\n", ctx->sni, ctx->fd);
-}
+	int rv = 0;
 
-		return 1;
-	}
-
-	// Single common name
-	if (!strcmp(ctx->ssl_names, site)) {
-if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("pxy_pass_site: Match with single common name: %s, fd=%d\n", ctx->ssl_names, ctx->fd);
-}
-
-		return 1;
-	}
-
+	// site has surrounding slashes: "/example.com/"
 	size_t len = strlen(site);
-	
-	// Common names are separated by slashes
-	char s[len + 3];
-	strncpy(s + 1, site, len);
-	s[0] = '/';
-	s[len + 1] = '/';
-	s[len + 2] = '\0';
 
-	char *s1 = s + 1;
+	// Replace slash with null
+	site[len - 1] = '\0';
+	// Skip the first slash
+	char *s = site + 1;
 
-	// First common name
-	if (strstr(ctx->ssl_names, s1) == ctx->ssl_names) {
-if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("pxy_pass_site: Match with the first common name: %s, %s, fd=%d\n", ctx->ssl_names, s1, ctx->fd);
-}
-
-		return 1;
+	// @attention Make sure sni is not null
+	// SNI: "example.com"
+	if (ctx->sni && !strcmp(ctx->sni, s)) {
+		log_dbg_printf("Match with sni: %s", ctx->sni);
+		rv = 1;
+		goto out2;
 	}
 
-	// A middle common name
-	if (strstr(ctx->ssl_names, s)) {
-if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("pxy_pass_site: Match with a middle common name: %s, %s, fd=%d\n", ctx->ssl_names, s, ctx->fd);
-}
-
-		return 1;
+	// @attention Make sure ssl_names is not null
+	if (!ctx->ssl_names) {
+		goto out2;
 	}
 
-	s[len + 1] = '\0';
-
-	// Last common name
-	if (strstr(ctx->ssl_names, s) == ctx->ssl_names + strlen(ctx->ssl_names) - strlen(s)) {
-if (OPTS_DEBUG(ctx->opts)) {
-		log_dbg_printf("pxy_pass_site: Match with the last common name: %s, %s, fd=%d\n", ctx->ssl_names, s, ctx->fd);
-}
-
-		return 1;
+	// Single common name: "example.com"
+	if (!strcmp(ctx->ssl_names, s)) {
+		log_dbg_printf("Match with single common name: %s", ctx->ssl_names);
+		rv = 1;
+		goto out2;
 	}
-	return 0;
+
+	// Insert slash at the end
+	site[len - 1] = '/';
+
+	// First common name: "example.com/"
+	if (strstr(ctx->ssl_names, s) == ctx->ssl_names) {
+		log_dbg_printf("Match with the first common name: %s, %s", ctx->ssl_names, s);
+		rv = 1;
+		goto out;
+	}
+
+	// Middle common name: "/example.com/"
+	if (strstr(ctx->ssl_names, site)) {
+		log_dbg_printf("Match with a middle common name: %s, %s", ctx->ssl_names, site);
+		rv = 1;
+		goto out;
+	}
+
+	// Replace slash with null
+	site[len - 1] = '\0';
+
+	// Last common name: "/example.com"
+	if (strstr(ctx->ssl_names, site) == ctx->ssl_names + strlen(ctx->ssl_names) - strlen(site)) {
+		log_dbg_printf("Match with the last common name: %s, %s", ctx->ssl_names, site);
+		rv = 1;
+	}
+out2:
+	// Restore the last modification
+	site[len - 1] = '/';
+out:
+	return rv;
 }
 
 /*

@@ -1354,21 +1354,54 @@ opts_unset_allow_wrong_host(opts_t *opts)
 	opts->allow_wrong_host = 0;
 }
 
-static void
-opts_set_pass_site(opts_t *opts, const char *value)
+void
+opts_set_pass_site(opts_t *opts, char *value, int line_num)
 {
-	if (!opts->passthrough) {
-		fprintf(stderr, "PassSite requires Passthrough option\n");
+	// site [(clientaddr|(user|*) [description keyword])]
+	char *argv[sizeof(char *) * 3];
+	int argc = 0;
+	char *p, *last = NULL;
+
+	for ((p = strtok_r(value, " ", &last));
+		 p;
+		 (p = strtok_r(NULL, " ", &last))) {
+		if (argc < 3) {
+			argv[argc++] = p;
+		} else {
+			break;
+		}
+	}
+	if (!argc) {
+		fprintf(stderr, "PassSite requires at least one parameter on line %d\n", line_num);
 		exit(EXIT_FAILURE);
 	}
 	passsite_t *ps = malloc(sizeof(passsite_t));
-	ps->site = strdup(value);
+	memset(ps, 0, sizeof(passsite_t));
+	size_t len = strlen(argv[0]);
+	// Common names are separated by slashes
+	char s[len + 3];
+	memcpy(s + 1, argv[0], len);
+	s[0] = '/';
+	s[len + 1] = '/';
+	s[len + 2] = '\0';
+	ps->site = strdup(s);
+
+	if (argc > 1) {
+			ps->ip = strdup(argv[1]);
+	}
+	if (argc > 2) {
+		if (ps->ip) {
+			fprintf(stderr, "PassSite client ip cannot define keyword filter on line %d\n", line_num);
+			exit(EXIT_FAILURE);
+		}
+	}
 	ps->next = opts->passsites;
 	opts->passsites = ps;
 #ifdef DEBUG_OPTS
-	log_dbg_printf("PassSite: %s\n", value);
+	log_dbg_printf("PassSite: %s, %s\n", ps->site, STRORDASH(ps->ip));
 #endif /* DEBUG_OPTS */
 }
+
 
 static int
 check_value_yesno(const char *value, const char *name, int line_num)
@@ -1572,7 +1605,7 @@ set_option(opts_t *opts, const char *argv0,
 		               opts->allow_wrong_host);
 #endif /* DEBUG_OPTS */
 	} else if (!strncmp(name, "PassSite", 9)) {
-		opts_set_pass_site(opts, value);
+		opts_set_pass_site(opts, value, line_num);
 	} else {
 		fprintf(stderr, "Error in conf: Unknown option "
 		                "'%s' at line %d\n", name, line_num);
