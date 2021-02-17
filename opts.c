@@ -68,7 +68,7 @@ opts_load_cert_chain_key(const char *filename)
 		return NULL;
 	}
 	if (X509_check_private_key(cert->crt, cert->key) != 1) {
-		log_err_printf("Cert does not match key in PEM file "
+		log_err_printf("Cert doess not match key in PEM file "
 		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
 		return NULL;
@@ -191,6 +191,12 @@ opts_free(opts_t *opts)
 		free(opts->mirrortarget);
 	}
 #endif /* !WITHOUT_MIRROR */
+	passsite_t *passsite = opts->passsites;
+	while (passsite) {
+		passsite_t *next = passsite->next;
+		free(passsite->site);
+		passsite = next;
+	}
 	memset(opts, 0, sizeof(opts_t));
 	free(opts);
 }
@@ -1348,6 +1354,22 @@ opts_unset_allow_wrong_host(opts_t *opts)
 	opts->allow_wrong_host = 0;
 }
 
+static void
+opts_set_pass_site(opts_t *opts, const char *value)
+{
+	if (!opts->passthrough) {
+		fprintf(stderr, "PassSite requires Passthrough option\n");
+		exit(EXIT_FAILURE);
+	}
+	passsite_t *ps = malloc(sizeof(passsite_t));
+	ps->site = strdup(value);
+	ps->next = opts->passsites;
+	opts->passsites = ps;
+#ifdef DEBUG_OPTS
+	log_dbg_printf("PassSite: %s\n", value);
+#endif /* DEBUG_OPTS */
+}
+
 static int
 check_value_yesno(const char *value, const char *name, int line_num)
 {
@@ -1549,6 +1571,8 @@ set_option(opts_t *opts, const char *argv0,
 		log_dbg_printf("AddSNIToCertificate: %u\n",
 		               opts->allow_wrong_host);
 #endif /* DEBUG_OPTS */
+	} else if (!strncmp(name, "PassSite", 9)) {
+		opts_set_pass_site(opts, value);
 	} else {
 		fprintf(stderr, "Error in conf: Unknown option "
 		                "'%s' at line %d\n", name, line_num);

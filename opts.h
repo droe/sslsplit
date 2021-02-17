@@ -54,6 +54,11 @@ typedef struct proxyspec {
 	struct proxyspec *next;
 } proxyspec_t;
 
+typedef struct passsite {
+	char *site;
+	struct passsite *next;
+} passsite_t;
+
 typedef struct opts {
 	unsigned int debug : 1;
 	unsigned int detach : 1;
@@ -125,6 +130,7 @@ typedef struct opts {
 	proxyspec_t *spec;
 	unsigned int verify_peer: 1;
 	unsigned int allow_wrong_host: 1;
+	struct passsite *passsites; 
 } opts_t;
 
 void NORET oom_die(const char *) NONNULL(1);
