@@ -598,7 +598,7 @@ ssl_ssl_masterkey_to_str(SSL *ssl)
 	char *str = NULL;
 	int rv;
 	unsigned char *k, *r;
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && (!defined(LIBRESSL_VERSION_NUMBER) || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)
 	unsigned char kbuf[48], rbuf[32];
 	k = &kbuf[0];
 	r = &rbuf[0];
