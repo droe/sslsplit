@@ -72,6 +72,10 @@ bufferevent_openssl_set_allow_dirty_shutdown(UNUSED struct bufferevent *bev,
 }
 #endif /* LIBEVENT_VERSION_NUMBER < 0x02010000 */
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#define ERR_GET_FUNC(x) 0
+#define ERR_func_error_string(x) ""
+#endif
 
 /*
  * Maximum size of data to buffer per connection direction before

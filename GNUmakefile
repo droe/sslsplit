@@ -350,7 +350,11 @@ endif
 
 ifdef OPENSSL_FOUND
 PKG_CPPFLAGS+=	-I$(OPENSSL_FOUND)/include
+ifneq ($(findstring openssl-3.,$(OPENSSL_FOUND)),openssl-3.)
 PKG_LDFLAGS+=	-L$(OPENSSL_FOUND)/lib
+else
+PKG_LDFLAGS+=	-L$(OPENSSL_FOUND)/lib64
+endif
 PKG_LIBS+=	-lssl -lcrypto -lz
 endif
 ifdef LIBEVENT_FOUND
