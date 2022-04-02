@@ -1736,18 +1736,6 @@ pxy_conn_terminate_free(pxy_conn_ctx_t *ctx, int is_requestor)
 	pxy_conn_ctx_free(ctx, is_requestor);
 }
 
-static int
-pxy_conn_getwatermark(struct bufferevent *bev)
-{
-	size_t lowmark = 0;
-	size_t highmark = 0;
-
-	bufferevent_getwatermark(bev, EV_WRITE, &lowmark, &highmark);
-	if (lowmark || highmark)
-		return 1;
-	return 0;
-}
-
 /*
  * Callback for read events on the up- and downstream connection bufferevents.
  * Called when there is data ready in the input evbuffer.
@@ -1916,8 +1904,9 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 				OUTBUF_LIMIT/2, OUTBUF_LIMIT);
 		bufferevent_disable(bev, EV_READ);
 
-		/* The watermark for ubev_other may be already set, see the write cb */
-		if (ubev_other && !pxy_conn_getwatermark(ubev_other))
+		/* The watermark for ubev_other may be already set, see writecb,
+		 * but getting is equally expensive as setting */
+		if (ubev_other)
 			bufferevent_setwatermark(ubev_other, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
 	}
 }
