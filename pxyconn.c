@@ -1651,6 +1651,18 @@ deny:
 	}
 }
 
+static int
+pxy_conn_getwatermark(struct bufferevent *bev)
+{
+	size_t lowmark = 0;
+	size_t highmark = 0;
+
+	bufferevent_getwatermark(bev, EV_WRITE, &lowmark, &highmark);
+	if (lowmark || highmark)
+		return 1;
+	return 0;
+}
+
 /*
  * Peek into pending data to see if it is an SSL/TLS ClientHello, and if so,
  * upgrade the connection from plain TCP to SSL/TLS.
@@ -1689,6 +1701,11 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 				               "upgrade\n");
 				return 0;
 			}
+
+			struct bufferevent *ubev = ctx->dst.bev;
+			int ubev_read_disabled = !(bufferevent_get_enabled(ctx->dst.bev) & EV_READ);
+			int ubev_watermark_set = pxy_conn_getwatermark(ctx->dst.bev);
+
 			ctx->dst.bev = bufferevent_openssl_filter_new(
 			               ctx->evbase, ctx->dst.bev, ctx->dst.ssl,
 			               BUFFEREVENT_SSL_CONNECTING,
@@ -1702,6 +1719,16 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
 			bufferevent_enable(ctx->dst.bev, EV_READ|EV_WRITE);
+
+			if (ubev_read_disabled) {
+				bufferevent_disable(ubev, EV_READ);
+				bufferevent_disable(ctx->dst.bev, EV_READ);
+			}
+			if (ubev_watermark_set) {
+				bufferevent_setwatermark(ubev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
+				bufferevent_setwatermark(ctx->dst.bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
+			}
+
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_err_printf("Replaced dst bufferevent, new "
 				               "one is %p\n",
@@ -1893,13 +1920,54 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 	}
+
+	struct bufferevent *ubev = bufferevent_get_underlying(bev);
+	struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
+
+	log_err_printf(">>> pxy_bev_readcb 1: bev= %p, watermark= (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_outbuf=%zu], OUTBUF_LIMIT=%u)\n"
+			"\t\tbevs=  %d, %d, %d, %d\n"
+			"\t\tubevs= %d, %d, %d, %d\n",
+		(void*)bev,
+		evbuffer_get_length(inbuf), ubev ? evbuffer_get_length(bufferevent_get_input(ubev)) : 0,
+		evbuffer_get_length(outbuf), ubev_other ? evbuffer_get_length(bufferevent_get_output(ubev_other)) : 0,
+		OUTBUF_LIMIT,
+		!(bufferevent_get_enabled(bev) & EV_READ), pxy_conn_getwatermark(bev),
+		!(bufferevent_get_enabled(other->bev) & EV_READ), pxy_conn_getwatermark(other->bev),
+		ubev ? !(bufferevent_get_enabled(ubev) & EV_READ) : -1, ubev ? pxy_conn_getwatermark(ubev) : -1,
+		ubev_other ? !(bufferevent_get_enabled(ubev_other) & EV_READ) : -1, ubev_other ? pxy_conn_getwatermark(ubev_other) : -1);
+
 	evbuffer_add_buffer(outbuf, inbuf);
-	if (evbuffer_get_length(outbuf) >= OUTBUF_LIMIT) {
+
+	log_err_printf(">>> pxy_bev_readcb 2: bev= %p, watermark= (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_outbuf=%zu], OUTBUF_LIMIT=%u)\n"
+			"\t\tbevs=  %d, %d, %d, %d\n"
+			"\t\tubevs= %d, %d, %d, %d\n",
+		(void*)bev,
+		evbuffer_get_length(inbuf), ubev ? evbuffer_get_length(bufferevent_get_input(ubev)) : 0,
+		evbuffer_get_length(outbuf), ubev_other ? evbuffer_get_length(bufferevent_get_output(ubev_other)) : 0,
+		OUTBUF_LIMIT,
+		!(bufferevent_get_enabled(bev) & EV_READ), pxy_conn_getwatermark(bev),
+		!(bufferevent_get_enabled(other->bev) & EV_READ), pxy_conn_getwatermark(other->bev),
+		ubev ? !(bufferevent_get_enabled(ubev) & EV_READ) : -1, ubev ? pxy_conn_getwatermark(ubev) : -1,
+		ubev_other ? !(bufferevent_get_enabled(ubev_other) & EV_READ) : -1, ubev_other ? pxy_conn_getwatermark(ubev_other) : -1);
+
+	if (evbuffer_get_length(outbuf) >= OUTBUF_LIMIT ||
+			(ubev_other && evbuffer_get_length(bufferevent_get_output(ubev_other)) >= OUTBUF_LIMIT)) {
 		/* temporarily disable data source;
 		 * set an appropriate watermark. */
-		bufferevent_setwatermark(other->bev, EV_WRITE,
-				OUTBUF_LIMIT/2, OUTBUF_LIMIT);
 		bufferevent_disable(bev, EV_READ);
+		log_err_printf(">>> pxy_bev_readcb: DISABLE READ bev= %d\n", !(bufferevent_get_enabled(bev) & EV_READ));
+		bufferevent_setwatermark(other->bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
+		log_err_printf(">>> pxy_bev_readcb: SET WATERMARK other= %d\n", pxy_conn_getwatermark(other->bev));
+
+		struct bufferevent *ubev = bufferevent_get_underlying(bev);
+		if (ubev) {
+			bufferevent_disable(ubev, EV_READ);
+			log_err_printf(">>> pxy_bev_readcb: DISABLE READ ubev= %d\n", !(bufferevent_get_enabled(ubev) & EV_READ));
+		}
+		if (ubev_other && !pxy_conn_getwatermark(ubev_other)) {
+			bufferevent_setwatermark(ubev_other, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
+			log_err_printf(">>> pxy_bev_readcb: SET WATERMARK ubev_other= %d\n", pxy_conn_getwatermark(ubev_other));
+		}
 	}
 }
 
@@ -1932,11 +2000,45 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 		return;
 	}
 
+	struct evbuffer *inbuf = bufferevent_get_input(other->bev);
+	struct evbuffer *outbuf = bufferevent_get_output(bev);
+
+	struct bufferevent *ubev = bufferevent_get_underlying(bev);
+	struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
+
+	log_err_printf(">>> pxy_bev_writecb: bev= %p, watermark= (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_outbuf=%zu], OUTBUF_LIMIT=%u)\n"
+			"\t\tbevs=  %d, %d, %d, %d\n"
+			"\t\tubevs= %d, %d, %d, %d\n",
+		(void*)bev,
+		evbuffer_get_length(inbuf), ubev_other ? evbuffer_get_length(bufferevent_get_input(ubev_other)) : 0,
+		evbuffer_get_length(outbuf), ubev ? evbuffer_get_length(bufferevent_get_output(ubev)) : 0,
+		OUTBUF_LIMIT,
+		!(bufferevent_get_enabled(other->bev) & EV_READ), pxy_conn_getwatermark(other->bev),
+		!(bufferevent_get_enabled(bev) & EV_READ), pxy_conn_getwatermark(bev),
+		ubev_other ? !(bufferevent_get_enabled(ubev_other) & EV_READ) : -1, ubev_other ? pxy_conn_getwatermark(ubev_other) : -1,
+		ubev ? !(bufferevent_get_enabled(ubev) & EV_READ) : -1, ubev ? pxy_conn_getwatermark(ubev) : -1);
+
 	if (other->bev && !(bufferevent_get_enabled(other->bev) & EV_READ)) {
 		/* data source temporarily disabled;
 		 * re-enable and reset watermark to 0. */
-		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
 		bufferevent_enable(other->bev, EV_READ);
+		log_err_printf(">>> pxy_bev_writecb: ENABLE READ other= %d\n", !(bufferevent_get_enabled(other->bev) & EV_READ));
+
+		struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
+		if (ubev_other) {
+			bufferevent_enable(ubev_other, EV_READ);
+			log_err_printf(">>> pxy_bev_writecb: ENABLE READ ubev_other= %d\n", !(bufferevent_get_enabled(ubev_other) & EV_READ));
+		}
+
+		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
+		log_err_printf(">>> pxy_bev_writecb: RESET WATERMARK bev= %d\n", pxy_conn_getwatermark(bev));
+
+		if (ubev && evbuffer_get_length(bufferevent_get_output(ubev)) < OUTBUF_LIMIT/2) {
+			bufferevent_setwatermark(ubev, EV_WRITE, 0, 0);
+			log_err_printf(">>> pxy_bev_writecb: RESET WATERMARK ubev= %d\n", pxy_conn_getwatermark(ubev));
+		} else {
+			log_err_printf(">>> pxy_bev_writecb: RETURN WITHOUT RESET WATERMARK ubev\n");
+		}
 	}
 }
 
@@ -2003,6 +2105,11 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Completing autossl upgrade\n");
 			}
+
+			struct bufferevent *ubev = ctx->src.bev;
+			int ubev_read_disabled = !(bufferevent_get_enabled(ctx->src.bev) & EV_READ);
+			int ubev_watermark_set = pxy_conn_getwatermark(ctx->src.bev);
+
 			ctx->src.bev = bufferevent_openssl_filter_new(
 			               ctx->evbase, ctx->src.bev, ctx->src.ssl,
 			               BUFFEREVENT_SSL_ACCEPTING,
@@ -2015,8 +2122,16 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				                  pxy_bev_writecb,
 				                  pxy_bev_eventcb,
 				                  ctx);
-				bufferevent_enable(ctx->src.bev,
-				                   EV_READ|EV_WRITE);
+				bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
+
+				if (ubev_read_disabled) {
+					bufferevent_disable(ubev, EV_READ);
+					bufferevent_disable(ctx->src.bev, EV_READ);
+				}
+				if (ubev_watermark_set) {
+					bufferevent_setwatermark(ubev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
+					bufferevent_setwatermark(ctx->src.bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
+				}
 			}
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
