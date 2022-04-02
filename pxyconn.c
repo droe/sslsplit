@@ -1922,54 +1922,34 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 			}
 		}
 	}
-
-	struct bufferevent *ubev = bufferevent_get_underlying(bev);
-	struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
-
-	log_err_printf(">>> pxy_bev_readcb 1: bev= %p, watermark= (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_outbuf=%zu], OUTBUF_LIMIT=%u)\n"
-			"\t\tbevs=  %d, %d, %d, %d\n"
-			"\t\tubevs= %d, %d, %d, %d\n",
-		(void*)bev,
-		evbuffer_get_length(inbuf), ubev ? evbuffer_get_length(bufferevent_get_input(ubev)) : 0,
-		evbuffer_get_length(outbuf), ubev_other ? evbuffer_get_length(bufferevent_get_output(ubev_other)) : 0,
-		OUTBUF_LIMIT,
-		!(bufferevent_get_enabled(bev) & EV_READ), pxy_conn_getwatermark(bev),
-		!(bufferevent_get_enabled(other->bev) & EV_READ), pxy_conn_getwatermark(other->bev),
-		ubev ? !(bufferevent_get_enabled(ubev) & EV_READ) : -1, ubev ? pxy_conn_getwatermark(ubev) : -1,
-		ubev_other ? !(bufferevent_get_enabled(ubev_other) & EV_READ) : -1, ubev_other ? pxy_conn_getwatermark(ubev_other) : -1);
-
 	evbuffer_add_buffer(outbuf, inbuf);
 
-	log_err_printf(">>> pxy_bev_readcb 2: bev= %p, watermark= (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_outbuf=%zu], OUTBUF_LIMIT=%u)\n"
-			"\t\tbevs=  %d, %d, %d, %d\n"
-			"\t\tubevs= %d, %d, %d, %d\n",
-		(void*)bev,
-		evbuffer_get_length(inbuf), ubev ? evbuffer_get_length(bufferevent_get_input(ubev)) : 0,
-		evbuffer_get_length(outbuf), ubev_other ? evbuffer_get_length(bufferevent_get_output(ubev_other)) : 0,
-		OUTBUF_LIMIT,
-		!(bufferevent_get_enabled(bev) & EV_READ), pxy_conn_getwatermark(bev),
-		!(bufferevent_get_enabled(other->bev) & EV_READ), pxy_conn_getwatermark(other->bev),
-		ubev ? !(bufferevent_get_enabled(ubev) & EV_READ) : -1, ubev ? pxy_conn_getwatermark(ubev) : -1,
-		ubev_other ? !(bufferevent_get_enabled(ubev_other) & EV_READ) : -1, ubev_other ? pxy_conn_getwatermark(ubev_other) : -1);
-
+	struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
 	if (evbuffer_get_length(outbuf) >= OUTBUF_LIMIT ||
 			(ubev_other && evbuffer_get_length(bufferevent_get_output(ubev_other)) >= OUTBUF_LIMIT)) {
+
+		if (OPTS_DEBUG(ctx->opts)) {
+			struct bufferevent *ubev = bufferevent_get_underlying(bev);
+			log_err_printf("buffer watermark control ! (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_other_outbuf=%zu], OUTBUF_LIMIT=%u)\n",
+					evbuffer_get_length(inbuf),
+					ubev ? evbuffer_get_length(bufferevent_get_input(ubev)) : 0,
+					evbuffer_get_length(outbuf),
+					ubev_other ? evbuffer_get_length(bufferevent_get_output(ubev_other)) : 0,
+					OUTBUF_LIMIT);
+		}
+
 		/* temporarily disable data source;
 		 * set an appropriate watermark. */
 		bufferevent_disable(bev, EV_READ);
-		log_err_printf(">>> pxy_bev_readcb: DISABLE READ bev= %d\n", !(bufferevent_get_enabled(bev) & EV_READ));
 		bufferevent_setwatermark(other->bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
-		log_err_printf(">>> pxy_bev_readcb: SET WATERMARK other= %d\n", pxy_conn_getwatermark(other->bev));
 
 		struct bufferevent *ubev = bufferevent_get_underlying(bev);
-		if (ubev) {
+		if (ubev)
 			bufferevent_disable(ubev, EV_READ);
-			log_err_printf(">>> pxy_bev_readcb: DISABLE READ ubev= %d\n", !(bufferevent_get_enabled(ubev) & EV_READ));
-		}
-		if (ubev_other && !pxy_conn_getwatermark(ubev_other)) {
+
+		/* The watermark for ubev_other may be already set, see the write cb */
+		if (ubev_other && !pxy_conn_getwatermark(ubev_other))
 			bufferevent_setwatermark(ubev_other, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
-			log_err_printf(">>> pxy_bev_readcb: SET WATERMARK ubev_other= %d\n", pxy_conn_getwatermark(ubev_other));
-		}
 	}
 }
 
@@ -2002,44 +1982,24 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 		return;
 	}
 
-	struct evbuffer *inbuf = bufferevent_get_input(other->bev);
-	struct evbuffer *outbuf = bufferevent_get_output(bev);
-
-	struct bufferevent *ubev = bufferevent_get_underlying(bev);
-	struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
-
-	log_err_printf(">>> pxy_bev_writecb: bev= %p, watermark= (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_outbuf=%zu], OUTBUF_LIMIT=%u)\n"
-			"\t\tbevs=  %d, %d, %d, %d\n"
-			"\t\tubevs= %d, %d, %d, %d\n",
-		(void*)bev,
-		evbuffer_get_length(inbuf), ubev_other ? evbuffer_get_length(bufferevent_get_input(ubev_other)) : 0,
-		evbuffer_get_length(outbuf), ubev ? evbuffer_get_length(bufferevent_get_output(ubev)) : 0,
-		OUTBUF_LIMIT,
-		!(bufferevent_get_enabled(other->bev) & EV_READ), pxy_conn_getwatermark(other->bev),
-		!(bufferevent_get_enabled(bev) & EV_READ), pxy_conn_getwatermark(bev),
-		ubev_other ? !(bufferevent_get_enabled(ubev_other) & EV_READ) : -1, ubev_other ? pxy_conn_getwatermark(ubev_other) : -1,
-		ubev ? !(bufferevent_get_enabled(ubev) & EV_READ) : -1, ubev ? pxy_conn_getwatermark(ubev) : -1);
-
-	if (other->bev && !(bufferevent_get_enabled(other->bev) & EV_READ)) {
-		/* data source temporarily disabled;
-		 * re-enable and reset watermark to 0. */
-		bufferevent_enable(other->bev, EV_READ);
-		log_err_printf(">>> pxy_bev_writecb: ENABLE READ other= %d\n", !(bufferevent_get_enabled(other->bev) & EV_READ));
-
+	if (other->bev) {
 		struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
-		if (ubev_other) {
-			bufferevent_enable(ubev_other, EV_READ);
-			log_err_printf(">>> pxy_bev_writecb: ENABLE READ ubev_other= %d\n", !(bufferevent_get_enabled(ubev_other) & EV_READ));
-		}
+		if (!(bufferevent_get_enabled(other->bev) & EV_READ) ||
+				(ubev_other && !(bufferevent_get_enabled(ubev_other) & EV_READ))) {
+			/* data source temporarily disabled;
+			 * re-enable and reset watermark to 0. */
+			bufferevent_enable(other->bev, EV_READ);
+			bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
 
-		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
-		log_err_printf(">>> pxy_bev_writecb: RESET WATERMARK bev= %d\n", pxy_conn_getwatermark(bev));
+			if (ubev_other)
+				bufferevent_enable(ubev_other, EV_READ);
 
-		if (ubev && evbuffer_get_length(bufferevent_get_output(ubev)) < OUTBUF_LIMIT/2) {
-			bufferevent_setwatermark(ubev, EV_WRITE, 0, 0);
-			log_err_printf(">>> pxy_bev_writecb: RESET WATERMARK ubev= %d\n", pxy_conn_getwatermark(ubev));
-		} else {
-			log_err_printf(">>> pxy_bev_writecb: RETURN WITHOUT RESET WATERMARK ubev\n");
+			/* Do not reset the watermark for ubev without checking its buf len,
+			 * because the current write event may be due to the buf len of bev
+			 * falling below OUTBUF_LIMIT/2, not that of ubev */
+			struct bufferevent *ubev = bufferevent_get_underlying(bev);
+			if (ubev && evbuffer_get_length(bufferevent_get_output(ubev)) < OUTBUF_LIMIT/2)
+				bufferevent_setwatermark(ubev, EV_WRITE, 0, 0);
 		}
 	}
 }
