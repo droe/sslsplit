@@ -1912,21 +1912,11 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 	struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
 	if (evbuffer_get_length(outbuf) >= OUTBUF_LIMIT ||
 			(ubev_other && evbuffer_get_length(bufferevent_get_output(ubev_other)) >= OUTBUF_LIMIT)) {
-
-		if (OPTS_DEBUG(ctx->opts)) {
-			struct bufferevent *ubev = bufferevent_get_underlying(bev);
-			log_err_printf("buffer watermark control ! (inbuf=%zu [ubev_inbuf=%zu], outbuf=%zu [ubev_other_outbuf=%zu], OUTBUF_LIMIT=%u)\n",
-					evbuffer_get_length(inbuf),
-					ubev ? evbuffer_get_length(bufferevent_get_input(ubev)) : 0,
-					evbuffer_get_length(outbuf),
-					ubev_other ? evbuffer_get_length(bufferevent_get_output(ubev_other)) : 0,
-					OUTBUF_LIMIT);
-		}
-
 		/* temporarily disable data source;
 		 * set an appropriate watermark. */
+		bufferevent_setwatermark(other->bev, EV_WRITE,
+				OUTBUF_LIMIT/2, OUTBUF_LIMIT);
 		bufferevent_disable(bev, EV_READ);
-		bufferevent_setwatermark(other->bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
 
 		/* The watermark for ubev_other may be already set, see the write cb */
 		if (ubev_other && !pxy_conn_getwatermark(ubev_other))
@@ -1966,8 +1956,8 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 	if (other->bev && !(bufferevent_get_enabled(other->bev) & EV_READ)) {
 		/* data source temporarily disabled;
 		 * re-enable and reset watermark to 0. */
-		bufferevent_enable(other->bev, EV_READ);
 		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
+		bufferevent_enable(other->bev, EV_READ);
 
 		/* Do not reset the watermark for ubev without checking its buf len,
 		 * because the current write event may be due to the buf len of bev
@@ -2053,7 +2043,8 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				                  pxy_bev_writecb,
 				                  pxy_bev_eventcb,
 				                  ctx);
-				bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
+				bufferevent_enable(ctx->src.bev,
+				                   EV_READ|EV_WRITE);
 			}
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
