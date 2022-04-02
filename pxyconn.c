@@ -1653,18 +1653,6 @@ deny:
 	}
 }
 
-static int
-pxy_conn_getwatermark(struct bufferevent *bev)
-{
-	size_t lowmark = 0;
-	size_t highmark = 0;
-
-	bufferevent_getwatermark(bev, EV_WRITE, &lowmark, &highmark);
-	if (lowmark || highmark)
-		return 1;
-	return 0;
-}
-
 /*
  * Peek into pending data to see if it is an SSL/TLS ClientHello, and if so,
  * upgrade the connection from plain TCP to SSL/TLS.
@@ -1703,11 +1691,6 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 				               "upgrade\n");
 				return 0;
 			}
-
-			struct bufferevent *ubev = ctx->dst.bev;
-			int ubev_read_disabled = !(bufferevent_get_enabled(ctx->dst.bev) & EV_READ);
-			int ubev_watermark_set = pxy_conn_getwatermark(ctx->dst.bev);
-
 			ctx->dst.bev = bufferevent_openssl_filter_new(
 			               ctx->evbase, ctx->dst.bev, ctx->dst.ssl,
 			               BUFFEREVENT_SSL_CONNECTING,
@@ -1721,16 +1704,6 @@ pxy_conn_autossl_peek_and_upgrade(pxy_conn_ctx_t *ctx)
 			                  pxy_bev_writecb, pxy_bev_eventcb,
 			                  ctx);
 			bufferevent_enable(ctx->dst.bev, EV_READ|EV_WRITE);
-
-			if (ubev_read_disabled) {
-				bufferevent_disable(ubev, EV_READ);
-				bufferevent_disable(ctx->dst.bev, EV_READ);
-			}
-			if (ubev_watermark_set) {
-				bufferevent_setwatermark(ubev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
-				bufferevent_setwatermark(ctx->dst.bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
-			}
-
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_err_printf("Replaced dst bufferevent, new "
 				               "one is %p\n",
@@ -1763,6 +1736,18 @@ pxy_conn_terminate_free(pxy_conn_ctx_t *ctx, int is_requestor)
 		ctx->src.bev = NULL;
 	}
 	pxy_conn_ctx_free(ctx, is_requestor);
+}
+
+static int
+pxy_conn_getwatermark(struct bufferevent *bev)
+{
+	size_t lowmark = 0;
+	size_t highmark = 0;
+
+	bufferevent_getwatermark(bev, EV_WRITE, &lowmark, &highmark);
+	if (lowmark || highmark)
+		return 1;
+	return 0;
 }
 
 /*
@@ -1943,10 +1928,6 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		bufferevent_disable(bev, EV_READ);
 		bufferevent_setwatermark(other->bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
 
-		struct bufferevent *ubev = bufferevent_get_underlying(bev);
-		if (ubev)
-			bufferevent_disable(ubev, EV_READ);
-
 		/* The watermark for ubev_other may be already set, see the write cb */
 		if (ubev_other && !pxy_conn_getwatermark(ubev_other))
 			bufferevent_setwatermark(ubev_other, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
@@ -1982,25 +1963,18 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 		return;
 	}
 
-	if (other->bev) {
-		struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
-		if (!(bufferevent_get_enabled(other->bev) & EV_READ) ||
-				(ubev_other && !(bufferevent_get_enabled(ubev_other) & EV_READ))) {
-			/* data source temporarily disabled;
-			 * re-enable and reset watermark to 0. */
-			bufferevent_enable(other->bev, EV_READ);
-			bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
+	if (other->bev && !(bufferevent_get_enabled(other->bev) & EV_READ)) {
+		/* data source temporarily disabled;
+		 * re-enable and reset watermark to 0. */
+		bufferevent_enable(other->bev, EV_READ);
+		bufferevent_setwatermark(bev, EV_WRITE, 0, 0);
 
-			if (ubev_other)
-				bufferevent_enable(ubev_other, EV_READ);
-
-			/* Do not reset the watermark for ubev without checking its buf len,
-			 * because the current write event may be due to the buf len of bev
-			 * falling below OUTBUF_LIMIT/2, not that of ubev */
-			struct bufferevent *ubev = bufferevent_get_underlying(bev);
-			if (ubev && evbuffer_get_length(bufferevent_get_output(ubev)) < OUTBUF_LIMIT/2)
-				bufferevent_setwatermark(ubev, EV_WRITE, 0, 0);
-		}
+		/* Do not reset the watermark for ubev without checking its buf len,
+		 * because the current write event may be due to the buf len of bev
+		 * falling below OUTBUF_LIMIT/2, not that of ubev */
+		struct bufferevent *ubev = bufferevent_get_underlying(bev);
+		if (ubev && evbuffer_get_length(bufferevent_get_output(ubev)) < OUTBUF_LIMIT/2)
+			bufferevent_setwatermark(ubev, EV_WRITE, 0, 0);
 	}
 }
 
@@ -2067,11 +2041,6 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 			if (OPTS_DEBUG(ctx->opts)) {
 				log_dbg_printf("Completing autossl upgrade\n");
 			}
-
-			struct bufferevent *ubev = ctx->src.bev;
-			int ubev_read_disabled = !(bufferevent_get_enabled(ctx->src.bev) & EV_READ);
-			int ubev_watermark_set = pxy_conn_getwatermark(ctx->src.bev);
-
 			ctx->src.bev = bufferevent_openssl_filter_new(
 			               ctx->evbase, ctx->src.bev, ctx->src.ssl,
 			               BUFFEREVENT_SSL_ACCEPTING,
@@ -2085,15 +2054,6 @@ pxy_bev_eventcb(struct bufferevent *bev, short events, void *arg)
 				                  pxy_bev_eventcb,
 				                  ctx);
 				bufferevent_enable(ctx->src.bev, EV_READ|EV_WRITE);
-
-				if (ubev_read_disabled) {
-					bufferevent_disable(ubev, EV_READ);
-					bufferevent_disable(ctx->src.bev, EV_READ);
-				}
-				if (ubev_watermark_set) {
-					bufferevent_setwatermark(ubev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
-					bufferevent_setwatermark(ctx->src.bev, EV_WRITE, OUTBUF_LIMIT/2, OUTBUF_LIMIT);
-				}
 			}
 		} else {
 			ctx->src.bev = pxy_bufferevent_setup(ctx, ctx->fd,
