@@ -2324,6 +2324,22 @@ connected:
 			                    evbuffer_get_length(
 			                    bufferevent_get_output(other->bev))
 			                );
+			struct bufferevent *ubev = bufferevent_get_underlying(bev);
+			struct bufferevent *ubev_other = other->closed ?
+				NULL : bufferevent_get_underlying(other->bev);
+			if (ubev || ubev_other) {
+				log_dbg_printf("underlying evbuffer size at EOF: "
+							   "i:%zu o:%zu i:%zu o:%zu\n",
+								ubev ? evbuffer_get_length(
+									bufferevent_get_input(ubev)) : 0,
+								ubev ? evbuffer_get_length(
+									bufferevent_get_output(ubev)) : 0,
+								ubev_other ? evbuffer_get_length(
+									bufferevent_get_input(ubev_other)) : 0,
+								ubev_other ? evbuffer_get_length(
+									bufferevent_get_output(ubev_other)) : 0
+								);
+			}
 		}
 #endif /* DEBUG_PROXY */
 		if (!ctx->connected) {
