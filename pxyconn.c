@@ -1773,6 +1773,14 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		log_dbg_printf("Warning: Drained %zu bytes (conn closed)\n",
 		               evbuffer_get_length(inbuf));
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
+
+		struct bufferevent *ubev = bufferevent_get_underlying(bev);
+		if (ubev) {
+			struct evbuffer *ubev_inbuf = bufferevent_get_input(ubev);
+			log_dbg_printf("Warning: Drained %zu bytes underlying (conn closed)\n",
+						   evbuffer_get_length(ubev_inbuf));
+			evbuffer_drain(ubev_inbuf, evbuffer_get_length(ubev_inbuf));
+		}
 		return;
 	}
 
@@ -1933,7 +1941,9 @@ pxy_bev_writecb(struct bufferevent *bev, void *arg)
 
 	if (other->closed) {
 		struct evbuffer *outbuf = bufferevent_get_output(bev);
-		if (evbuffer_get_length(outbuf) == 0) {
+		struct bufferevent *ubev = bufferevent_get_underlying(bev);
+		if (evbuffer_get_length(outbuf) == 0 &&
+				(!ubev || evbuffer_get_length(bufferevent_get_output(ubev)) == 0)) {
 			/* finished writing and other end is closed;
 			 * close this end too and clean up memory */
 			bufferevent_free_and_close_fd(bev, ctx);
@@ -2288,9 +2298,10 @@ connected:
 			/* if the other end is still open and doesn't have data
 			 * to send, close it, otherwise its writecb will close
 			 * it after writing what's left in the output buffer */
-			struct evbuffer *outbuf;
-			outbuf = bufferevent_get_output(other->bev);
-			if (evbuffer_get_length(outbuf) == 0) {
+			struct evbuffer *outbuf = bufferevent_get_output(other->bev);
+			struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
+			if (evbuffer_get_length(outbuf) == 0 &&
+					(!ubev_other || evbuffer_get_length(bufferevent_get_output(ubev_other)) == 0)) {
 				bufferevent_free_and_close_fd(other->bev, ctx);
 				other->bev = NULL;
 				other->closed = 1;
@@ -2332,8 +2343,9 @@ connected:
 			 * have data to send, close it, otherwise its
 			 * writecb will close it after writing what's
 			 * left in the output buffer. */
-			if (evbuffer_get_length(
-			    bufferevent_get_output(other->bev)) == 0) {
+			struct bufferevent *ubev_other = bufferevent_get_underlying(other->bev);
+			if (evbuffer_get_length(bufferevent_get_output(other->bev)) == 0 &&
+					(!ubev_other || evbuffer_get_length(bufferevent_get_output(ubev_other)) == 0)) {
 				bufferevent_free_and_close_fd(other->bev, ctx);
 				other->bev = NULL;
 				other->closed = 1;
