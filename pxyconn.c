@@ -1632,6 +1632,15 @@ deny:
 		}
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
 	}
+
+	struct bufferevent *ubev = bufferevent_get_underlying(ctx->src.bev);
+	if (ubev) {
+		struct evbuffer *ubev_inbuf = bufferevent_get_input(ubev);
+		size_t ubev_inbuf_size = evbuffer_get_length(ubev_inbuf);
+		if (ubev_inbuf_size)
+			evbuffer_drain(ubev_inbuf, ubev_inbuf_size);
+	}
+
 	bufferevent_free_and_close_fd(ctx->dst.bev, ctx);
 	ctx->dst.bev = NULL;
 	ctx->dst.closed = 1;
