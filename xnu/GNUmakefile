@@ -86,6 +86,7 @@ XNU_RELS+=	4903.231.4	# 10.14.2
 XNU_RELS+=	4903.241.1	# 10.14.3
 #XNU_RELS+=	4903.251.3	# 10.14.4       # "coming soon!"
 #XNU_RELS+=	4903.261.4	# 10.14.5       # "coming soon!"
+XNU_RELS+=	4903.270.47	# 10.14.6
 
 # macOS Catalina
 
