@@ -455,8 +455,7 @@ logpkt_mirror_build(libnet_t *libnet,
 	} else {
 		ptag = libnet_build_ipv6(0,             /* traffic class */
 		                         0,             /* flow label */
-		                         LIBNET_IPV6_H + LIBNET_TCP_H +
-		                         payloadlen,
+		                         LIBNET_TCP_H + payloadlen,
 		                         IPPROTO_TCP,
 		                         255,           /* hop limit */
 		                         *(struct libnet_in6_addr *)
