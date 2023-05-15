@@ -401,7 +401,7 @@ logpkt_pcap_build(uint8_t *pkt,
 		                 sizeof(ip6_hdr->src_addr));
 		CHKSUM_ADD_RANGE(sum, ip6_hdr->dst_addr,
 		                 sizeof(ip6_hdr->dst_addr));
-		CHKSUM_ADD_UINT32(sum, ip6_hdr->len);
+		CHKSUM_ADD_UINT32(sum, (uint32_t)ip6_hdr->len);
 		CHKSUM_ADD_UINT16(sum, htons(IPPROTO_TCP));
 	}
 	tcp_hdr->seq = htonl(seq);
