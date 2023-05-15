@@ -464,29 +464,32 @@ proxyspec_free(proxyspec_t *spec)
 char *
 proxyspec_str(proxyspec_t *spec)
 {
-	char *s;
-	char *lhbuf, *lpbuf;
+	char *s = NULL;
+	char *lhbuf = NULL;
+	char *lpbuf = NULL;
+	char *chbuf = NULL;
+	char *cpbuf = NULL;
 	char *cbuf = NULL;
+
 	if (sys_sockaddr_str((struct sockaddr *)&spec->listen_addr,
 	                     spec->listen_addrlen, &lhbuf, &lpbuf) != 0) {
-		return NULL;
+		goto out;
 	}
 	if (spec->connect_addrlen) {
-		char *chbuf, *cpbuf;
 		if (sys_sockaddr_str((struct sockaddr *)&spec->connect_addr,
 		                     spec->connect_addrlen,
 		                     &chbuf, &cpbuf) != 0) {
-			return NULL;
+			goto out;
 		}
 		if (asprintf(&cbuf, "[%s]:%s", chbuf, cpbuf) < 0) {
-			return NULL;
+			cbuf = NULL;
+			goto out;
 		}
-		free(chbuf);
-		free(cpbuf);
 	}
 	if (spec->sni_port) {
 		if (asprintf(&cbuf, "sni %i", spec->sni_port) < 0) {
-			return NULL;
+			cbuf = NULL;
+			goto out;
 		}
 	}
 	if (asprintf(&s, "[%s]:%s %s%s%s %s", lhbuf, lpbuf,
@@ -496,8 +499,15 @@ proxyspec_str(proxyspec_t *spec)
 	             (spec->natengine ? spec->natengine : cbuf)) < 0) {
 		s = NULL;
 	}
-	free(lhbuf);
-	free(lpbuf);
+out:
+	if (lhbuf)
+		free(lhbuf);
+	if (lpbuf)
+		free(lpbuf);
+	if (chbuf)
+		free(chbuf);
+	if (cpbuf)
+		free(cpbuf);
 	if (cbuf)
 		free(cbuf);
 	return s;
