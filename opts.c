@@ -475,9 +475,15 @@ proxyspec_str(proxyspec_t *spec)
 		if (sys_sockaddr_str((struct sockaddr *)&spec->connect_addr,
 		                     spec->connect_addrlen,
 		                     &chbuf, &cpbuf) != 0) {
+			free(lhbuf);
+			free(lpbuf);
 			return NULL;
 		}
 		if (asprintf(&cbuf, "[%s]:%s", chbuf, cpbuf) < 0) {
+			free(lhbuf);
+			free(lpbuf);
+			free(chbuf);
+			free(cpbuf);
 			return NULL;
 		}
 		free(chbuf);
@@ -485,6 +491,10 @@ proxyspec_str(proxyspec_t *spec)
 	}
 	if (spec->sni_port) {
 		if (asprintf(&cbuf, "sni %i", spec->sni_port) < 0) {
+			free(lhbuf);
+			free(lpbuf);
+			if (cbuf)
+				free(cbuf);
 			return NULL;
 		}
 	}
