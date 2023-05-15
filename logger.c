@@ -306,7 +306,6 @@ logger_printf(logger_t *logger, void *fh, unsigned long prepflags,
 
 	if (!(lb = logbuf_new(NULL, 0, NULL)))
 		return -1;
-	lb->fh = fh;
 	va_start(ap, fmt);
 	lb->sz = vasprintf((char**)&lb->buf, fmt, ap);
 	va_end(ap);
@@ -324,7 +323,6 @@ logger_write(logger_t *logger, void *fh, unsigned long prepflags,
 
 	if (!(lb = logbuf_new_copy(buf, sz, NULL)))
 		return -1;
-	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 int
@@ -335,7 +333,6 @@ logger_print(logger_t *logger, void *fh, unsigned long prepflags,
 
 	if (!(lb = logbuf_new_copy(s, strlen(s), NULL)))
 		return -1;
-	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 int
@@ -346,19 +343,13 @@ logger_write_freebuf(logger_t *logger, void *fh, unsigned long prepflags,
 
 	if (!(lb = logbuf_new(buf, sz, NULL)))
 		return -1;
-	lb->fh = fh;
 	return logger_submit(logger, fh, prepflags, lb);
 }
 int
 logger_print_freebuf(logger_t *logger, void *fh, unsigned long prepflags,
                      char *s)
 {
-	logbuf_t *lb;
-
-	if (!(lb = logbuf_new(s, strlen(s), NULL)))
-		return -1;
-	lb->fh = fh;
-	return logger_submit(logger, fh, prepflags, lb);
+	return logger_write_freebuf(logger, fh, prepflags, s, strlen(s));
 }
 
 /* vim: set noet ft=c: */
