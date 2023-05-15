@@ -71,6 +71,7 @@ opts_load_cert_chain_key(const char *filename)
 		log_err_printf("Cert does not match key in PEM file "
 		                "'%s':\n", filename);
 		ERR_print_errors_fp(stderr);
+		cert_free(cert);
 		return NULL;
 	}
 
