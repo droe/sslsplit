@@ -183,6 +183,22 @@ typedef struct __attribute__((packed)) {
 #define CSIN(X)         ((const struct sockaddr_in *)(X))
 #define CSIN6(X)        ((const struct sockaddr_in6 *)(X))
 
+static int
+logpkt_write_all(int fd, const void *data, size_t sz)
+{
+	const char *ptr = data;
+	while (sz > 0) {
+		ssize_t w = write(fd, ptr, sz);
+		if (w == -1 && errno == EINTR)
+			continue;
+		if (w == -1)
+			return -1;
+		ptr += w;
+		sz -= w;
+	}
+	return 0;
+}
+
 /*
  * Write the PCAP file-level header to file descriptor *fd* open for writing,
  * positioned at the beginning of an empty file.
@@ -200,7 +216,7 @@ logpkt_write_global_pcap_hdr(int fd)
 	hdr.version_minor = 4;
 	hdr.snaplen = MAX_PKTSZ;
 	hdr.network = 1;
-	return write(fd, &hdr, sizeof(hdr)) != sizeof(hdr) ? -1 : 0;
+	return logpkt_write_all(fd, &hdr, sizeof(hdr));
 }
 
 /*
@@ -288,12 +304,12 @@ logpkt_pcap_write(const uint8_t *pkt, size_t pktsz, int fd)
 	rec_hdr.ts_usec = tv.tv_usec;
 	rec_hdr.orig_len = rec_hdr.incl_len = pktsz;
 
-	if (write(fd, &rec_hdr, sizeof(rec_hdr)) != sizeof(rec_hdr)) {
+	if (logpkt_write_all(fd, &rec_hdr, sizeof(rec_hdr)) == -1) {
 		log_err_printf("Error writing pcap record hdr: %s\n",
 		               strerror(errno));
 		return -1;
 	}
-	if (write(fd, pkt, pktsz) != (ssize_t)pktsz) {
+	if (logpkt_write_all(fd, pkt, pktsz) == -1) {
 		log_err_printf("Error writing pcap record: %s\n",
 		               strerror(errno));
 		return -1;
