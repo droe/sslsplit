@@ -454,7 +454,6 @@ pxy_log_connect_nonhttp(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->opts->connectlog) {
 		if (log_connect_print_free(msg) == -1) {
-			free(msg);
 			log_err_printf("Warning: Connection logging failed\n");
 		}
 	} else {
@@ -567,7 +566,6 @@ pxy_log_connect_http(pxy_conn_ctx_t *ctx)
 	}
 	if (ctx->opts->connectlog) {
 		if (log_connect_print_free(msg) == -1) {
-			free(msg);
 			log_err_printf("Warning: Connection logging failed\n");
 		}
 	} else {

@@ -1454,10 +1454,8 @@ log_cert_submit(const char *fn, X509 *crt)
 	if (!(pem = ssl_x509_to_pem(crt)))
 		goto errout2;
 	if (!(lb = logbuf_new(pem, strlen(pem), NULL)))
-		goto errout3;
+		goto errout2;
 	return logger_submit(cert_log, fh, 0, lb);
-errout3:
-	free(pem);
 errout2:
 	free(fh);
 errout1:
