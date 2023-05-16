@@ -1974,6 +1974,16 @@ ssl_is_ocspreq(const unsigned char *buf, size_t sz)
 	return 1;
 }
 
+static uint16_t
+len2(uint8_t p0, uint8_t p1) {
+	return (uint16_t)p1 + ((uint16_t)p0 << 8);
+}
+
+static uint32_t
+len3(uint8_t p0, uint8_t p1, uint8_t p2) {
+	return (uint32_t)p2 + ((uint32_t)p1 << 8) + ((uint32_t)p0 << 16);
+}
+
 /*
  * Ugly hack to manually parse a clientHello message from a memory buffer.
  * This is needed in order to be able to support SNI and STARTTLS.
@@ -2105,15 +2115,15 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 			p += 2; n -= 2;
 
 			DBG_printf("cipher-spec-len: %02x %02x\n", p[0], p[1]);
-			ssize_t cipherspec_len = p[0] << 8 | p[1];
+			ssize_t cipherspec_len = len2(p[0], p[1]);
 			p += 2; n -= 2;
 
 			DBG_printf("session-id-len: %02x %02x\n", p[0], p[1]);
-			ssize_t sessionid_len = p[0] << 8 | p[1];
+			ssize_t sessionid_len = len2(p[0], p[1]);
 			p += 2; n -= 2;
 
 			DBG_printf("challenge-len: %02x %02x\n", p[0], p[1]);
-			ssize_t challenge_len = p[0] << 8 | p[1];
+			ssize_t challenge_len = len2(p[0], p[1]);
 			p += 2; n -= 2;
 			if (challenge_len < 16 || challenge_len > 32)
 				continue;
@@ -2156,7 +2166,7 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 			return 1;
 		}
 		DBG_printf("length: %02x %02x\n", p[0], p[1]);
-		ssize_t recordlen = p[1] + (p[0] << 8);
+		ssize_t recordlen = len2(p[0], p[1]);
 		DBG_printf("recordlen=%zd\n", recordlen);
 		p += 2; n -= 2;
 		if (recordlen < 36) /* arbitrary size too small for a c-h */
@@ -2181,7 +2191,8 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 		if (n < 3)
 			continue;
 		DBG_printf("message len: %02x %02x %02x\n", p[0], p[1], p[2]);
-		ssize_t msglen = p[2] + (p[1] << 8) + (p[0] << 16);
+
+		ssize_t msglen = len3(p[0], p[1], p[2]);
 		DBG_printf("msglen=%zd\n", msglen);
 		p += 3; n -= 3;
 		if (msglen < 32) /* arbitrary size too small for a c-h */
@@ -2223,7 +2234,8 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 			continue;
 		DBG_printf("clienthello cipher suites length %02x %02x\n",
 		           p[0], p[1]);
-		ssize_t suiteslen = p[1] + (p[0] << 8);
+
+		ssize_t suiteslen = len2(p[0], p[1]);
 		p += 2; n -= 2;
 		if (n < suiteslen)
 			continue;
@@ -2252,7 +2264,7 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 		if (n < 2)
 			continue;
 		DBG_printf("tlsexts length %02x %02x\n", p[0], p[1]);
-		ssize_t tlsextslen = p[1] + (p[0] << 8);
+		ssize_t tlsextslen = len2(p[0], p[1]);
 		DBG_printf("tlsextslen %zd\n", tlsextslen);
 		p += 2; n -= 2;
 		if (n < tlsextslen)
@@ -2264,8 +2276,8 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 				goto continue_search;
 			DBG_printf("tlsext type %02x %02x len %02x %02x\n",
 			           p[0], p[1], p[2], p[3]);
-			unsigned short exttype = p[1] + (p[0] << 8);
-			ssize_t extlen = p[3] + (p[2] << 8);
+			unsigned short exttype = len2(p[0], p[1]);
+			ssize_t extlen = len2(p[2], p[3]);
 			p += 4; n -= 4;
 			if (n < extlen)
 				goto continue_search;
@@ -2278,7 +2290,7 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 					goto continue_search;
 				DBG_printf("list length %02x %02x\n",
 				           extp[0], extp[1]);
-				ssize_t namelistlen = extp[1] + (extp[0] << 8);
+				ssize_t namelistlen = len2(extp[0], extp[1]);
 				DBG_printf("namelistlen = %zd\n", namelistlen);
 				extp += 2;
 				extn -= 2;
@@ -2293,7 +2305,7 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 					           " len %02x %02x\n",
 					           extp[0], extp[1], extp[2]);
 					unsigned char sntype = extp[0];
-					ssize_t snlen = extp[2] + (extp[1]<<8);
+					ssize_t snlen = len2(extp[1], extp[2]);
 					extp += 3;
 					extn -= 3;
 					if (snlen > extn)
