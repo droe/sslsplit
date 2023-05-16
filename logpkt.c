@@ -558,7 +558,7 @@ logpkt_write_packet(logpkt_ctx_t *ctx, int fd, int direction, char flags,
 			                         payload, payloadlen);
 		} else {
 			rv = logpkt_mirror_build(ctx->libnet,
-			                         ctx->src_ether, ctx->dst_ether,
+			                         ctx->dst_ether, ctx->src_ether,
 			                         CSA(&ctx->dst_addr),
 			                         CSA(&ctx->src_addr),
 			                         flags,
