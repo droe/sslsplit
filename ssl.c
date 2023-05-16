@@ -2032,13 +2032,13 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 #endif /* !DEBUG_CLIENTHELLO_PARSER */
 	const unsigned char *p = buf;
 	ssize_t n = sz;
-	char *sn = NULL;
 
 	*clienthello = NULL;
 
 	DBG_printf("parsing buffer of sz %zd\n", sz);
 
 	do {
+		char *sn = NULL;
 		if (*clienthello) {
 			/*
 			 * Rewind after skipping an invalid ClientHello by
@@ -2047,10 +2047,6 @@ ssl_tls_clienthello_parse(const unsigned char *buf, ssize_t sz, int search,
 			 */
 			p = (*clienthello) + 1;
 			n = sz - (p - buf);
-			if (sn) {
-				free(sn);
-				sn = NULL;
-			}
 		}
 
 		if (search) {
@@ -2348,16 +2344,13 @@ done_parsing:
 			*servername = sn;
 		return 0;
 continue_search:
-		;
+		if (sn)
+			free(sn);
 	} while (search && n > 0);
 
 	/* No valid ClientHello messages found, not even a truncated one */
 	DBG_printf("===> No match: rv 1, *clienthello NULL\n");
 	*clienthello = NULL;
-	if (sn) {
-		free(sn);
-		sn = NULL;
-	}
 	return 1;
 }
 
