@@ -93,6 +93,11 @@ dynbuf_new_file(const char *filename)
 	}
 	fseek(f, 0, SEEK_END);
 	db->sz = ftell(f);
+	if (db->sz == (size_t)-1) {
+		free(db);
+		fclose(f);
+		return NULL;
+	}
 	fseek(f, 0, SEEK_SET);
 	if (!(db->buf = malloc(db->sz))) {
 		free(db);
