@@ -209,6 +209,32 @@ typedef struct pxy_conn_ctx {
 #define WANT_CONTENT_LOG(ctx)	(((ctx)->opts->contentlog||(ctx)->opts->pcaplog)&&!(ctx)->passthrough)
 #endif /* WITHOUT_MIRROR */
 
+static void
+add_line_to_content_log(const char *line, logbuf_t **plb, logbuf_t **ptail) {
+	logbuf_t *tmp;
+	tmp = logbuf_new_printf(NULL, "%s\r\n", line);
+	if (tmp) {
+		if (*ptail) {
+			(*ptail)->next = tmp;
+			(*ptail) = (*ptail)->next;
+		} else {
+			*plb = *ptail = tmp;
+		}
+	}
+}
+
+static void
+submit_content_logbuf_free(pxy_conn_ctx_t *ctx, logbuf_t *lb, int is_req) {
+	if (lb) {
+		if (log_content_submit(&ctx->logctx, lb,
+	                           is_req) == -1) {
+			logbuf_free(lb);
+			log_err_printf("Warning: Content log "
+			               "submission failed\n");
+		}
+	}
+}
+
 static pxy_conn_ctx_t *
 pxy_conn_ctx_new(proxyspec_t *spec, opts_t *opts,
                  pxy_thrmgr_ctx_t *thrmgr, evutil_socket_t fd)
@@ -1622,12 +1648,7 @@ deny:
 			lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL);
 			if (lb &&
 			    (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-				if (log_content_submit(&ctx->logctx, lb,
-				                       1/*req*/) == -1) {
-					logbuf_free(lb);
-					log_err_printf("Warning: Content log "
-					               "submission failed\n");
-				}
+				submit_content_logbuf_free(ctx, lb, 1/*req*/);
 			}
 		}
 		evbuffer_drain(inbuf, evbuffer_get_length(inbuf));
@@ -1649,14 +1670,7 @@ deny:
 	if (WANT_CONTENT_LOG(ctx)) {
 		logbuf_t *lb;
 		lb = logbuf_new_copy(ocspresp, sizeof(ocspresp) - 1, NULL);
-		if (lb) {
-			if (log_content_submit(&ctx->logctx, lb,
-			                       0/*resp*/) == -1) {
-				logbuf_free(lb);
-				log_err_printf("Warning: Content log "
-				               "submission failed\n");
-			}
-		}
+		submit_content_logbuf_free(ctx, lb, 0/*resp*/);
 	}
 }
 
@@ -1802,16 +1816,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		                               EVBUFFER_EOL_CRLF))) {
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
-				logbuf_t *tmp;
-				tmp = logbuf_new_printf(NULL, "%s\r\n", line);
-				if (tail) {
-					if (tmp) {
-						tail->next = tmp;
-						tail = tail->next;
-					}
-				} else {
-					lb = tail = tmp;
-				}
+				add_line_to_content_log(line, &lb, &tail);
 			}
 			replace = pxy_http_reqhdr_filter_line(line, ctx);
 			if (replace == line) {
@@ -1829,13 +1834,8 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 				break;
 			}
 		}
-		if (lb && WANT_CONTENT_LOG(ctx)) {
-			if (log_content_submit(&ctx->logctx, lb,
-			                       1/*req*/) == -1) {
-				logbuf_free(lb);
-				log_err_printf("Warning: Content log "
-				               "submission failed\n");
-			}
+		if (WANT_CONTENT_LOG(ctx)) {
+			submit_content_logbuf_free(ctx, lb, 1/*req*/);
 		}
 		if (!ctx->seen_req_header)
 			return;
@@ -1849,16 +1849,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		                               EVBUFFER_EOL_CRLF))) {
 			char *replace;
 			if (WANT_CONTENT_LOG(ctx)) {
-				logbuf_t *tmp;
-				tmp = logbuf_new_printf(NULL, "%s\r\n", line);
-				if (tail) {
-					if (tmp) {
-						tail->next = tmp;
-						tail = tail->next;
-					}
-				} else {
-					lb = tail = tmp;
-				}
+				add_line_to_content_log(line, &lb, &tail);
 			}
 			replace = pxy_http_resphdr_filter_line(line, ctx);
 			if (replace == line) {
@@ -1876,13 +1867,8 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 				break;
 			}
 		}
-		if (lb && WANT_CONTENT_LOG(ctx)) {
-			if (log_content_submit(&ctx->logctx, lb,
-			                       0/*resp*/) == -1) {
-				logbuf_free(lb);
-				log_err_printf("Warning: Content log "
-				               "submission failed\n");
-			}
+		if (WANT_CONTENT_LOG(ctx)) {
+			submit_content_logbuf_free(ctx, lb, 0/*resp*/);
 		}
 		if (!ctx->seen_resp_header)
 			return;
@@ -1902,12 +1888,7 @@ pxy_bev_readcb(struct bufferevent *bev, void *arg)
 		logbuf_t *lb;
 		lb = logbuf_new_alloc(evbuffer_get_length(inbuf), NULL);
 		if (lb && (evbuffer_copyout(inbuf, lb->buf, lb->sz) != -1)) {
-			if (log_content_submit(&ctx->logctx, lb,
-			                       (bev == ctx->src.bev)) == -1) {
-				logbuf_free(lb);
-				log_err_printf("Warning: Content log "
-				               "submission failed\n");
-			}
+			submit_content_logbuf_free(ctx, lb, (bev == ctx->src.bev));
 		}
 	}
 	evbuffer_add_buffer(outbuf, inbuf);

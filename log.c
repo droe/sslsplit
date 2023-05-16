@@ -238,7 +238,9 @@ log_masterkey_writecb(UNUSED void *fh, UNUSED unsigned long ctl,
 static void
 log_masterkey_fini(void)
 {
-	close(masterkey_fd);
+	if (masterkey_fd != -1)
+		close(masterkey_fd);
+	masterkey_fd = -1;
 }
 
 
@@ -325,7 +327,9 @@ log_connect_writecb(UNUSED void *fh, UNUSED unsigned long ctl,
 static void
 log_connect_fini(void)
 {
-	close(connect_fd);
+	if (connect_fd != -1)
+		close(connect_fd);
+	connect_fd = -1;
 }
 
 
