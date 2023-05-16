@@ -1643,13 +1643,14 @@ int
 opts_set_option(opts_t *opts, const char *argv0, const char *optarg,
                 char **natengine)
 {
-	char *name, *value;
+	char *name, *value, *line;
 	int retval = -1;
-	char *line = strdup(optarg);
+	name = line = strdup(optarg);
 
 	/* White spaces possible before option name,
 	 * if the command line option is passed between the quotes */
-	for (name = line; *name == ' ' || *name == '\t'; name++); 
+	if (name)
+		for (; *name == ' ' || *name == '\t'; name++);
 
 	/* Command line option separator is '=' */
 	retval = get_name_value(&name, &value, '=');
