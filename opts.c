@@ -488,7 +488,6 @@ proxyspec_str(proxyspec_t *spec)
 	}
 	if (spec->sni_port) {
 		if (asprintf(&cbuf, "sni %i", spec->sni_port) < 0) {
-			cbuf = NULL;
 			goto out;
 		}
 	}
