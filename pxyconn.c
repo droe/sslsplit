@@ -1011,6 +1011,74 @@ pxy_srccert_create(pxy_conn_ctx_t *ctx)
 	return cert;
 }
 
+
+static int NONNULL(1,2)
+pxy_pass_site(pxy_conn_ctx_t *ctx, char *site)
+{
+	log_dbg_printf("ENTER, %s, %s, %s", site, STRORDASH(ctx->sni), STRORDASH(ctx->ssl_names));
+
+	int rv = 0;
+
+	// site has surrounding slashes: "/example.com/"
+	size_t len = strlen(site);
+
+	// Replace slash with null
+	site[len - 1] = '\0';
+	// Skip the first slash
+	char *s = site + 1;
+
+	// @attention Make sure sni is not null
+	// SNI: "example.com"
+	if (ctx->sni && !strcmp(ctx->sni, s)) {
+		log_dbg_printf("Match with sni: %s", ctx->sni);
+		rv = 1;
+		goto out2;
+	}
+
+	// @attention Make sure ssl_names is not null
+	if (!ctx->ssl_names) {
+		goto out2;
+	}
+
+	// Single common name: "example.com"
+	if (!strcmp(ctx->ssl_names, s)) {
+		log_dbg_printf("Match with single common name: %s", ctx->ssl_names);
+		rv = 1;
+		goto out2;
+	}
+
+	// Insert slash at the end
+	site[len - 1] = '/';
+
+	// First common name: "example.com/"
+	if (strstr(ctx->ssl_names, s) == ctx->ssl_names) {
+		log_dbg_printf("Match with the first common name: %s, %s", ctx->ssl_names, s);
+		rv = 1;
+		goto out;
+	}
+
+	// Middle common name: "/example.com/"
+	if (strstr(ctx->ssl_names, site)) {
+		log_dbg_printf("Match with a middle common name: %s, %s", ctx->ssl_names, site);
+		rv = 1;
+		goto out;
+	}
+
+	// Replace slash with null
+	site[len - 1] = '\0';
+
+	// Last common name: "/example.com"
+	if (strstr(ctx->ssl_names, site) == ctx->ssl_names + strlen(ctx->ssl_names) - strlen(site)) {
+		log_dbg_printf("Match with the last common name: %s, %s", ctx->ssl_names, site);
+		rv = 1;
+	}
+out2:
+	// Restore the last modification
+	site[len - 1] = '/';
+out:
+	return rv;
+}
+
 /*
  * Create new SSL context for the incoming connection, based on the original
  * destination SSL certificate.
@@ -1051,6 +1119,18 @@ pxy_srcssl_create(pxy_conn_ctx_t *ctx, SSL *origssl)
 		                                       cert->crt);
 		if (!ctx->ssl_names)
 			ctx->enomem = 1;
+	}
+
+	if (ctx->opts->passthrough) {
+		passsite_t *passsite = ctx->opts->passsites;
+		while (passsite) {
+			if (pxy_pass_site(ctx, passsite->site)) {
+				log_dbg_printf("Found pass site; switching to passthrough\n");
+				cert_free(cert);
+				return NULL;
+			}
+			passsite = passsite->next;
+		}
 	}
 
 	SSL_CTX *sslctx = pxy_srcsslctx_create(ctx, cert->crt, cert->chain,
