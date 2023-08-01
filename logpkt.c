@@ -41,6 +41,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <errno.h>
+#include <time.h>
 
 #ifndef WITHOUT_MIRROR
 #include <pcap.h>
@@ -297,11 +298,16 @@ static int
 logpkt_pcap_write(const uint8_t *pkt, size_t pktsz, int fd)
 {
 	pcap_rec_hdr_t rec_hdr;
-	struct timeval tv;
+	struct timespec tv;
 
-	gettimeofday(&tv, NULL);
+	if (clock_gettime(CLOCK_MONOTONIC, &tv) == -1)
+	{
+		log_err_printf("Error getting current time: %s\n",
+		               strerror(errno));
+		return -1;
+	}
 	rec_hdr.ts_sec = tv.tv_sec;
-	rec_hdr.ts_usec = tv.tv_usec;
+	rec_hdr.ts_usec = tv.tv_nsec / 1000;
 	rec_hdr.orig_len = rec_hdr.incl_len = pktsz;
 
 	if (logpkt_write_all(fd, &rec_hdr, sizeof(rec_hdr)) == -1) {
