@@ -38,7 +38,6 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/un.h>
-#include <sys/time.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -50,6 +49,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <errno.h>
 
 #ifndef _SC_NPROCESSORS_ONLN
@@ -1019,12 +1019,12 @@ static int sys_rand_seeded = 0;
 
 static void
 sys_rand_seed(void) {
-	struct timeval seed;
+	struct timespec seed;
 
-	if (gettimeofday(&seed, NULL) == -1) {
+	if (clock_gettime(CLOCK_MONOTONIC, &seed) == -1) {
 		srandom((unsigned)time(NULL));
 	} else {
-		srandom((unsigned)(seed.tv_sec ^ seed.tv_usec));
+		srandom((unsigned)(seed.tv_sec ^ seed.tv_nsec));
 	}
 	sys_rand_seeded = 1;
 }
