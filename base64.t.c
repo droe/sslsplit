@@ -61,9 +61,9 @@ START_TEST(base64_enc_01)
 	size_t sz;
 
 	buf = base64_enc((unsigned char *)plain01, strlen(plain01), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(coded01), "wrong length");
-	fail_unless(!memcmp(coded01, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(coded01), "wrong length");
+	ck_assert_msg(!memcmp(coded01, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -74,9 +74,9 @@ START_TEST(base64_enc_02)
 	size_t sz;
 
 	buf = base64_enc((unsigned char *)plain02, strlen(plain02), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(coded02), "wrong length");
-	fail_unless(!memcmp(coded02, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(coded02), "wrong length");
+	ck_assert_msg(!memcmp(coded02, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -87,9 +87,9 @@ START_TEST(base64_enc_03)
 	size_t sz;
 
 	buf = base64_enc((unsigned char *)plain03, strlen(plain03), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(coded03), "wrong length");
-	fail_unless(!memcmp(coded03, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(coded03), "wrong length");
+	ck_assert_msg(!memcmp(coded03, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -100,9 +100,9 @@ START_TEST(base64_enc_04)
 	size_t sz;
 
 	buf = base64_enc((unsigned char *)plain04, strlen(plain04), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(coded04), "wrong length");
-	fail_unless(!memcmp(coded04, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(coded04), "wrong length");
+	ck_assert_msg(!memcmp(coded04, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -113,9 +113,9 @@ START_TEST(base64_enc_05)
 	size_t sz;
 
 	buf = base64_enc((unsigned char *)plain05, strlen(plain05), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(coded05), "wrong length");
-	fail_unless(!memcmp(coded05, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(coded05), "wrong length");
+	ck_assert_msg(!memcmp(coded05, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -126,9 +126,9 @@ START_TEST(base64_enc_06)
 	size_t sz;
 
 	buf = base64_enc((unsigned char *)"", 0, &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(!sz, "length not 0");
-	fail_unless(!buf[0], "not empty string");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(!sz, "length not 0");
+	ck_assert_msg(!buf[0], "not empty string");
 	free(buf);
 }
 END_TEST
@@ -139,9 +139,9 @@ START_TEST(base64_dec_01)
 	size_t sz;
 
 	buf = base64_dec(coded01, strlen(coded01), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain01), "wrong length");
-	fail_unless(!memcmp(plain01, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain01), "wrong length");
+	ck_assert_msg(!memcmp(plain01, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -152,9 +152,9 @@ START_TEST(base64_dec_02)
 	size_t sz;
 
 	buf = base64_dec(coded02, strlen(coded02), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain02), "wrong length");
-	fail_unless(!memcmp(plain02, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain02), "wrong length");
+	ck_assert_msg(!memcmp(plain02, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -165,9 +165,9 @@ START_TEST(base64_dec_03)
 	size_t sz;
 
 	buf = base64_dec(coded03, strlen(coded03), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain03), "wrong length");
-	fail_unless(!memcmp(plain03, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain03), "wrong length");
+	ck_assert_msg(!memcmp(plain03, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -178,9 +178,9 @@ START_TEST(base64_dec_04)
 	size_t sz;
 
 	buf = base64_dec(coded04, strlen(coded04), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain04), "wrong length");
-	fail_unless(!memcmp(plain04, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain04), "wrong length");
+	ck_assert_msg(!memcmp(plain04, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -191,9 +191,9 @@ START_TEST(base64_dec_05)
 	size_t sz;
 
 	buf = base64_dec(coded05, strlen(coded05), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain05), "wrong length");
-	fail_unless(!memcmp(plain05, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain05), "wrong length");
+	ck_assert_msg(!memcmp(plain05, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -204,7 +204,7 @@ START_TEST(base64_dec_06)
 	size_t sz;
 
 	buf = base64_dec(coded06, strlen(coded06), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -214,7 +214,7 @@ START_TEST(base64_dec_07)
 	size_t sz;
 
 	buf = base64_dec(coded07, strlen(coded07), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -224,7 +224,7 @@ START_TEST(base64_dec_08)
 	size_t sz;
 
 	buf = base64_dec(coded08, strlen(coded08), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -234,7 +234,7 @@ START_TEST(base64_dec_09)
 	size_t sz;
 
 	buf = base64_dec(coded09, strlen(coded09), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -244,7 +244,7 @@ START_TEST(base64_dec_10)
 	size_t sz;
 
 	buf = base64_dec(coded10, strlen(coded10), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -254,7 +254,7 @@ START_TEST(base64_dec_11)
 	size_t sz;
 
 	buf = base64_dec(coded11, strlen(coded11), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -264,7 +264,7 @@ START_TEST(base64_dec_12)
 	size_t sz;
 
 	buf = base64_dec(coded12, strlen(coded12), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -274,7 +274,7 @@ START_TEST(base64_dec_13)
 	size_t sz;
 
 	buf = base64_dec(coded13, strlen(coded13), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -284,7 +284,7 @@ START_TEST(base64_dec_14)
 	size_t sz;
 
 	buf = base64_dec(coded14, strlen(coded14), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -294,7 +294,7 @@ START_TEST(base64_dec_15)
 	size_t sz;
 
 	buf = base64_dec(coded15, strlen(coded15), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -304,9 +304,9 @@ START_TEST(base64_dec_16)
 	size_t sz;
 
 	buf = base64_dec("", 0, &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(!sz, "length not 0");
-	fail_unless(!buf[0], "not empty string");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(!sz, "length not 0");
+	ck_assert_msg(!buf[0], "not empty string");
 	free(buf);
 }
 END_TEST

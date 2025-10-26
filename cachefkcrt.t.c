@@ -55,11 +55,11 @@ START_TEST(cache_fkcrt_01)
 	X509 *c1, *c2;
 
 	c1 = ssl_x509_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
+	ck_assert_msg(!!c1, "loading certificate failed");
 	cachemgr_fkcrt_set(c1, c1);
 	c2 = cachemgr_fkcrt_get(c1);
-	fail_unless(!!c2, "cache did not return a certificate");
-	fail_unless(c2 == c1, "cache did not return same pointer");
+	ck_assert_msg(!!c2, "cache did not return a certificate");
+	ck_assert_msg(c2 == c1, "cache did not return same pointer");
 	X509_free(c1);
 	X509_free(c2);
 }
@@ -70,9 +70,9 @@ START_TEST(cache_fkcrt_02)
 	X509 *c1, *c2;
 
 	c1 = ssl_x509_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
+	ck_assert_msg(!!c1, "loading certificate failed");
 	c2 = cachemgr_fkcrt_get(c1);
-	fail_unless(c2 == NULL, "certificate was already in empty cache");
+	ck_assert_msg(c2 == NULL, "certificate was already in empty cache");
 	X509_free(c1);
 }
 END_TEST
@@ -82,11 +82,11 @@ START_TEST(cache_fkcrt_03)
 	X509 *c1, *c2;
 
 	c1 = ssl_x509_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
+	ck_assert_msg(!!c1, "loading certificate failed");
 	cachemgr_fkcrt_set(c1, c1);
 	cachemgr_fkcrt_del(c1);
 	c2 = cachemgr_fkcrt_get(c1);
-	fail_unless(c2 == NULL, "cache returned deleted certificate");
+	ck_assert_msg(c2 == NULL, "cache returned deleted certificate");
 	X509_free(c1);
 }
 END_TEST
@@ -97,28 +97,28 @@ START_TEST(cache_fkcrt_04)
 	X509 *c1, *c2;
 
 	c1 = ssl_x509_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
-	fail_unless(c1->references == 1, "refcount != 1");
+	ck_assert_msg(!!c1, "loading certificate failed");
+	ck_assert_msg(c1->references == 1, "refcount != 1");
 	cachemgr_fkcrt_set(c1, c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	ck_assert_msg(c1->references == 2, "refcount != 2");
 	c2 = cachemgr_fkcrt_get(c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	ck_assert_msg(c1->references == 3, "refcount != 3");
 	cachemgr_fkcrt_set(c1, c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	ck_assert_msg(c1->references == 3, "refcount != 3");
 	cachemgr_fkcrt_del(c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	ck_assert_msg(c1->references == 2, "refcount != 2");
 	cachemgr_fkcrt_set(c1, c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	ck_assert_msg(c1->references == 3, "refcount != 3");
 	X509_free(c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	ck_assert_msg(c1->references == 2, "refcount != 2");
 	cachemgr_fini();
-	fail_unless(c1->references == 1, "refcount != 1");
+	ck_assert_msg(c1->references == 1, "refcount != 1");
 	X509_free(c2);
 #if 0
 	/* deliberate access of free'd X509* */
-	fail_unless(c1->references == 0, "refcount != 0");
+	ck_assert_msg(c1->references == 0, "refcount != 0");
 #endif
-	fail_unless(cachemgr_preinit() != -1, "reinit");
+	ck_assert_msg(cachemgr_preinit() != -1, "reinit");
 }
 END_TEST
 #endif

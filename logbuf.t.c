@@ -40,10 +40,10 @@ START_TEST(logbuf_make_contiguous_01)
 	lb = logbuf_new_printf(lb, "%s", "456");
 	lb = logbuf_new_printf(lb, "%s", "123");
 	lb = logbuf_make_contiguous(lb);
-	fail_unless(!!lb, "logbuf_make_contiguous failed");
-	fail_unless(!lb->next, "multiple buffers");
-	fail_unless(logbuf_size(lb) == 9, "buffer size incorrect");
-	fail_unless(!memcmp(lb->buf, "123456789", 9), "buffer value incorrect");
+	ck_assert_msg(!!lb, "logbuf_make_contiguous failed");
+	ck_assert_msg(!lb->next, "multiple buffers");
+	ck_assert_msg(logbuf_size(lb) == 9, "buffer size incorrect");
+	ck_assert_msg(!memcmp(lb->buf, "123456789", 9), "buffer value incorrect");
 	logbuf_free(lb);
 }
 END_TEST

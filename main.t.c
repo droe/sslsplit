@@ -45,9 +45,9 @@ blank_suite(void)
 
 START_TEST(build_date_01)
 {
-	fail_unless(strlen(build_date) == 10, "length mismatch");
-	fail_unless(build_date[4] == '-', "year/month separator not dash");
-	fail_unless(build_date[7] == '-', "month/day separator not dash");
+	ck_assert_msg(strlen(build_date) == 10, "length mismatch");
+	ck_assert_msg(build_date[4] == '-', "year/month separator not dash");
+	ck_assert_msg(build_date[7] == '-', "month/day separator not dash");
 }
 END_TEST
 

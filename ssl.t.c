@@ -82,7 +82,7 @@ static char name11[] = "";
 START_TEST(ssl_wildcardify_01)
 {
 	char *wc = ssl_wildcardify(name1);
-	fail_unless(!strcmp(wc, wildcard1), "mismatch for 'www.example.org'");
+	ck_assert_msg(!strcmp(wc, wildcard1), "mismatch for 'www.example.org'");
 	free(wc);
 }
 END_TEST
@@ -90,7 +90,7 @@ END_TEST
 START_TEST(ssl_wildcardify_02)
 {
 	char *wc = ssl_wildcardify(name8);
-	fail_unless(!strcmp(wc, wildcard5), "mismatch for 'ch'");
+	ck_assert_msg(!strcmp(wc, wildcard5), "mismatch for 'ch'");
 	free(wc);
 }
 END_TEST
@@ -98,14 +98,14 @@ END_TEST
 START_TEST(ssl_wildcardify_03)
 {
 	char *wc = ssl_wildcardify(name11);
-	fail_unless(!strcmp(wc, wildcard5), "mismatch for ''");
+	ck_assert_msg(!strcmp(wc, wildcard5), "mismatch for ''");
 	free(wc);
 }
 END_TEST
 
 START_TEST(ssl_dnsname_match_01)
 {
-	fail_unless(
+	ck_assert_msg(
 		ssl_dnsname_match(name1, sizeof(name1) - 1,
 		                  name1, sizeof(name1) - 1),
 		"Hostname does not match itself");
@@ -114,7 +114,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_02)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(name1, sizeof(name1) - 1,
 		                   name2, sizeof(name2) - 1),
 		"Hostname matches hostname with different TLD");
@@ -123,7 +123,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_03)
 {
-	fail_unless(
+	ck_assert_msg(
 		ssl_dnsname_match(wildcard1, sizeof(wildcard1) - 1,
 		                  name1, sizeof(name1) - 1),
 		"Regular wildcard does not match");
@@ -132,7 +132,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_04)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard1, sizeof(wildcard1) - 1,
 		                   name2, sizeof(name2) - 1),
 		"Regular wildcard matches other TLD");
@@ -141,7 +141,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_05)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard1, sizeof(wildcard1) - 1,
 		                   name3, sizeof(name3) - 1),
 		"Regular wildcard matches upper level domain");
@@ -150,7 +150,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_06)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard1, sizeof(wildcard1) - 1,
 		                   name4, sizeof(name4) - 1),
 		"Regular wildcard matches despite added suffix");
@@ -159,7 +159,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_07)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard1, sizeof(wildcard1) - 1,
 		                   name5, sizeof(name5) - 1),
 		"Regular wildcard matches two elements");
@@ -168,7 +168,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_08)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard2, sizeof(wildcard2) - 1,
 		                   name6, sizeof(name6) - 1),
 		"Wildcard matches in non-leftmost element");
@@ -177,7 +177,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_09)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard3, sizeof(wildcard3) - 1,
 		                   name5, sizeof(name5) - 1),
 		"Multiple wildcard matches");
@@ -186,7 +186,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_10)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard4, sizeof(wildcard4) - 1,
 		                   name7, sizeof(name7) - 1),
 		"Partial label wildcard matches");
@@ -195,7 +195,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_11)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard5, sizeof(wildcard5) - 1,
 		                   name1, sizeof(name1) - 1),
 		"Global wildcard * matches fqdn");
@@ -204,7 +204,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_12)
 {
-	fail_unless(
+	ck_assert_msg(
 		ssl_dnsname_match(wildcard5, sizeof(wildcard5) - 1,
 		                  name8, sizeof(name8) - 1),
 		"Global wildcard * does not match TLD");
@@ -213,7 +213,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_13)
 {
-	fail_unless(
+	ck_assert_msg(
 		ssl_dnsname_match(wildcard6, sizeof(wildcard6) - 1,
 		                  name9, sizeof(name9) - 1),
 		"IDN wildcard does not match");
@@ -222,7 +222,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_14)
 {
-	fail_unless(
+	ck_assert_msg(
 		ssl_dnsname_match(wildcard6, sizeof(wildcard6) - 1,
 		                  name10, sizeof(name10) - 1),
 		"IDN wildcard does not match IDN element");
@@ -231,7 +231,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_15)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard7, sizeof(wildcard7) - 1,
 		                   name10, sizeof(name10) - 1),
 		"Illegal IDN wildcard matches");
@@ -240,7 +240,7 @@ END_TEST
 
 START_TEST(ssl_dnsname_match_16)
 {
-	fail_unless(
+	ck_assert_msg(
 		!ssl_dnsname_match(wildcard8, sizeof(wildcard8) - 1,
 		                   name10, sizeof(name10) - 1),
 		"Illegal IDN wildcard matches IDN element");
@@ -366,13 +366,13 @@ START_TEST(ssl_tls_clienthello_parse_00)
 	                               sizeof(clienthello00) - 1,
 	                               0, &ch, &sni);
 #ifdef HAVE_SSLV2
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless(sni == NULL, "sni not NULL");
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg(sni == NULL, "sni not NULL");
 #else /* !HAVE_SSLV2 */
-	fail_unless(rv == 1, "rv not 1");
-	fail_unless(ch == NULL, "ch not NULL");
-	fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
+	ck_assert_msg(rv == 1, "rv not 1");
+	ck_assert_msg(ch == NULL, "ch not NULL");
+	ck_assert_msg(sni == (void*)0xDEADBEEF, "sni modified");
 #endif /* !HAVE_SSLV2 */
 }
 END_TEST
@@ -386,9 +386,9 @@ START_TEST(ssl_tls_clienthello_parse_01)
 	rv = ssl_tls_clienthello_parse(clienthello01,
 	                               sizeof(clienthello01) - 1,
 	                               0, &ch, &sni);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless(sni == NULL, "sni not NULL");
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg(sni == NULL, "sni not NULL");
 }
 END_TEST
 
@@ -401,9 +401,9 @@ START_TEST(ssl_tls_clienthello_parse_02)
 	rv = ssl_tls_clienthello_parse(clienthello02,
 	                                sizeof(clienthello02) - 1,
 	                                0, &ch, &sni);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless(sni == NULL, "sni not NULL");
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg(sni == NULL, "sni not NULL");
 }
 END_TEST
 
@@ -416,9 +416,9 @@ START_TEST(ssl_tls_clienthello_parse_03)
 	rv = ssl_tls_clienthello_parse(clienthello03,
 	                                sizeof(clienthello03) - 1,
 	                                0, &ch, &sni);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless(sni && !strcmp(sni, "192.168.100.4"),
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg(sni && !strcmp(sni, "192.168.100.4"),
 	            "sni not '192.168.100.4' but should be");
 }
 END_TEST
@@ -432,9 +432,9 @@ START_TEST(ssl_tls_clienthello_parse_04)
 	rv = ssl_tls_clienthello_parse(clienthello04,
 	                                sizeof(clienthello04) - 1,
 	                                0, &ch, &sni);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless(sni && !strcmp(sni, "kamesh.com"),
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg(sni && !strcmp(sni, "kamesh.com"),
 	            "sni not 'kamesh.com' but should be");
 }
 END_TEST
@@ -449,9 +449,9 @@ START_TEST(ssl_tls_clienthello_parse_05)
 
 		sz = (ssize_t)i;
 		rv = ssl_tls_clienthello_parse(clienthello04, sz, 0, &ch, &sni);
-		fail_unless(rv == 1, "rv not 1");
-		fail_unless(ch != NULL, "ch is NULL");
-		fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
+		ck_assert_msg(rv == 1, "rv not 1");
+		ck_assert_msg(ch != NULL, "ch is NULL");
+		ck_assert_msg(sni == (void*)0xDEADBEEF, "sni modified");
 	}
 }
 END_TEST
@@ -465,9 +465,9 @@ START_TEST(ssl_tls_clienthello_parse_06)
 	rv = ssl_tls_clienthello_parse(clienthello05,
 	                                sizeof(clienthello05) - 1,
 	                                0, &ch, &sni);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless(sni && !strcmp(sni, "daniel.roe.ch"),
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg(sni && !strcmp(sni, "daniel.roe.ch"),
 	            "sni not 'daniel.roe.ch' but should be");
 }
 END_TEST
@@ -482,9 +482,9 @@ START_TEST(ssl_tls_clienthello_parse_07)
 
 		sz = (ssize_t)i;
 		rv = ssl_tls_clienthello_parse(clienthello05, sz, 0, &ch, &sni);
-		fail_unless(rv == 1, "rv not 1");
-		fail_unless(ch != NULL, "ch is NULL");
-		fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
+		ck_assert_msg(rv == 1, "rv not 1");
+		ck_assert_msg(ch != NULL, "ch is NULL");
+		ck_assert_msg(sni == (void*)0xDEADBEEF, "sni modified");
 	}
 }
 END_TEST
@@ -498,9 +498,9 @@ START_TEST(ssl_tls_clienthello_parse_08)
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
 	                                0, &ch, &sni);
-	fail_unless(rv == 1, "rv not 1");
-	fail_unless(ch == NULL, "ch not NULL");
-	fail_unless(sni == (void*)0xDEADBEEF, "sni modified");
+	ck_assert_msg(rv == 1, "rv not 1");
+	ck_assert_msg(ch == NULL, "ch not NULL");
+	ck_assert_msg(sni == (void*)0xDEADBEEF, "sni modified");
 }
 END_TEST
 
@@ -513,10 +513,10 @@ START_TEST(ssl_tls_clienthello_parse_09)
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
 	                                1, &ch, &sni);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless((ch - clienthello06) != 21, "ch does not point to start");
-	fail_unless(sni && !strcmp(sni, "daniel.roe.ch"),
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg((ch - clienthello06) != 21, "ch does not point to start");
+	ck_assert_msg(sni && !strcmp(sni, "daniel.roe.ch"),
 	            "sni not 'daniel.roe.ch' but should be");
 }
 END_TEST
@@ -529,9 +529,9 @@ START_TEST(ssl_tls_clienthello_parse_10)
 	rv = ssl_tls_clienthello_parse(clienthello06,
 	                                sizeof(clienthello06) - 1,
 	                                1, &ch, NULL);
-	fail_unless(rv == 0, "rv not 0");
-	fail_unless(ch != NULL, "ch is NULL");
-	fail_unless((ch - clienthello06) != 21, "ch does not point to start");
+	ck_assert_msg(rv == 0, "rv not 0");
+	ck_assert_msg(ch != NULL, "ch is NULL");
+	ck_assert_msg((ch - clienthello06) != 21, "ch does not point to start");
 }
 END_TEST
 
@@ -542,20 +542,20 @@ START_TEST(ssl_key_identifier_sha1_01)
 	unsigned char keyid[SSL_KEY_IDSZ];
 
 	c = ssl_x509_load(TESTCERT);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	k = ssl_key_load(TESTKEY);
-	fail_unless(!!k, "loading key failed");
+	ck_assert_msg(!!k, "loading key failed");
 
-	fail_unless(ssl_key_identifier_sha1(k, keyid) == 0,
+	ck_assert_msg(ssl_key_identifier_sha1(k, keyid) == 0,
 	            "ssl_key_identifier_sha1() failed");
 
 	int loc = X509_get_ext_by_NID(c, NID_subject_key_identifier, -1);
 	X509_EXTENSION *ext = X509_get_ext(c, loc);
-	fail_unless(!!ext, "loading ext failed");
+	ck_assert_msg(!!ext, "loading ext failed");
 	ASN1_STRING *value = X509_EXTENSION_get_data(ext);
-	fail_unless(ASN1_STRING_length(value) - 2 == SSL_KEY_IDSZ,
+	ck_assert_msg(ASN1_STRING_length(value) - 2 == SSL_KEY_IDSZ,
 	             "extension length mismatch");
-	fail_unless(!memcmp(ASN1_STRING_get0_data(value) + 2, keyid, SSL_KEY_IDSZ),
+	ck_assert_msg(!memcmp(ASN1_STRING_get0_data(value) + 2, keyid, SSL_KEY_IDSZ),
 	            "key id mismatch");
 	EVP_PKEY_free(k);
 	X509_free(c);
@@ -568,18 +568,18 @@ START_TEST(ssl_x509_names_01)
 	char **names, **p;
 
 	c = ssl_x509_load(TESTCERT);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	names = ssl_x509_names(c);
-	fail_unless(!!names, "parsing names failed");
-	fail_unless(!!names[0], "first name");
-	fail_unless(!strcmp(names[0], "daniel.roe.ch"), "first name");
-	fail_unless(!!names[1], "second name");
-	fail_unless(!strcmp(names[1], "daniel.roe.ch"), "second name");
-	fail_unless(!!names[2], "third name");
-	fail_unless(!strcmp(names[2], "www.roe.ch"), "third name");
-	fail_unless(!!names[3], "fourth name");
-	fail_unless(!strcmp(names[3], "*.roe.ch"), "fourth name");
-	fail_unless(!names[4], "too many names");
+	ck_assert_msg(!!names, "parsing names failed");
+	ck_assert_msg(!!names[0], "first name");
+	ck_assert_msg(!strcmp(names[0], "daniel.roe.ch"), "first name");
+	ck_assert_msg(!!names[1], "second name");
+	ck_assert_msg(!strcmp(names[1], "daniel.roe.ch"), "second name");
+	ck_assert_msg(!!names[2], "third name");
+	ck_assert_msg(!strcmp(names[2], "www.roe.ch"), "third name");
+	ck_assert_msg(!!names[3], "fourth name");
+	ck_assert_msg(!strcmp(names[3], "*.roe.ch"), "fourth name");
+	ck_assert_msg(!names[4], "too many names");
 	p = names;
 	while (*p)
 		free(*p++);
@@ -594,10 +594,10 @@ START_TEST(ssl_x509_names_to_str_01)
 	char *names;
 
 	c = ssl_x509_load(TESTCERT);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	names = ssl_x509_names_to_str(c);
-	fail_unless(!!names, "no string");
-	fail_unless(!strcmp(names,
+	ck_assert_msg(!!names, "no string");
+	ck_assert_msg(!strcmp(names,
 	            "daniel.roe.ch/daniel.roe.ch/www.roe.ch/*.roe.ch"),
 	            "wrong name string");
 	X509_free(c);
@@ -610,10 +610,10 @@ START_TEST(ssl_x509_names_to_str_02)
 	char *names;
 
 	c = ssl_x509_load(TESTCERT2);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	names = ssl_x509_names_to_str(c);
-	fail_unless(!!names, "no string");
-	fail_unless(!strcmp(names, "SSLsplit Root CA"), "wrong name string");
+	ck_assert_msg(!!names, "no string");
+	ck_assert_msg(!strcmp(names, "SSLsplit Root CA"), "wrong name string");
 	X509_free(c);
 }
 END_TEST
@@ -624,10 +624,10 @@ START_TEST(ssl_x509_subject_01)
 	char *subject;
 
 	c = ssl_x509_load(TESTCERT);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	subject = ssl_x509_subject(c);
-	fail_unless(!!subject, "no string");
-	fail_unless(!strcmp(subject, "/C=CH/O=SSLsplit Test Certificate/"
+	ck_assert_msg(!!subject, "no string");
+	ck_assert_msg(!strcmp(subject, "/C=CH/O=SSLsplit Test Certificate/"
 	                             "CN=daniel.roe.ch"),
 	            "wrong subject string");
 	X509_free(c);
@@ -642,14 +642,14 @@ START_TEST(ssl_x509_subject_cn_01)
 	size_t expsz = strlen("daniel.roe.ch") + 1;
 
 	c = ssl_x509_load(TESTCERT);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	cn = ssl_x509_subject_cn(c, &sz);
-	fail_unless(!!cn, "no string");
-	fail_unless(sz >= expsz, "subject CN size too small");
-	fail_unless(!strcmp(cn, "daniel.roe.ch"), "wrong subject CN string");
+	ck_assert_msg(!!cn, "no string");
+	ck_assert_msg(sz >= expsz, "subject CN size too small");
+	ck_assert_msg(!strcmp(cn, "daniel.roe.ch"), "wrong subject CN string");
 #if 0
 	for (unsigned int i = expsz; i < sz; i++) {
-		fail_unless(cn[i] == '\0', "extra byte != 0");
+		ck_assert_msg(cn[i] == '\0', "extra byte != 0");
 	}
 #endif
 	X509_free(c);
@@ -662,13 +662,13 @@ START_TEST(ssl_x509_ocsps_01)
 	char **ocsps, **p;
 
 	c = ssl_x509_load(TESTCERT);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	ocsps = ssl_x509_ocsps(c);
-	fail_unless(!!ocsps, "parsing OCSP extensions failed");
-	fail_unless(!!ocsps[0], "first OCSP");
-	fail_unless(!strcmp(ocsps[0], "http://daniel.roe.ch/test/ocsp"),
+	ck_assert_msg(!!ocsps, "parsing OCSP extensions failed");
+	ck_assert_msg(!!ocsps[0], "first OCSP");
+	ck_assert_msg(!strcmp(ocsps[0], "http://daniel.roe.ch/test/ocsp"),
 	                              "first OCSP");
-	fail_unless(!ocsps[1], "too many OCSPs");
+	ck_assert_msg(!ocsps[1], "too many OCSPs");
 	p = ocsps;
 	while (*p)
 		free(*p++);
@@ -683,9 +683,9 @@ START_TEST(ssl_x509_ocsps_02)
 	char **ocsps;
 
 	c = ssl_x509_load(TESTCERT2);
-	fail_unless(!!c, "loading certificate failed");
+	ck_assert_msg(!!c, "loading certificate failed");
 	ocsps = ssl_x509_ocsps(c);
-	fail_unless(!ocsps, "unexpected OCSP extensions");
+	ck_assert_msg(!ocsps, "unexpected OCSP extensions");
 	X509_free(c);
 }
 END_TEST
@@ -700,8 +700,8 @@ START_TEST(ssl_is_ocspreq_01)
 	size_t sz;
 
 	buf = base64_dec(ocspreq01, sizeof(ocspreq01) - 1, &sz);
-	fail_unless(!!buf, "failed to base64 decode");
-	fail_unless(ssl_is_ocspreq(buf, sz), "is not ocsp req");
+	ck_assert_msg(!!buf, "failed to base64 decode");
+	ck_assert_msg(ssl_is_ocspreq(buf, sz), "is not ocsp req");
 }
 END_TEST
 
@@ -709,7 +709,7 @@ START_TEST(ssl_features_01)
 {
 	long vdiff = ((OPENSSL_VERSION_NUMBER ^ SSLeay()) & 0xfffff000L);
 
-	fail_unless(!vdiff, "OpenSSL version mismatch at runtime");
+	ck_assert_msg(!vdiff, "OpenSSL version mismatch at runtime");
 }
 END_TEST
 
@@ -719,7 +719,7 @@ START_TEST(ssl_features_02)
 #ifdef OPENSSL_THREADS
 	have_threads = 1;
 #endif /* OPENSSL_THREADS */
-	fail_unless(have_threads, "!OPENSSL_THREADS: no threading support");
+	ck_assert_msg(have_threads, "!OPENSSL_THREADS: no threading support");
 }
 END_TEST
 
@@ -728,7 +728,7 @@ START_TEST(ssl_key_refcount_inc_01)
 	EVP_PKEY *key;
 
 	key = ssl_key_load(TESTKEY);
-	fail_unless(!!key, "loading key failed");
+	ck_assert_msg(!!key, "loading key failed");
 	ssl_key_refcount_inc(key);
 	ssl_key_refcount_inc(key);
 	ssl_key_refcount_inc(key);
@@ -745,7 +745,7 @@ START_TEST(ssl_x509_refcount_inc_01)
 	X509 *crt;
 
 	crt = ssl_x509_load(TESTCERT);
-	fail_unless(!!crt, "loading certificate failed");
+	ck_assert_msg(!!crt, "loading certificate failed");
 	ssl_x509_refcount_inc(crt);
 	ssl_x509_refcount_inc(crt);
 	ssl_x509_refcount_inc(crt);
@@ -763,10 +763,10 @@ START_TEST(ssl_engine_01)
 	char cwd[PATH_MAX];
 	char *path;
 
-	fail_unless(getcwd(cwd, sizeof(cwd)) == cwd, "getcwd() failed");
-	fail_unless(asprintf(&path, "%s/"ENGINE, cwd) != -1 && !!path,
+	ck_assert_msg(getcwd(cwd, sizeof(cwd)) == cwd, "getcwd() failed");
+	ck_assert_msg(asprintf(&path, "%s/"ENGINE, cwd) != -1 && !!path,
 	            "constructing engine path failed");
-	fail_unless(ssl_engine(path) == 0, "loading OpenSSL engine failed");
+	ck_assert_msg(ssl_engine(path) == 0, "loading OpenSSL engine failed");
 	free(path);
 }
 END_TEST

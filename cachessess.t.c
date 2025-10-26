@@ -81,14 +81,14 @@ START_TEST(cache_ssess_01)
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
 	cachemgr_ssess_set(s1);
 	session_id = SSL_SESSION_get_id(s1, &len);
 	s2 = cachemgr_ssess_get(session_id, len);
-	fail_unless(!!s2, "cache returned no session");
-	fail_unless(s2 != s1, "cache returned same pointer");
+	ck_assert_msg(!!s2, "cache returned no session");
+	ck_assert_msg(s2 != s1, "cache returned same pointer");
 	SSL_SESSION_free(s1);
 	SSL_SESSION_free(s2);
 }
@@ -101,12 +101,12 @@ START_TEST(cache_ssess_02)
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
 	session_id = SSL_SESSION_get_id(s1, &len);
 	s2 = cachemgr_ssess_get(session_id, len);
-	fail_unless(s2 == NULL, "session was already in empty cache");
+	ck_assert_msg(s2 == NULL, "session was already in empty cache");
 	SSL_SESSION_free(s1);
 }
 END_TEST
@@ -118,14 +118,14 @@ START_TEST(cache_ssess_03)
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
 	cachemgr_ssess_set(s1);
 	cachemgr_ssess_del(s1);
 	session_id = SSL_SESSION_get_id(s1, &len);
 	s2 = cachemgr_ssess_get(session_id, len);
-	fail_unless(s2 == NULL, "cache returned deleted session");
+	ck_assert_msg(s2 == NULL, "cache returned deleted session");
 	SSL_SESSION_free(s1);
 }
 END_TEST
@@ -138,23 +138,23 @@ START_TEST(cache_ssess_04)
 	unsigned int len;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	cachemgr_ssess_set(s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	session_id = SSL_SESSION_get_id(s1, &len);
 	s2 = cachemgr_ssess_get(session_id, len);
-	fail_unless(s1->references == 1, "refcount != 1");
-	fail_unless(!!s2, "cache returned no session");
-	fail_unless(s2->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
+	ck_assert_msg(!!s2, "cache returned no session");
+	ck_assert_msg(s2->references == 1, "refcount != 1");
 	cachemgr_ssess_set(s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	cachemgr_ssess_del(s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	cachemgr_ssess_set(s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	SSL_SESSION_free(s1);
 	SSL_SESSION_free(s2);
 }

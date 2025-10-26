@@ -56,11 +56,11 @@ START_TEST(cache_tgcrt_01)
 	cert_t *c1, *c2;
 
 	c1 = cert_new_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
+	ck_assert_msg(!!c1, "loading certificate failed");
 	cachemgr_tgcrt_set("daniel.roe.ch", c1);
 	c2 = cachemgr_tgcrt_get("daniel.roe.ch");
-	fail_unless(!!c2, "cache did not return a certificate");
-	fail_unless(c2 == c1, "cache did not return same pointer");
+	ck_assert_msg(!!c2, "cache did not return a certificate");
+	ck_assert_msg(c2 == c1, "cache did not return same pointer");
 	cert_free(c1);
 	cert_free(c2);
 }
@@ -71,7 +71,7 @@ START_TEST(cache_tgcrt_02)
 	cert_t *c;
 
 	c = cachemgr_tgcrt_get("daniel.roe.ch");
-	fail_unless(c == NULL, "certificate was already in empty cache");
+	ck_assert_msg(c == NULL, "certificate was already in empty cache");
 }
 END_TEST
 
@@ -80,11 +80,11 @@ START_TEST(cache_tgcrt_03)
 	cert_t *c1, *c2;
 
 	c1 = cert_new_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
+	ck_assert_msg(!!c1, "loading certificate failed");
 	cachemgr_tgcrt_set("daniel.roe.ch", c1);
 	cachemgr_tgcrt_del("daniel.roe.ch");
 	c2 = cachemgr_tgcrt_get("daniel.roe.ch");
-	fail_unless(c2 == NULL, "cache returned deleted certificate");
+	ck_assert_msg(c2 == NULL, "cache returned deleted certificate");
 	cert_free(c1);
 }
 END_TEST
@@ -94,28 +94,28 @@ START_TEST(cache_tgcrt_04)
 	cert_t *c1, *c2;
 
 	c1 = cert_new_load(TESTCERT);
-	fail_unless(!!c1, "loading certificate failed");
-	fail_unless(c1->references == 1, "refcount != 1");
+	ck_assert_msg(!!c1, "loading certificate failed");
+	ck_assert_msg(c1->references == 1, "refcount != 1");
 	cachemgr_tgcrt_set("daniel.roe.ch", c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	ck_assert_msg(c1->references == 2, "refcount != 2");
 	c2 = cachemgr_tgcrt_get("daniel.roe.ch");
-	fail_unless(c1->references == 3, "refcount != 3");
+	ck_assert_msg(c1->references == 3, "refcount != 3");
 	cachemgr_tgcrt_set("daniel.roe.ch", c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	ck_assert_msg(c1->references == 3, "refcount != 3");
 	cachemgr_tgcrt_del("daniel.roe.ch");
-	fail_unless(c1->references == 2, "refcount != 2");
+	ck_assert_msg(c1->references == 2, "refcount != 2");
 	cachemgr_tgcrt_set("daniel.roe.ch", c1);
-	fail_unless(c1->references == 3, "refcount != 3");
+	ck_assert_msg(c1->references == 3, "refcount != 3");
 	cert_free(c1);
-	fail_unless(c1->references == 2, "refcount != 2");
+	ck_assert_msg(c1->references == 2, "refcount != 2");
 	cachemgr_fini();
-	fail_unless(c1->references == 1, "refcount != 1");
+	ck_assert_msg(c1->references == 1, "refcount != 1");
 	cert_free(c2);
 #if 0
 	/* deliberate access of free'd cert_t* */
-	fail_unless(c1->references == 0, "refcount != 0");
+	ck_assert_msg(c1->references == 0, "refcount != 0");
 #endif
-	fail_unless(cachemgr_preinit() != -1, "reinit");
+	ck_assert_msg(cachemgr_preinit() != -1, "reinit");
 }
 END_TEST
 

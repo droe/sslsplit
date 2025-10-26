@@ -36,7 +36,7 @@
 
 START_TEST(cache_types_01)
 {
-	fail_unless(sizeof(cache_iter_t) == sizeof(khiter_t),
+	ck_assert_msg(sizeof(cache_iter_t) == sizeof(khiter_t),
 	            "type mismatch: cache_iter_t != khiter_t");
 }
 END_TEST
