@@ -91,7 +91,7 @@ START_TEST(cache_fkcrt_03)
 }
 END_TEST
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x3050200fL)
 START_TEST(cache_fkcrt_04)
 {
 	X509 *c1, *c2;
@@ -136,7 +136,7 @@ cachefkcrt_suite(void)
 	tcase_add_test(tc, cache_fkcrt_01);
 	tcase_add_test(tc, cache_fkcrt_02);
 	tcase_add_test(tc, cache_fkcrt_03);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x3050200fL)
 	tcase_add_test(tc, cache_fkcrt_04);
 #endif
 	suite_add_tcase(s, tc);
