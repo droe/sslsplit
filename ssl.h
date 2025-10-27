@@ -211,7 +211,6 @@ char * ssl_ssl_masterkey_to_str(SSL *) NONNULL(1) MALLOC;
 #ifndef OPENSSL_NO_DH
 DH * ssl_tmp_dh_callback(SSL *, int, int) NONNULL(1) MALLOC;
 DH * ssl_dh_load(const char *) NONNULL(1) MALLOC;
-void ssl_dh_refcount_inc(DH *) NONNULL(1);
 #endif /* !OPENSSL_NO_DH */
 
 #ifndef OPENSSL_NO_EC
