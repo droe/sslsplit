@@ -86,13 +86,13 @@ START_TEST(cache_dsess_01)
 	SSL_SESSION *s1, *s2;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
 	cachemgr_dsess_set((struct sockaddr*)&addr, addrlen, sni, s1);
 	s2 = cachemgr_dsess_get((struct sockaddr*)&addr, addrlen, sni);
-	fail_unless(!!s2, "cache returned no session");
-	fail_unless(s2 != s1, "cache returned same pointer");
+	ck_assert_msg(!!s2, "cache returned no session");
+	ck_assert_msg(s2 != s1, "cache returned same pointer");
 	SSL_SESSION_free(s1);
 	SSL_SESSION_free(s2);
 }
@@ -103,11 +103,11 @@ START_TEST(cache_dsess_02)
 	SSL_SESSION *s1, *s2;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
 	s2 = cachemgr_dsess_get((struct sockaddr*)&addr, addrlen, sni);
-	fail_unless(s2 == NULL, "session was already in empty cache");
+	ck_assert_msg(s2 == NULL, "session was already in empty cache");
 	SSL_SESSION_free(s1);
 }
 END_TEST
@@ -117,39 +117,39 @@ START_TEST(cache_dsess_03)
 	SSL_SESSION *s1, *s2;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
 	cachemgr_dsess_set((struct sockaddr*)&addr, addrlen, sni, s1);
 	cachemgr_dsess_del((struct sockaddr*)&addr, addrlen, sni);
 	s2 = cachemgr_dsess_get((struct sockaddr*)&addr, addrlen, sni);
-	fail_unless(s2 == NULL, "cache returned deleted session");
+	ck_assert_msg(s2 == NULL, "cache returned deleted session");
 	SSL_SESSION_free(s1);
 }
 END_TEST
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20701000L)
 START_TEST(cache_dsess_04)
 {
 	SSL_SESSION *s1, *s2;
 
 	s1 = ssl_session_from_file(TMP_SESS_FILE);
-	fail_unless(!!s1, "creating session failed");
-	fail_unless(ssl_session_is_valid(s1), "session invalid");
+	ck_assert_msg(!!s1, "creating session failed");
+	ck_assert_msg(ssl_session_is_valid(s1), "session invalid");
 
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	cachemgr_dsess_set((struct sockaddr*)&addr, addrlen, sni, s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	s2 = cachemgr_dsess_get((struct sockaddr*)&addr, addrlen, sni);
-	fail_unless(s1->references == 1, "refcount != 1");
-	fail_unless(!!s2, "cache returned no session");
-	fail_unless(s2->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
+	ck_assert_msg(!!s2, "cache returned no session");
+	ck_assert_msg(s2->references == 1, "refcount != 1");
 	cachemgr_dsess_set((struct sockaddr*)&addr, addrlen, sni, s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	cachemgr_dsess_del((struct sockaddr*)&addr, addrlen, sni);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	cachemgr_dsess_set((struct sockaddr*)&addr, addrlen, sni, s1);
-	fail_unless(s1->references == 1, "refcount != 1");
+	ck_assert_msg(s1->references == 1, "refcount != 1");
 	SSL_SESSION_free(s1);
 	SSL_SESSION_free(s2);
 }
@@ -169,7 +169,7 @@ cachedsess_suite(void)
 	tcase_add_test(tc, cache_dsess_01);
 	tcase_add_test(tc, cache_dsess_02);
 	tcase_add_test(tc, cache_dsess_03);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20701000L)
 	tcase_add_test(tc, cache_dsess_04);
 #endif
 	suite_add_tcase(s, tc);

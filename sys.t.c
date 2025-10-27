@@ -106,31 +106,31 @@ sys_isdir_teardown(void)
 
 START_TEST(sys_isdir_01)
 {
-	fail_unless(sys_isdir(dir), "Directory !isdir");
+	ck_assert_msg(sys_isdir(dir), "Directory !isdir");
 }
 END_TEST
 
 START_TEST(sys_isdir_02)
 {
-	fail_unless(sys_isdir(ldir), "Symlink dir !isdir");
+	ck_assert_msg(sys_isdir(ldir), "Symlink dir !isdir");
 }
 END_TEST
 
 START_TEST(sys_isdir_03)
 {
-	fail_unless(!sys_isdir(notexist), "Not-exist isdir");
+	ck_assert_msg(!sys_isdir(notexist), "Not-exist isdir");
 }
 END_TEST
 
 START_TEST(sys_isdir_04)
 {
-	fail_unless(!sys_isdir(file), "File isdir");
+	ck_assert_msg(!sys_isdir(file), "File isdir");
 }
 END_TEST
 
 START_TEST(sys_isdir_05)
 {
-	fail_unless(!sys_isdir(lfile), "Symlink file isdir");
+	ck_assert_msg(!sys_isdir(lfile), "Symlink file isdir");
 }
 END_TEST
 
@@ -167,10 +167,10 @@ START_TEST(sys_mkpath_01)
 
 	rv = asprintf(&dir, "%s/a/bb/ccc/dddd/eeeee/ffffff/ggggggg/hhhhhhhh",
 	              basedir);
-	fail_unless((rv != -1) && !!dir, "asprintf failed");
-	fail_unless(!sys_isdir(dir), "dir already sys_isdir()");
-	fail_unless(!sys_mkpath(dir, DFLT_DIRMODE), "sys_mkpath failed");
-	fail_unless(sys_isdir(dir), "dir not sys_isdir()");
+	ck_assert_msg((rv != -1) && !!dir, "asprintf failed");
+	ck_assert_msg(!sys_isdir(dir), "dir already sys_isdir()");
+	ck_assert_msg(!sys_mkpath(dir, DFLT_DIRMODE), "sys_mkpath failed");
+	ck_assert_msg(sys_isdir(dir), "dir not sys_isdir()");
 	free(dir);
 }
 END_TEST
@@ -180,10 +180,10 @@ START_TEST(sys_realdir_01)
 	char *rd;
 
 	rd = sys_realdir("./extra/../sys.t.c");
-	fail_unless(!!rd, "sys_realdir failed");
-	fail_unless(!!strstr(rd, "/sys.t.c"), "filename not found");
-	fail_unless(!strstr(rd, "/extra/"), "extra in path");
-	fail_unless(!strstr(rd, "/../"), "dot-dot in path");
+	ck_assert_msg(!!rd, "sys_realdir failed");
+	ck_assert_msg(!!strstr(rd, "/sys.t.c"), "filename not found");
+	ck_assert_msg(!strstr(rd, "/extra/"), "extra in path");
+	ck_assert_msg(!strstr(rd, "/../"), "dot-dot in path");
 	free(rd);
 }
 END_TEST
@@ -193,8 +193,8 @@ START_TEST(sys_realdir_02)
 	char *rd;
 
 	rd = sys_realdir("/foo/bar/baz");
-	fail_unless(!rd, "sys_realdir did not fail");
-	fail_unless(errno == ENOENT, "errno not ENOENT");
+	ck_assert_msg(!rd, "sys_realdir did not fail");
+	ck_assert_msg(errno == ENOENT, "errno not ENOENT");
 }
 END_TEST
 
@@ -203,8 +203,8 @@ START_TEST(sys_realdir_03)
 	char *rd;
 
 	rd = sys_realdir("foobarbaz");
-	fail_unless(!!rd, "sys_realdir failed");
-	fail_unless(!!strstr(rd, "/foobarbaz"), "filename not found or dir");
+	ck_assert_msg(!!rd, "sys_realdir failed");
+	ck_assert_msg(!!strstr(rd, "/foobarbaz"), "filename not found or dir");
 	free(rd);
 }
 END_TEST
@@ -214,7 +214,7 @@ START_TEST(sys_realdir_04)
 	char *rd;
 
 	rd = sys_realdir("");
-	fail_unless(!rd, "sys_realdir did not fail");
+	ck_assert_msg(!rd, "sys_realdir did not fail");
 }
 END_TEST
 
@@ -233,14 +233,14 @@ START_TEST(sys_dir_eachfile_01)
 
 	rv = sys_dir_eachfile(TARGETDIR, sys_dir_eachfile_cb, &flag);
 
-	fail_unless(rv == 0, "Did not return success");
-	fail_unless(flag == 2, "Iterated wrong number of files");
+	ck_assert_msg(rv == 0, "Did not return success");
+	ck_assert_msg(flag == 2, "Iterated wrong number of files");
 }
 END_TEST
 
 START_TEST(sys_get_cpu_cores_01)
 {
-	fail_unless(sys_get_cpu_cores() >= 1, "Number of CPU cores < 1");
+	ck_assert_msg(sys_get_cpu_cores() >= 1, "Number of CPU cores < 1");
 }
 END_TEST
 
@@ -256,25 +256,25 @@ START_TEST(pthread_create_01)
 	pthread_t tid;
 	int x = 0;
 	void *rv;
-	fail_unless(!pthread_create(&tid, NULL, thrmain, &x),
+	ck_assert_msg(!pthread_create(&tid, NULL, thrmain, &x),
 	            "Cannot create thread");
-	fail_unless(!pthread_join(tid, &rv), "Cannot join thread");
-	fail_unless(x == 1, "Thread failed to update x");
-	fail_unless(rv == (void*) 2, "Thread return value mismatch");
+	ck_assert_msg(!pthread_join(tid, &rv), "Cannot join thread");
+	ck_assert_msg(x == 1, "Thread failed to update x");
+	ck_assert_msg(rv == (void*) 2, "Thread return value mismatch");
 }
 END_TEST
 
 START_TEST(sys_user_str_01)
 {
 	char *name = sys_user_str(0);
-	fail_unless(!strcmp(name, TEST_ZEROUSR), "User 0 name mismatch");
+	ck_assert_msg(!strcmp(name, TEST_ZEROUSR), "User 0 name mismatch");
 }
 END_TEST
 
 START_TEST(sys_group_str_01)
 {
 	char *name = sys_group_str(0);
-	fail_unless(!strcmp(name, TEST_ZEROGRP), "Group 0 name mismatch");
+	ck_assert_msg(!strcmp(name, TEST_ZEROGRP), "Group 0 name mismatch");
 }
 END_TEST
 
@@ -283,8 +283,8 @@ START_TEST(sys_ip46str_sanitize_01)
 	char *clean;
 
 	clean = sys_ip46str_sanitize("2a01:7c8:aab0:1fb::1");
-	fail_unless(!!clean, "Sanitized string is NULL");
-	fail_unless(!strcmp(clean, "2a01_7c8_aab0_1fb__1"),
+	ck_assert_msg(!!clean, "Sanitized string is NULL");
+	ck_assert_msg(!strcmp(clean, "2a01_7c8_aab0_1fb__1"),
 	            "Unexpected result");
 	free(clean);
 }
@@ -295,8 +295,8 @@ START_TEST(sys_ip46str_sanitize_02)
 	char *clean;
 
 	clean = sys_ip46str_sanitize("127.0.0.1");
-	fail_unless(!!clean, "Sanitized string is NULL");
-	fail_unless(!strcmp(clean, "127.0.0.1"),
+	ck_assert_msg(!!clean, "Sanitized string is NULL");
+	ck_assert_msg(!strcmp(clean, "127.0.0.1"),
 	            "Unexpected result");
 	free(clean);
 }
@@ -307,8 +307,8 @@ START_TEST(sys_ip46str_sanitize_03)
 	char *clean;
 
 	clean = sys_ip46str_sanitize("fe80::5626:96ff:e4a7:f583%en0");
-	fail_unless(!!clean, "Sanitized string is NULL");
-	fail_unless(!strcmp(clean, "fe80__5626_96ff_e4a7_f583_en0"),
+	ck_assert_msg(!!clean, "Sanitized string is NULL");
+	ck_assert_msg(!strcmp(clean, "fe80__5626_96ff_e4a7_f583_en0"),
 	            "Unexpected result");
 	free(clean);
 }

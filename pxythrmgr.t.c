@@ -37,7 +37,7 @@ START_TEST(pxythrmgr_libevent_01)
 	struct event_base *evbase;
 
 	evbase = event_base_new();
-	fail_unless(!!evbase, "no event base");
+	ck_assert_msg(!!evbase, "no event base");
 	event_base_free(evbase);
 }
 END_TEST
@@ -48,9 +48,9 @@ START_TEST(pxythrmgr_libevent_02)
 	struct evdns_base *dnsbase;
 
 	evbase = event_base_new();
-	fail_unless(!!evbase, "no event base");
+	ck_assert_msg(!!evbase, "no event base");
 	dnsbase = evdns_base_new(evbase, 0);
-	fail_unless(!!dnsbase, "no evdns base");
+	ck_assert_msg(!!dnsbase, "no evdns base");
 	evdns_base_free(dnsbase, 0);
 	event_base_free(evbase);
 }
@@ -63,12 +63,12 @@ START_TEST(pxythrmgr_libevent_03)
 	int rc;
 
 	evbase = event_base_new();
-	fail_unless(!!evbase, "no event base");
+	ck_assert_msg(!!evbase, "no event base");
 	dnsbase = evdns_base_new(evbase, 0);
-	fail_unless(!!dnsbase, "no evdns base");
+	ck_assert_msg(!!dnsbase, "no evdns base");
 	rc = evdns_base_resolv_conf_parse(dnsbase, DNS_OPTIONS_ALL,
 	                                  "/etc/resolv.conf");
-	fail_unless(rc == 0, "unable to parse resolv.conf");
+	ck_assert_msg(rc == 0, "unable to parse resolv.conf");
 	evdns_base_free(dnsbase, 0);
 	event_base_free(evbase);
 }
@@ -80,9 +80,9 @@ START_TEST(pxythrmgr_libevent_04)
 	struct evdns_base *dnsbase;
 
 	evbase = event_base_new();
-	fail_unless(!!evbase, "no event base");
+	ck_assert_msg(!!evbase, "no event base");
 	dnsbase = evdns_base_new(evbase, 1);
-	fail_unless(!!dnsbase, "no evdns base");
+	ck_assert_msg(!!dnsbase, "no evdns base");
 	evdns_base_free(dnsbase, 0);
 	event_base_free(evbase);
 }
@@ -96,11 +96,11 @@ START_TEST(pxythrmgr_libevent_05)
 
 	/* issue #17:  */
 	evbase1 = event_base_new();
-	fail_unless(!!evbase1, "no event base 1");
+	ck_assert_msg(!!evbase1, "no event base 1");
 	evbase2 = event_base_new();
-	fail_unless(!!evbase1, "no event base 2");
+	ck_assert_msg(!!evbase1, "no event base 2");
 	dnsbase = evdns_base_new(evbase2, 1);
-	fail_unless(!!dnsbase, "no evdns base");
+	ck_assert_msg(!!dnsbase, "no evdns base");
 	evdns_base_free(dnsbase, 0);
 	event_base_free(evbase2);
 	event_base_free(evbase1);

@@ -59,10 +59,10 @@ START_TEST(dynbuf_new_01)
 	dynbuf_t *db;
 
 	db = dynbuf_new(buf, sz);
-	fail_unless(!!db, "dynbuf not allocated");
-	fail_unless(!!db->buf, "buffer not set");
-	fail_unless(db->buf == buf, "buffer incorrect");
-	fail_unless(db->sz == sz, "size incorrect");
+	ck_assert_msg(!!db, "dynbuf not allocated");
+	ck_assert_msg(!!db->buf, "buffer not set");
+	ck_assert_msg(db->buf == buf, "buffer incorrect");
+	ck_assert_msg(db->sz == sz, "size incorrect");
 	dynbuf_free(db);
 	buf = malloc(sz);
 }
@@ -73,9 +73,9 @@ START_TEST(dynbuf_new_alloc_01)
 	dynbuf_t *db;
 
 	db = dynbuf_new_alloc(sz);
-	fail_unless(!!db, "dynbuf not allocated");
-	fail_unless(!!db->buf, "buffer not set");
-	fail_unless(db->sz == sz, "size incorrect");
+	ck_assert_msg(!!db, "dynbuf not allocated");
+	ck_assert_msg(!!db->buf, "buffer not set");
+	ck_assert_msg(db->sz == sz, "size incorrect");
 	dynbuf_free(db);
 }
 END_TEST
@@ -85,11 +85,11 @@ START_TEST(dynbuf_new_copy_01)
 	dynbuf_t *db;
 
 	db = dynbuf_new_copy(buf, sz);
-	fail_unless(!!db, "dynbuf not allocated");
-	fail_unless(!!db->buf, "buffer not set");
-	fail_unless(db->buf != buf, "buffer incorrect");
-	fail_unless(db->sz == sz, "size incorrect");
-	fail_unless(!memcmp(db->buf, buf, sz), "buffer data incorrect");
+	ck_assert_msg(!!db, "dynbuf not allocated");
+	ck_assert_msg(!!db->buf, "buffer not set");
+	ck_assert_msg(db->buf != buf, "buffer incorrect");
+	ck_assert_msg(db->sz == sz, "size incorrect");
+	ck_assert_msg(!memcmp(db->buf, buf, sz), "buffer data incorrect");
 	dynbuf_free(db);
 }
 END_TEST
@@ -99,13 +99,13 @@ START_TEST(dynbuf_new_file_01)
 	dynbuf_t *db;
 
 	db = dynbuf_new_file(TESTCERT);
-	fail_unless(!!db, "dynbuf not allocated");
-	fail_unless(!!db->buf, "buffer not set");
-	fail_unless(db->buf != buf, "buffer incorrect");
-	fail_unless(db->sz > 0, "size incorrect");
-	fail_unless(!!strstr((char*)db->buf, "-----BEGIN CERTIFICATE-----"),
+	ck_assert_msg(!!db, "dynbuf not allocated");
+	ck_assert_msg(!!db->buf, "buffer not set");
+	ck_assert_msg(db->buf != buf, "buffer incorrect");
+	ck_assert_msg(db->sz > 0, "size incorrect");
+	ck_assert_msg(!!strstr((char*)db->buf, "-----BEGIN CERTIFICATE-----"),
 	            "cannot find begin of cert");
-	fail_unless(!!strstr((char*)db->buf, "-----END CERTIFICATE-----"),
+	ck_assert_msg(!!strstr((char*)db->buf, "-----END CERTIFICATE-----"),
 	            "cannot find end of cert");
 	dynbuf_free(db);
 }

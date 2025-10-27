@@ -48,9 +48,9 @@ START_TEST(url_dec_01)
 	size_t sz;
 
 	buf = url_dec(coded01, strlen(coded01), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain01), "wrong length");
-	fail_unless(!memcmp(plain01, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain01), "wrong length");
+	ck_assert_msg(!memcmp(plain01, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -61,9 +61,9 @@ START_TEST(url_dec_02)
 	size_t sz;
 
 	buf = url_dec(coded02, strlen(coded02), &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(sz == strlen(plain02 + 1) + 1, "wrong length");
-	fail_unless(!memcmp(plain02, buf, sz), "wrong data");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(sz == strlen(plain02 + 1) + 1, "wrong length");
+	ck_assert_msg(!memcmp(plain02, buf, sz), "wrong data");
 	free(buf);
 }
 END_TEST
@@ -74,7 +74,7 @@ START_TEST(url_dec_03)
 	size_t sz;
 
 	buf = url_dec(coded03, strlen(coded03), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -84,7 +84,7 @@ START_TEST(url_dec_04)
 	size_t sz;
 
 	buf = url_dec(coded04, strlen(coded04), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -94,7 +94,7 @@ START_TEST(url_dec_05)
 	size_t sz;
 
 	buf = url_dec(coded05, strlen(coded05), &sz);
-	fail_unless(!buf, "buffer returned");
+	ck_assert_msg(!buf, "buffer returned");
 }
 END_TEST
 
@@ -104,9 +104,9 @@ START_TEST(url_dec_06)
 	size_t sz;
 
 	buf = url_dec("", 0, &sz);
-	fail_unless(!!buf, "no buffer returned");
-	fail_unless(!sz, "length not 0");
-	fail_unless(!buf[0], "not empty string");
+	ck_assert_msg(!!buf, "no buffer returned");
+	ck_assert_msg(!sz, "length not 0");
+	ck_assert_msg(!buf[0], "not empty string");
 	free(buf);
 }
 END_TEST

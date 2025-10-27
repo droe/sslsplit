@@ -43,8 +43,8 @@ START_TEST(util_skipws_01)
 	char *p;
 
 	p = util_skipws(string01);
-	fail_unless(!!p, "no pointer returned");
-	fail_unless(!strcmp(p, "test"), "wrong data");
+	ck_assert_msg(!!p, "no pointer returned");
+	ck_assert_msg(!strcmp(p, "test"), "wrong data");
 }
 END_TEST
 
@@ -53,8 +53,8 @@ START_TEST(util_skipws_02)
 	char *p;
 
 	p = util_skipws(string02);
-	fail_unless(!!p, "no pointer returned");
-	fail_unless(!strcmp(p, "test"), "wrong data");
+	ck_assert_msg(!!p, "no pointer returned");
+	ck_assert_msg(!strcmp(p, "test"), "wrong data");
 }
 END_TEST
 
@@ -63,8 +63,8 @@ START_TEST(util_skipws_03)
 	char *p;
 
 	p = util_skipws(string03);
-	fail_unless(!!p, "no pointer returned");
-	fail_unless(!strcmp(p, "test"), "wrong data");
+	ck_assert_msg(!!p, "no pointer returned");
+	ck_assert_msg(!strcmp(p, "test"), "wrong data");
 }
 END_TEST
 
@@ -73,8 +73,8 @@ START_TEST(util_skipws_04)
 	char *p;
 
 	p = util_skipws(string04);
-	fail_unless(!!p, "no pointer returned");
-	fail_unless(!strcmp(p, "test"), "wrong data");
+	ck_assert_msg(!!p, "no pointer returned");
+	ck_assert_msg(!strcmp(p, "test"), "wrong data");
 }
 END_TEST
 
@@ -83,8 +83,8 @@ START_TEST(util_skipws_05)
 	char *p;
 
 	p = util_skipws(string05);
-	fail_unless(!!p, "no pointer returned");
-	fail_unless(!strcmp(p, "\r\ntest"), "wrong data");
+	ck_assert_msg(!!p, "no pointer returned");
+	ck_assert_msg(!strcmp(p, "\r\ntest"), "wrong data");
 }
 END_TEST
 
@@ -93,8 +93,8 @@ START_TEST(util_skipws_06)
 	char *p;
 
 	p = util_skipws("");
-	fail_unless(!!p, "no pointer returned");
-	fail_unless(!strcmp(p, ""), "wrong data");
+	ck_assert_msg(!!p, "no pointer returned");
+	ck_assert_msg(!strcmp(p, ""), "wrong data");
 }
 END_TEST
 

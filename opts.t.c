@@ -103,19 +103,19 @@ START_TEST(proxyspec_parse_01)
 	char **argv = argv01;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -128,19 +128,19 @@ START_TEST(proxyspec_parse_02)
 	char **argv = argv02;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in6),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in6),
 	            "not IPv6 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in6),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in6),
 	            "not IPv6 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -183,19 +183,19 @@ START_TEST(proxyspec_parse_05)
 	char **argv = argv03;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(!spec->ssl, "SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(!spec->ssl, "SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -207,19 +207,19 @@ START_TEST(proxyspec_parse_06)
 	char **argv = argv04;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(!spec->http, "HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(!spec->http, "HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -231,19 +231,19 @@ START_TEST(proxyspec_parse_07)
 	char **argv = argv05;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(!spec->ssl, "SSL");
-	fail_unless(!spec->http, "HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(!spec->ssl, "SSL");
+	ck_assert_msg(!spec->http, "HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -255,18 +255,18 @@ START_TEST(proxyspec_parse_08)
 	char **argv = argv06;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(!spec->connect_addrlen, "connect addr set");
-	fail_unless(spec->sni_port == 443, "SNI port is not set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->connect_addrlen, "connect addr set");
+	ck_assert_msg(spec->sni_port == 443, "SNI port is not set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -306,19 +306,19 @@ START_TEST(proxyspec_parse_11)
 	char **argv = argv08;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(!spec->connect_addrlen, "connect addr set");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!!spec->natengine, "natengine not set");
-	fail_unless(!strcmp(spec->natengine, NATENGINE), "natengine mismatch");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->connect_addrlen, "connect addr set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!!spec->natengine, "natengine not set");
+	ck_assert_msg(!strcmp(spec->natengine, NATENGINE), "natengine mismatch");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -346,30 +346,30 @@ START_TEST(proxyspec_parse_13)
 	char **argv = argv09;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in6),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in6),
 	            "not IPv6 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in6),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in6),
 	            "not IPv6 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!!spec->next, "next is not set");
-	fail_unless(spec->next->ssl, "not SSL");
-	fail_unless(spec->next->http, "not HTTP");
-	fail_unless(!spec->next->upgrade, "Upgrade");
-	fail_unless(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!!spec->next, "next is not set");
+	ck_assert_msg(spec->next->ssl, "not SSL");
+	ck_assert_msg(spec->next->http, "not HTTP");
+	ck_assert_msg(!spec->next->upgrade, "Upgrade");
+	ck_assert_msg(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->next->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->next->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->next->sni_port, "SNI port is set");
-	fail_unless(!spec->next->natengine, "natengine is set");
-	fail_unless(!spec->next->natlookup, "natlookup() is set");
-	fail_unless(!spec->next->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->next->natengine, "natengine is set");
+	ck_assert_msg(!spec->next->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->next->natsocket, "natsocket() is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -381,31 +381,31 @@ START_TEST(proxyspec_parse_14)
 	char **argv = argv10;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in6),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in6),
 	            "not IPv6 listen addr");
-	fail_unless(!spec->connect_addrlen, "connect addr set");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!!spec->natengine, "natengine not set");
-	fail_unless(!strcmp(spec->natengine, NATENGINE), "natengine mismatch");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!!spec->next, "next is not set");
-	fail_unless(spec->next->ssl, "not SSL");
-	fail_unless(spec->next->http, "not HTTP");
-	fail_unless(!spec->next->upgrade, "Upgrade");
-	fail_unless(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!spec->connect_addrlen, "connect addr set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!!spec->natengine, "natengine not set");
+	ck_assert_msg(!strcmp(spec->natengine, NATENGINE), "natengine mismatch");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!!spec->next, "next is not set");
+	ck_assert_msg(spec->next->ssl, "not SSL");
+	ck_assert_msg(spec->next->http, "not HTTP");
+	ck_assert_msg(!spec->next->upgrade, "Upgrade");
+	ck_assert_msg(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(!spec->next->connect_addrlen, "connect addr set");
-	fail_unless(!spec->next->sni_port, "SNI port is set");
-	fail_unless(!!spec->next->natengine, "natengine not set");
-	fail_unless(!strcmp(spec->next->natengine, NATENGINE),
+	ck_assert_msg(!spec->next->connect_addrlen, "connect addr set");
+	ck_assert_msg(!spec->next->sni_port, "SNI port is set");
+	ck_assert_msg(!!spec->next->natengine, "natengine not set");
+	ck_assert_msg(!strcmp(spec->next->natengine, NATENGINE),
 	            "natengine mismatch");
-	fail_unless(!spec->next->natlookup, "natlookup() is set");
-	fail_unless(!spec->next->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->next->natsocket, "natsocket() is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -418,18 +418,18 @@ START_TEST(proxyspec_parse_15)
 	char **argv = argv11;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(!spec->ssl, "SSL");
-	fail_unless(!spec->http, "HTTP");
-	fail_unless(spec->upgrade, "not Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(!spec->ssl, "SSL");
+	ck_assert_msg(!spec->http, "HTTP");
+	ck_assert_msg(spec->upgrade, "not Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(!spec->connect_addrlen, "connect addr set");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!!spec->natengine, "natengine is not set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!spec->next, "next is set");
+	ck_assert_msg(!spec->connect_addrlen, "connect addr set");
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!!spec->natengine, "natengine is not set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next, "next is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -441,30 +441,30 @@ START_TEST(proxyspec_parse_16)
 	char **argv = argv12;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(spec->ssl, "not SSL");
-	fail_unless(spec->http, "not HTTP");
-	fail_unless(!spec->upgrade, "Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(spec->ssl, "not SSL");
+	ck_assert_msg(spec->http, "not HTTP");
+	ck_assert_msg(!spec->upgrade, "Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!!spec->next, "next is not set");
-	fail_unless(!spec->next->ssl, "SSL");
-	fail_unless(!spec->next->http, "HTTP");
-	fail_unless(spec->next->upgrade, "not Upgrade");
-	fail_unless(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!!spec->next, "next is not set");
+	ck_assert_msg(!spec->next->ssl, "SSL");
+	ck_assert_msg(!spec->next->http, "HTTP");
+	ck_assert_msg(spec->next->upgrade, "not Upgrade");
+	ck_assert_msg(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->next->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->next->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->next->sni_port, "SNI port is set");
-	fail_unless(!spec->next->natengine, "natengine is set");
-	fail_unless(!spec->next->natlookup, "natlookup() is set");
-	fail_unless(!spec->next->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->next->natengine, "natengine is set");
+	ck_assert_msg(!spec->next->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->next->natsocket, "natsocket() is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -491,29 +491,29 @@ START_TEST(proxyspec_parse_18)
 	char **argv = argv14;
 
 	proxyspec_parse(&argc, &argv, NATENGINE, &spec);
-	fail_unless(!!spec, "failed to parse spec");
-	fail_unless(!spec->ssl, "SSL");
-	fail_unless(!spec->http, "HTTP");
-	fail_unless(spec->upgrade, "not Upgrade");
-	fail_unless(spec->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!!spec, "failed to parse spec");
+	ck_assert_msg(!spec->ssl, "SSL");
+	ck_assert_msg(!spec->http, "HTTP");
+	ck_assert_msg(spec->upgrade, "not Upgrade");
+	ck_assert_msg(spec->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(spec->connect_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(spec->connect_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 connect addr");
-	fail_unless(!spec->sni_port, "SNI port is set");
-	fail_unless(!spec->natengine, "natengine is set");
-	fail_unless(!spec->natlookup, "natlookup() is set");
-	fail_unless(!spec->natsocket, "natsocket() is set");
-	fail_unless(!!spec->next, "next is not set");
-	fail_unless(spec->next->ssl, "not SSL");
-	fail_unless(spec->next->http, "not HTTP");
-	fail_unless(!spec->next->upgrade, "Upgrade");
-	fail_unless(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
+	ck_assert_msg(!spec->sni_port, "SNI port is set");
+	ck_assert_msg(!spec->natengine, "natengine is set");
+	ck_assert_msg(!spec->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->natsocket, "natsocket() is set");
+	ck_assert_msg(!!spec->next, "next is not set");
+	ck_assert_msg(spec->next->ssl, "not SSL");
+	ck_assert_msg(spec->next->http, "not HTTP");
+	ck_assert_msg(!spec->next->upgrade, "Upgrade");
+	ck_assert_msg(spec->next->listen_addrlen == sizeof(struct sockaddr_in),
 	            "not IPv4 listen addr");
-	fail_unless(!spec->next->connect_addrlen, "connect addr set");
-	fail_unless(!spec->next->sni_port, "SNI port is set");
-	fail_unless(!!spec->next->natengine, "natengine is not set");
-	fail_unless(!spec->next->natlookup, "natlookup() is set");
-	fail_unless(!spec->next->natsocket, "natsocket() is set");
+	ck_assert_msg(!spec->next->connect_addrlen, "connect addr set");
+	ck_assert_msg(!spec->next->sni_port, "SNI port is set");
+	ck_assert_msg(!!spec->next->natengine, "natengine is not set");
+	ck_assert_msg(!spec->next->natlookup, "natlookup() is set");
+	ck_assert_msg(!spec->next->natsocket, "natsocket() is set");
 	proxyspec_free(spec);
 }
 END_TEST
@@ -524,11 +524,11 @@ START_TEST(opts_debug_01)
 
 	opts = opts_new();
 	opts->debug = 0;
-	fail_unless(!opts->debug, "plain 0");
-	fail_unless(!OPTS_DEBUG(opts), "macro 0");
+	ck_assert_msg(!opts->debug, "plain 0");
+	ck_assert_msg(!OPTS_DEBUG(opts), "macro 0");
 	opts->debug = 1;
-	fail_unless(!!opts->debug, "plain 1");
-	fail_unless(!!OPTS_DEBUG(opts), "macro 1");
+	ck_assert_msg(!!opts->debug, "plain 1");
+	ck_assert_msg(!!OPTS_DEBUG(opts), "macro 1");
 	opts_free(opts);
 }
 END_TEST

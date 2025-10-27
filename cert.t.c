@@ -41,11 +41,11 @@ START_TEST(cert_new_load_01)
 	cert_t *c;
 
 	c = cert_new_load(TESTCERT);
-	fail_unless(!!c, "loading PEM failed");
-	fail_unless(!!c->crt, "loading crt failed");
-	fail_unless(!!c->key, "loading key failed");
-	fail_unless(!!c->chain, "initializing chain stack failed");
-	fail_unless(sk_X509_num(c->chain) == 1, "loading chain failed");
+	ck_assert_msg(!!c, "loading PEM failed");
+	ck_assert_msg(!!c->crt, "loading crt failed");
+	ck_assert_msg(!!c->key, "loading key failed");
+	ck_assert_msg(!!c->chain, "initializing chain stack failed");
+	ck_assert_msg(sk_X509_num(c->chain) == 1, "loading chain failed");
 	cert_free(c);
 }
 END_TEST
@@ -55,16 +55,16 @@ START_TEST(cert_refcount_inc_01)
 	cert_t *c;
 
 	c = cert_new_load(TESTCERT);
-	fail_unless(!!c, "loading PEM failed");
-	fail_unless(c->references == 1, "refcount mismatch");
+	ck_assert_msg(!!c, "loading PEM failed");
+	ck_assert_msg(c->references == 1, "refcount mismatch");
 	cert_refcount_inc(c);
-	fail_unless(c->references == 2, "refcount mismatch");
+	ck_assert_msg(c->references == 2, "refcount mismatch");
 	cert_free(c);
-	fail_unless(c->references == 1, "refcount mismatch");
+	ck_assert_msg(c->references == 1, "refcount mismatch");
 	cert_free(c);
 #if 0
 	/* deliberate access after last free() */
-	fail_unless(c->references == 0, "refcount mismatch");
+	ck_assert_msg(c->references == 0, "refcount mismatch");
 #endif
 }
 END_TEST
