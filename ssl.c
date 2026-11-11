@@ -1378,6 +1378,7 @@ EVP_PKEY *
 ssl_key_genrsa(const int keysize)
 {
 	EVP_PKEY *pkey;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 	RSA *rsa;
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
@@ -1399,6 +1400,26 @@ ssl_key_genrsa(const int keysize)
 #endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	pkey = EVP_PKEY_new();
 	EVP_PKEY_assign_RSA(pkey, rsa); /* does not increment refcount */
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+	pkey = EVP_RSA_gen(keysize);
+	/*
+	// https://docs.openssl.org/3.0/man7/EVP_PKEY-RSA
+	// "The RSA "e" value. The value may be any odd number greater than or equal to 65537. The default value is 65537.
+	// For legacy reasons a value of 3 is currently accepted but is deprecated."
+	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, "rsa", NULL);
+
+	BIGNUM *bn = BN_new();
+	BN_dec2bn(&bn, "3");
+
+	OSSL_PARAM params[2] = {
+		OSSL_PARAM_BN(OSSL_PKEY_PARAM_RSA_E, bn, BN_num_bytes(bn)),
+		OSSL_PARAM_END
+	};
+
+	EVP_PKEY_fromdata_init(ctx);
+	EVP_PKEY_fromdata(ctx, &pkey, EVP_PKEY_KEY_PARAMETERS, params);
+	*/
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 	return pkey;
 }
 
