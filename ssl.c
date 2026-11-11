@@ -806,18 +806,13 @@ ssl_dh_load(const char *filename)
  * Load an Elliptic Curve by name.  If curvename is NULL, a default curve is
  * loaded.
  */
-EC_KEY *
-ssl_ec_by_name(const char *curvename)
+int
+ssl_ec_nid_by_name(const char *curvename)
 {
-	int nid;
-
 	if (!curvename)
 		curvename = DFLT_CURVE;
 
-	if ((nid = OBJ_sn2nid(curvename)) == NID_undef) {
-		return NULL;
-	}
-	return EC_KEY_new_by_curve_name(nid);
+	return OBJ_sn2nid(curvename);
 }
 #endif /* !OPENSSL_NO_EC */
 
