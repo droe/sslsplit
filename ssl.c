@@ -1780,14 +1780,16 @@ static char *
 ssl_ia5string_strdup(ASN1_IA5STRING *ia5)
 {
 	char *str;
-
-	if (!ia5 || !ia5->length)
+	if (!ia5)
 		return NULL;
-	str = malloc(ia5->length + 1);
+	int len = ASN1_STRING_length(ia5);
+	if (!len)
+		return NULL;
+	str = malloc(len + 1);
 	if (!str)
 		return NULL;
-	memcpy(str, ia5->data, ia5->length);
-	str[ia5->length] = 0;
+	memcpy(str, ASN1_STRING_get0_data(ia5), len);
+	str[len] = 0;
 	return str;
 }
 
