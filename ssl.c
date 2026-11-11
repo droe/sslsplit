@@ -637,6 +637,7 @@ ssl_ssl_masterkey_to_str(SSL *ssl)
 }
 
 #ifndef OPENSSL_NO_DH
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 static unsigned char dh_g[] = { 0x02 };
 static unsigned char dh512_p[] = {
 	0xAB, 0xC0, 0x34, 0x16, 0x95, 0x8B, 0x57, 0xE5, 0x5C, 0xB3, 0x4E, 0x6E,
@@ -778,6 +779,7 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
 	}
 	return(dh);
 }
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER) */
 
 /*
  * Load DH parameters from a PEM file.

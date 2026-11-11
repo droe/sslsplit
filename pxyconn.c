@@ -813,7 +813,11 @@ pxy_srcsslctx_create(pxy_conn_ctx_t *ctx, X509 *crt, STACK_OF(X509) *chain,
 	if (ctx->opts->dh) {
 		SSL_CTX_set_tmp_dh(sslctx, ctx->opts->dh);
 	} else {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 		SSL_CTX_set_tmp_dh_callback(sslctx, ssl_tmp_dh_callback);
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+		SSL_CTX_set_dh_auto(sslctx, 1);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 	}
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
