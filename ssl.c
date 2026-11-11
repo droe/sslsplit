@@ -785,20 +785,39 @@ ssl_tmp_dh_callback(UNUSED SSL *s, int is_export, int keylength)
  * Load DH parameters from a PEM file.
  * Not thread-safe.
  */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 DH *
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+EVP_PKEY *
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 ssl_dh_load(const char *filename)
 {
-	DH *dh;
-	FILE *fh;
-
 	if (ssl_init() == -1)
 		return NULL;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
+	DH *dh;
+
+	FILE *fh;
 	if (!(fh = fopen(filename, "r"))) {
 		return NULL;
 	}
 	dh = PEM_read_DHparams(fh, NULL, NULL, NULL);
 	fclose(fh);
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+	EVP_PKEY *dh;
+
+	BIO *bio = BIO_new_file(filename, "r");
+	if (!bio)
+		return NULL;
+
+	dh = EVP_PKEY_new();
+	if (!PEM_read_bio_Parameters(bio, &dh)) {
+		EVP_PKEY_free(dh);
+		dh = NULL;
+	}
+	BIO_free(bio);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 	return dh;
 }
 #endif /* !OPENSSL_NO_DH */

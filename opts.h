@@ -117,7 +117,11 @@ typedef struct opts {
 	X509 *clientcrt;
 	EVP_PKEY *clientkey;
 #ifndef OPENSSL_NO_DH
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 	DH *dh;
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+	EVP_PKEY *dh;
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
 	char *ecdhcurve;

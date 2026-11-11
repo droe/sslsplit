@@ -129,7 +129,11 @@ opts_free(opts_t *opts)
 	}
 #ifndef OPENSSL_NO_DH
 	if (opts->dh) {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 		DH_free(opts->dh);
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+		EVP_PKEY_free(opts->dh);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 	}
 #endif /* !OPENSSL_NO_DH */
 #ifndef OPENSSL_NO_ECDH
@@ -775,7 +779,11 @@ void
 opts_set_dh(opts_t *opts, const char *argv0, const char *optarg)
 {
 	if (opts->dh)
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 		DH_free(opts->dh);
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+		EVP_PKEY_free(opts->dh);
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
 	opts->dh = ssl_dh_load(optarg);
 	if (!opts->dh) {
 		fprintf(stderr, "%s: error loading DH params from '%s':\n",

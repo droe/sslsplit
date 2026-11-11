@@ -211,8 +211,11 @@ char * ssl_ssl_masterkey_to_str(SSL *) NONNULL(1) MALLOC;
 #ifndef OPENSSL_NO_DH
 #if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
 DH * ssl_tmp_dh_callback(SSL *, int, int) NONNULL(1) MALLOC;
-#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER) */
-DH * ssl_dh_load(const char *) NONNULL(1) MALLOC;
+DH *
+#else /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+EVP_PKEY *
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+ssl_dh_load(const char *) NONNULL(1) MALLOC;
 #endif /* !OPENSSL_NO_DH */
 
 #ifndef OPENSSL_NO_EC
