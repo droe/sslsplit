@@ -44,6 +44,12 @@
 static int
 bind(ENGINE *engine, const char *id)
 {
+	// Engines are deprecated but should still work with OpenSSL 3.x, so we just suppress the deprecation warnings
+	// see ssl_engine() in src/ssl.c as well
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+
 	if (!ENGINE_set_id(engine, "dummy")) {
 		fprintf(stderr, "ENGINE_set_id() failed\n");
 		return 0;

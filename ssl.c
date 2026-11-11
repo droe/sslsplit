@@ -517,27 +517,6 @@ ssl_fini(void)
 }
 
 /*
- * Look up an OpenSSL engine by ID or by full path and load it as default
- * engine.  This works globally, not on specific SSL_CTX or SSL instances.
- * OpenSSL must already have been initialized when calling this function.
- * Returns 0 on success, -1 on failure.
- */
-#ifndef OPENSSL_NO_ENGINE
-int
-ssl_engine(const char *name) {
-	ENGINE *engine;
-
-	engine = ENGINE_by_id(name);
-	if (!engine)
-		return -1;
-
-	if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
-		return -1;
-	return 0;
-}
-#endif /* !OPENSSL_NO_ENGINE */
-
-/*
  * Format raw SHA1 hash into newly allocated string, with or without colons.
  */
 char *
@@ -2388,5 +2367,36 @@ continue_search:
 	*clienthello = NULL;
 	return 1;
 }
+
+/*
+ * Look up an OpenSSL engine by ID or by full path and load it as default
+ * engine.  This works globally, not on specific SSL_CTX or SSL instances.
+ * OpenSSL must already have been initialized when calling this function.
+ * Returns 0 on success, -1 on failure.
+ */
+#ifndef OPENSSL_NO_ENGINE
+int
+ssl_engine(const char *name) {
+	ENGINE *engine;
+
+	// Engines are deprecated but should still work with OpenSSL 3.x, so we just suppress the deprecation warnings
+	// ATTENTION: We have moved this function to the bottom of file, so we can suppress the warnings for engine functions only
+	// https://docs.openssl.org/3.0/man7/migration_guide
+	// "If openssl is not built without engine support or deprecated API support, engines will still work.
+	// However, their applicability will be limited.
+	// New algorithms provided via engines will still work."
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif /* OPENSSL_VERSION_NUMBER >= 0x30000000L */
+
+	engine = ENGINE_by_id(name);
+	if (!engine)
+		return -1;
+
+	if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
+		return -1;
+	return 0;
+}
+#endif /* !OPENSSL_NO_ENGINE */
 
 /* vim: set noet ft=c: */
